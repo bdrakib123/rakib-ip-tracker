@@ -1,0 +1,17 @@
+{
+  "name": "privacy-safe-ip-tracker",
+  "version": "1.0.0",
+  "description": "Privacy-safe IP information API and dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "ua-parser-js": "^2.0.6"
+  }
+}
