@@ -1,114 +1,379 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Privacy-safe IP and device information dashboard">
-  <title>IP Tracker • Visitor Info</title>
-  <link rel="stylesheet" href="/style.css">
+
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  >
+
+  <meta
+    name="description"
+    content="Rakib IP Intelligence Dashboard"
+  >
+
+  <title>Rakib IP Intelligence</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
 </head>
+
 <body>
-  <div class="bg"></div>
 
-  <main class="container">
-    <header class="hero">
-      <div class="logo">◎</div>
-      <div>
-        <p class="eyebrow">PRIVACY-SAFE ANALYTICS</p>
-        <h1>Visitor <span>Information</span></h1>
-        <p class="sub">Approximate network location and browser/device information.</p>
+<div class="background"></div>
+
+<main class="container">
+
+  <header class="topbar">
+
+    <div class="brand">
+
+      <div class="brand-logo">
+        ◉
       </div>
-    </header>
 
-    <div id="status" class="status">Collecting information…</div>
+      <div>
 
-    <section class="grid">
-      <article class="card highlight">
-        <div class="icon">🌐</div>
+        <div class="brand-mini">
+          RAKIB SYSTEM
+        </div>
+
+        <h1>
+          IP <span>Intelligence</span>
+        </h1>
+
+      </div>
+
+    </div>
+
+    <div class="live-badge">
+
+      <i></i>
+
+      LIVE
+
+    </div>
+
+  </header>
+
+
+  <div
+    id="status"
+    class="status"
+  >
+    Connecting to visitor intelligence...
+  </div>
+
+
+  <section class="stats">
+
+    <div class="stat-card">
+
+      <span>👥</span>
+
+      <div>
+        <small>VISITORS</small>
+        <strong id="total">0</strong>
+      </div>
+
+    </div>
+
+    <div class="stat-card">
+
+      <span>🌍</span>
+
+      <div>
+        <small>COUNTRIES</small>
+        <strong id="countries">0</strong>
+      </div>
+
+    </div>
+
+    <div class="stat-card">
+
+      <span>📱</span>
+
+      <div>
+        <small>MOBILE</small>
+        <strong id="mobile">0</strong>
+      </div>
+
+    </div>
+
+    <div class="stat-card">
+
+      <span>💻</span>
+
+      <div>
+        <small>DESKTOP</small>
+        <strong id="desktop">0</strong>
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <section class="main-grid">
+
+    <div class="panel map-panel">
+
+      <div class="panel-head">
+
         <div>
-          <small>IP ADDRESS</small>
+
+          <small>APPROXIMATE NETWORK LOCATION</small>
+
+          <h2>🌍 Visitor Map</h2>
+
+        </div>
+
+        <span class="tag">
+          IP GEO
+        </span>
+
+      </div>
+
+      <div id="map"></div>
+
+      <div
+        id="map-note"
+        class="map-note"
+      >
+        Location is approximate IP geolocation.
+      </div>
+
+    </div>
+
+
+    <div class="panel current-panel">
+
+      <div class="panel-head">
+
+        <div>
+
+          <small>CURRENT VISITOR</small>
+
+          <h2>Visitor Profile</h2>
+
+        </div>
+
+        <span class="tag green">
+          ACTIVE
+        </span>
+
+      </div>
+
+
+      <div class="profile-ip">
+
+        <span>🌐</span>
+
+        <div>
+
+          <small>PUBLIC IP</small>
+
           <strong id="ip">—</strong>
-        </div>
-      </article>
 
-      <article class="card">
-        <div class="icon">📱</div>
-        <div>
-          <small>DEVICE</small>
-          <strong id="device">—</strong>
         </div>
-      </article>
 
-      <article class="card">
-        <div class="icon">🤖</div>
-        <div>
-          <small>OPERATING SYSTEM</small>
-          <strong id="os">—</strong>
-        </div>
-      </article>
+      </div>
 
-      <article class="card">
-        <div class="icon">🌍</div>
+
+      <div class="info-grid">
+
         <div>
           <small>LOCATION</small>
-          <strong id="location">—</strong>
+          <b id="location">—</b>
         </div>
-      </article>
 
-      <article class="card">
-        <div class="icon">🏢</div>
         <div>
-          <small>ISP / ORGANIZATION</small>
-          <strong id="isp">—</strong>
+          <small>COUNTRY</small>
+          <b id="country">—</b>
         </div>
-      </article>
 
-      <article class="card">
-        <div class="icon">🔢</div>
+        <div>
+          <small>ISP</small>
+          <b id="isp">—</b>
+        </div>
+
         <div>
           <small>ASN</small>
-          <strong id="asn">—</strong>
+          <b id="asn">—</b>
         </div>
-      </article>
 
-      <article class="card">
-        <div class="icon">🕐</div>
         <div>
           <small>TIMEZONE</small>
-          <strong id="timezone">—</strong>
+          <b id="timezone">—</b>
         </div>
-      </article>
 
-      <article class="card">
-        <div class="icon">🌐</div>
         <div>
-          <small>BROWSER</small>
-          <strong id="browser">—</strong>
+          <small>POSTAL</small>
+          <b id="postal">—</b>
         </div>
-      </article>
-    </section>
 
-    <section class="details card">
-      <div class="section-title">
-        <span>Technical details</span>
-        <span class="pill">NO GPS</span>
       </div>
 
-      <div class="rows">
-        <div><span>Country</span><b id="country">—</b></div>
-        <div><span>Region</span><b id="region">—</b></div>
-        <div><span>City</span><b id="city">—</b></div>
-        <div><span>Postal</span><b id="postal">—</b></div>
-        <div><span>Coordinates</span><b id="coordinates">Approximate / unavailable</b></div>
-        <div><span>Engine</span><b id="engine">—</b></div>
+
+      <div class="device-box">
+
+        <div class="device-icon">
+          📱
+        </div>
+
+        <div>
+
+          <small>DEVICE</small>
+
+          <strong id="device">
+            —
+          </strong>
+
+          <p id="os">
+            —
+          </p>
+
+        </div>
+
       </div>
-    </section>
 
-    <footer>
-      IP location is approximate and can identify a network/ISP rather than a person's exact location.
-    </footer>
-  </main>
 
-  <script src="/app.js"></script>
+      <div class="browser-box">
+
+        <span>🌐</span>
+
+        <div>
+
+          <small>BROWSER</small>
+
+          <b id="browser">
+            —
+          </b>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <section class="panel">
+
+    <div class="panel-head">
+
+      <div>
+
+        <small>REAL-TIME ACTIVITY</small>
+
+        <h2>🔴 Live Visitors</h2>
+
+      </div>
+
+      <span
+        class="tag"
+        id="liveCount"
+      >
+        0 LIVE
+      </span>
+
+    </div>
+
+
+    <div
+      id="visitorList"
+      class="visitor-list"
+    >
+
+      <div class="empty">
+        Waiting for visitors...
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <section class="panel details-panel">
+
+    <div class="panel-head">
+
+      <div>
+
+        <small>NETWORK DETAILS</small>
+
+        <h2>Technical Information</h2>
+
+      </div>
+
+    </div>
+
+
+    <div class="technical">
+
+      <div>
+        <span>Device</span>
+        <b id="techDevice">—</b>
+      </div>
+
+      <div>
+        <span>OS</span>
+        <b id="techOS">—</b>
+      </div>
+
+      <div>
+        <span>Browser</span>
+        <b id="techBrowser">—</b>
+      </div>
+
+      <div>
+        <span>Engine</span>
+        <b id="engine">—</b>
+      </div>
+
+      <div>
+        <span>Coordinates</span>
+        <b id="coordinates">—</b>
+      </div>
+
+      <div>
+        <span>Region</span>
+        <b id="region">—</b>
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <footer>
+
+    IP location is approximate network geolocation.
+    No GPS or exact street address is collected.
+
+  </footer>
+
+</main>
+
+
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+></script>
+
+<script src="/app.js"></script>
+
 </body>
+
 </html>
