@@ -1,7 +1,7 @@
 {
-  "name": "privacy-safe-ip-tracker",
-  "version": "1.0.0",
-  "description": "Privacy-safe IP information API and dashboard",
+  "name": "rakib-ip-tracker",
+  "version": "3.0.0",
+  "description": "Cyber Glass IP Intelligence Dashboard with MongoDB",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -11,7 +11,9 @@
     "node": ">=20"
   },
   "dependencies": {
+    "dotenv": "^16.4.7",
     "express": "^5.1.0",
+    "mongodb": "^6.20.0",
     "ua-parser-js": "^2.0.6"
   }
 }

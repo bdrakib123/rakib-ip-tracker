@@ -1,280 +1,214 @@
+let map;
+let markers = [];
+let liveToken = null;
+let eventSource = null;
+
 const $ = id =>
   document.getElementById(id);
-
-let map;
-let marker;
-
-const markers = [];
-
-function value(
-  v,
-  fallback = "Unavailable"
-) {
-  return (
-    v === null ||
-    v === undefined ||
-    v === ""
-  )
-    ? fallback
-    : v;
-}
 
 /* =========================================================
    MAP
 ========================================================= */
 
 function initMap() {
-
   map = L.map("map", {
     zoomControl: true,
-    attributionControl: true
-  }).setView(
-    [23.685, 90.3563],
-    6
-  );
+    worldCopyJump: true
+  }).setView([23.8103, 90.4125], 3);
 
   L.tileLayer(
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     {
       maxZoom: 18,
-      attribution:
-        "&copy; OpenStreetMap contributors"
+      attribution: "© OpenStreetMap"
     }
   ).addTo(map);
 }
 
-function updateMap(
-  latitude,
-  longitude,
-  visitor
-) {
+function clearMarkers() {
+  for (const marker of markers) {
+    map.removeLayer(marker);
+  }
+
+  markers = [];
+}
+
+function addMarker(visitor) {
+  const lat =
+    visitor.location?.latitude;
+
+  const lng =
+    visitor.location?.longitude;
 
   if (
-    latitude === null ||
-    longitude === null ||
-    latitude === undefined ||
-    longitude === undefined
+    typeof lat !== "number" ||
+    typeof lng !== "number"
   ) {
     return;
   }
 
-  const coords =
-    [latitude, longitude];
-
-  if (marker) {
-    marker.setLatLng(coords);
-  } else {
-
-    marker =
-      L.marker(coords)
-        .addTo(map);
-  }
+  const marker = L.circleMarker(
+    [lat, lng],
+    {
+      radius: 7,
+      color: "#54ffe1",
+      fillColor: "#54ffe1",
+      fillOpacity: .55,
+      weight: 1
+    }
+  ).addTo(map);
 
   marker.bindPopup(`
-    <b>${value(visitor.flag, "🌐")}
-    ${value(visitor.city, "Unknown")}</b>
-    <br>
-    ${value(visitor.country, "Unknown")}
-    <br>
-    <small>
-      Approximate IP location
-    </small>
+    <b>${escapeHTML(
+      visitor.flag || "🌐"
+    )} ${escapeHTML(
+      visitor.country || "Unknown"
+    )}</b><br>
+    ${escapeHTML(
+      visitor.city || "Unknown"
+    )}<br>
+    ${escapeHTML(
+      visitor.ip || "Hidden"
+    )}
   `);
 
-  map.setView(
-    coords,
-    9,
-    {
-      animate: true
-    }
-  );
+  markers.push(marker);
 }
 
 /* =========================================================
-   CURRENT VISITOR
+   VISITOR CARD
 ========================================================= */
 
-async function loadVisitor() {
+function visitorCard(visitor) {
+  const date =
+    new Date(visitor.createdAt);
 
+  return `
+    <div class="visitor-card">
+
+      <div class="visitor-top">
+
+        <div class="visitor-country">
+          ${escapeHTML(visitor.flag || "🌐")}
+          ${escapeHTML(visitor.country || "Unknown")}
+        </div>
+
+        <div class="visitor-time">
+          ${formatTime(date)}
+        </div>
+
+      </div>
+
+      <div class="visitor-ip">
+        ${escapeHTML(visitor.ip || "Hidden")}
+      </div>
+
+      <div class="visitor-meta">
+
+        <span>
+          📍
+          <b>
+            ${escapeHTML(visitor.city || "Unknown")}
+          </b>
+        </span>
+
+        <span>
+          📱
+          <b>
+            ${escapeHTML(visitor.device?.type || "Unknown")}
+          </b>
+        </span>
+
+        <span>
+          💻
+          <b>
+            ${escapeHTML(visitor.device?.os || "Unknown")}
+          </b>
+        </span>
+
+        <span>
+          🌐
+          <b>
+            ${escapeHTML(visitor.device?.browser || "Unknown")}
+          </b>
+        </span>
+
+        <span>
+          🏢
+          <b>
+            ${escapeHTML(visitor.isp || "Unknown")}
+          </b>
+        </span>
+
+        <span>
+          🔢
+          <b>
+            ${escapeHTML(visitor.asn || "Unknown")}
+          </b>
+        </span>
+
+      </div>
+
+    </div>
+  `;
+}
+
+/* =========================================================
+   CURRENT
+========================================================= */
+
+function showCurrent(visitor) {
+  $("currentVisitor").innerHTML =
+    visitorCard(visitor);
+}
+
+/* =========================================================
+   TRACK
+========================================================= */
+
+async function trackVisitor() {
   try {
-
     const response =
-      await fetch(
-        "/api/track",
-        {
-          cache: "no-store",
-          headers: {
-            Accept:
-              "application/json"
-          }
-        }
-      );
+      await fetch("/api/track");
 
     const data =
       await response.json();
 
-    if (
-      !response.ok ||
-      !data.success
-    ) {
+    if (!data.success) {
       throw new Error(
-        data.error ||
-        "Request failed"
+        data.message || "Tracking failed"
       );
     }
 
-    const v =
-      data.visitor;
+    showCurrent(data.visitor);
 
-    const d =
-      data.device;
-
-    $("ip").textContent =
-      value(v.ip);
-
-    $("location").textContent =
-      [
-        v.city,
-        v.region
-      ]
-        .filter(Boolean)
-        .join(", ") ||
-      "Unavailable";
-
-    $("country").textContent =
-      [
-        v.countryCode
-          ? `${v.countryCode} ${countryFlag(v.countryCode)}`
-          : null,
-        v.country
-      ]
-        .filter(Boolean)
-        .join(" • ") ||
-      "Unavailable";
-
-    $("isp").textContent =
-      value(v.isp);
-
-    $("asn").textContent =
-      value(v.asn);
-
-    $("timezone").textContent =
-      value(v.timezone);
-
-    $("postal").textContent =
-      value(v.postal);
-
-    $("device").textContent =
-      [
-        d.vendor,
-        d.model
-      ]
-        .filter(Boolean)
-        .join(" ") ||
-      value(d.type);
-
-    $("os").textContent =
-      value(d.os);
-
-    $("browser").textContent =
-      value(d.browser);
-
-    $("techDevice").textContent =
-      [
-        d.vendor,
-        d.model
-      ]
-        .filter(Boolean)
-        .join(" ") ||
-      value(d.type);
-
-    $("techOS").textContent =
-      value(d.os);
-
-    $("techBrowser").textContent =
-      value(d.browser);
-
-    $("engine").textContent =
-      value(d.engine);
-
-    $("region").textContent =
-      value(v.region);
-
-    $("coordinates").textContent =
-      v.latitude !== null &&
-      v.longitude !== null
-        ? `${v.latitude}, ${v.longitude}`
-        : "Unavailable";
-
-    updateMap(
-      v.latitude,
-      v.longitude,
-      {
-        ...v,
-        flag:
-          countryFlag(
-            v.countryCode
-          )
-      }
+    addVisitorToList(
+      data.visitor,
+      true
     );
 
-    $("status").textContent =
-      "✓ Visitor information loaded";
-
-    $("status").style.color =
-      "#91f0c4";
+    addMarker(data.visitor);
 
   } catch (error) {
-
     console.error(error);
 
-    $("status").textContent =
-      "Unable to load visitor information";
-
-    $("status").style.color =
-      "#ff9b9b";
+    $("currentVisitor").innerHTML = `
+      <div class="empty">
+        Unable to receive visitor signal.
+      </div>
+    `;
   }
 }
 
 /* =========================================================
-   FLAG
+   HISTORY
 ========================================================= */
 
-function countryFlag(code) {
-
-  if (
-    !code ||
-    code.length !== 2
-  ) {
-    return "🌐";
-  }
-
-  return code
-    .toUpperCase()
-    .split("")
-    .map(c =>
-      String.fromCodePoint(
-        127397 +
-        c.charCodeAt(0)
-      )
-    )
-    .join("");
-}
-
-/* =========================================================
-   STATS
-========================================================= */
-
-async function loadStats() {
-
+async function loadHistory() {
   try {
-
     const response =
       await fetch(
-        "/api/stats",
-        {
-          cache: "no-store"
-        }
+        "/api/history?limit=30"
       );
 
     const data =
@@ -284,35 +218,36 @@ async function loadStats() {
       return;
     }
 
-    $("total").textContent =
-      data.total;
+    $("visitorList").innerHTML = "";
 
-    $("countries").textContent =
-      data.countries;
+    clearMarkers();
 
-    $("mobile").textContent =
-      data.mobile;
+    for (const visitor of data.data) {
+      addVisitorToList(
+        visitor,
+        false
+      );
 
-    $("desktop").textContent =
-      data.desktop;
+      addMarker(visitor);
+    }
 
-    $("liveCount").textContent =
-      `${data.live} LIVE`;
+    if (!data.data.length) {
+      $("visitorList").innerHTML = `
+        <div class="empty">
+          No visitor records yet.
+        </div>
+      `;
+    }
 
   } catch (error) {
-    console.error(
-      "Stats error:",
-      error
-    );
+    console.error(error);
   }
 }
 
-/* =========================================================
-   VISITOR LIST
-========================================================= */
-
-function addVisitor(visitor) {
-
+function addVisitorToList(
+  visitor,
+  prepend = true
+) {
   const list =
     $("visitorList");
 
@@ -323,96 +258,36 @@ function addVisitor(visitor) {
     empty.remove();
   }
 
-  const item =
+  const wrapper =
     document.createElement("div");
 
-  item.className =
-    "visitor";
+  wrapper.innerHTML =
+    visitorCard(visitor);
 
-  const device =
-    visitor.device || {};
+  const element =
+    wrapper.firstElementChild;
 
-  const deviceName =
-    [
-      device.vendor,
-      device.model
-    ]
-      .filter(Boolean)
-      .join(" ") ||
-    value(
-      device.type,
-      "Unknown device"
-    );
-
-  const location =
-    [
-      visitor.city,
-      visitor.country
-    ]
-      .filter(Boolean)
-      .join(", ") ||
-    "Unknown location";
-
-  item.innerHTML = `
-    <div class="visitor-flag">
-      ${value(visitor.flag, "🌐")}
-    </div>
-
-    <div class="visitor-main">
-
-      <strong>
-        ${escapeHTML(location)}
-      </strong>
-
-      <span>
-        ${escapeHTML(deviceName)}
-        •
-        ${escapeHTML(
-          value(
-            device.browser,
-            "Unknown browser"
-          )
-        )}
-        •
-        ${escapeHTML(
-          value(
-            visitor.isp,
-            "Unknown ISP"
-          )
-        )}
-      </span>
-
-    </div>
-
-    <div class="visitor-time">
-      JUST NOW
-    </div>
-  `;
-
-  list.prepend(item);
+  if (prepend) {
+    list.prepend(element);
+  } else {
+    list.appendChild(element);
+  }
 
   while (
-    list.children.length > 20
+    list.children.length > 30
   ) {
     list.lastElementChild.remove();
   }
 }
 
 /* =========================================================
-   HISTORY
+   STATS
 ========================================================= */
 
-async function loadHistory() {
-
+async function loadStats() {
   try {
-
     const response =
-      await fetch(
-        "/api/history",
-        {
-          cache: "no-store"
-        }
-      );
+      await fetch("/api/stats");
 
     const data =
       await response.json();
@@ -421,113 +296,421 @@ async function loadHistory() {
       return;
     }
 
-    $("total").textContent =
-      data.total;
+    $("totalVisitors").textContent =
+      data.totalVisitors;
 
-    $("countries").textContent =
-      Object.keys(
-        data.countries || {}
-      ).length;
+    $("todayVisitors").textContent =
+      data.todayVisitors;
 
-    $("mobile").textContent =
-      data.devices?.mobile || 0;
+    $("countryCount").textContent =
+      data.countries.length;
 
-    $("desktop").textContent =
-      data.devices?.desktop || 0;
+    renderRank(
+      "countriesList",
+      data.countries
+    );
 
-    const list =
-      $("visitorList");
+    renderRank(
+      "devicesList",
+      data.devices
+    );
 
-    list.innerHTML = "";
-
-    if (
-      !data.visitors ||
-      !data.visitors.length
-    ) {
-
-      list.innerHTML = `
-        <div class="empty">
-          Waiting for visitors...
-        </div>
-      `;
-
-      return;
-    }
-
-    data.visitors
-      .slice(0, 20)
-      .forEach(addVisitor);
+    renderRank(
+      "ispList",
+      data.isps
+    );
 
   } catch (error) {
-
-    console.error(
-      "History error:",
-      error
-    );
+    console.error(error);
   }
 }
 
-/* =========================================================
-   LIVE CONNECTION
-========================================================= */
+function renderRank(
+  id,
+  items
+) {
+  const element =
+    $(id);
 
-function connectLive() {
+  if (!items?.length) {
+    element.innerHTML =
+      `<div class="empty">No data</div>`;
 
-  if (!window.EventSource) {
     return;
   }
 
-  const source =
-    new EventSource(
-      "/api/live"
-    );
+  element.innerHTML =
+    items
+      .slice(0, 8)
+      .map(item => `
+        <div class="rank-row">
+          <span>
+            ${escapeHTML(item.name)}
+          </span>
 
-  source.addEventListener(
+          <b>
+            ${item.count}
+          </b>
+        </div>
+      `)
+      .join("");
+}
+
+/* =========================================================
+   SSE LIVE
+========================================================= */
+
+function connectLive() {
+  if (eventSource) {
+    eventSource.close();
+  }
+
+  eventSource =
+    new EventSource("/api/live");
+
+  eventSource.addEventListener(
+    "connected",
+    () => {
+      $("streamText").textContent =
+        "CONNECTED";
+
+      $("liveCount").textContent =
+        "LIVE";
+    }
+  );
+
+  eventSource.addEventListener(
     "visitor",
     event => {
-
       try {
-
         const visitor =
-          JSON.parse(
-            event.data
-          );
+          JSON.parse(event.data);
 
-        addVisitor(visitor);
+        addVisitorToList(
+          visitor,
+          true
+        );
+
+        addMarker(visitor);
+
+        if (liveToken) {
+          addLiveVisitor(
+            visitor
+          );
+        }
+
+        showCurrent(visitor);
 
         loadStats();
 
       } catch (error) {
-
-        console.error(
-          "Live visitor error:",
-          error
-        );
+        console.error(error);
       }
-
     }
   );
 
-  source.onerror = () => {
-
-    /*
-     * Browser EventSource automatically
-     * reconnects.
-     */
+  eventSource.onerror = () => {
+    $("streamText").textContent =
+      "RECONNECTING";
 
     $("liveCount").textContent =
-      "RECONNECTING";
+      "—";
   };
-
 }
 
 /* =========================================================
-   ESCAPE
+   PASSWORD MODAL
 ========================================================= */
 
-function escapeHTML(value) {
+function openPasswordModal() {
+  $("passwordModal")
+    .classList.remove("hidden");
 
-  return String(value)
+  $("livePassword").value = "";
+
+  $("passwordError").textContent = "";
+
+  setTimeout(() => {
+    $("livePassword").focus();
+  }, 100);
+}
+
+function closePasswordModal() {
+  $("passwordModal")
+    .classList.add("hidden");
+}
+
+async function unlockLive() {
+  const password =
+    $("livePassword").value;
+
+  if (!password) {
+    $("passwordError").textContent =
+      "Enter access password.";
+
+    return;
+  }
+
+  $("unlockButton").disabled =
+    true;
+
+  $("unlockButton").textContent =
+    "AUTHENTICATING...";
+
+  try {
+    const response =
+      await fetch(
+        "/api/live/auth",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+          body: JSON.stringify({
+            password
+          })
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message ||
+        "Access denied"
+      );
+    }
+
+    liveToken =
+      data.token;
+
+    closePasswordModal();
+
+    openLivePanel();
+
+    await loadProtectedLive();
+
+  } catch (error) {
+
+    $("passwordError").textContent =
+      "ACCESS DENIED";
+
+  } finally {
+
+    $("unlockButton").disabled =
+      false;
+
+    $("unlockButton").textContent =
+      "UNLOCK LIVE";
+  }
+}
+
+/* =========================================================
+   LIVE PANEL
+========================================================= */
+
+function openLivePanel() {
+  $("livePanel")
+    .classList.remove("hidden");
+}
+
+function closeLivePanel() {
+  $("livePanel")
+    .classList.add("hidden");
+}
+
+async function loadProtectedLive() {
+  if (!liveToken) {
+    return;
+  }
+
+  try {
+    const response =
+      await fetch(
+        "/api/live/history",
+        {
+          headers: {
+            Authorization:
+              `Bearer ${liveToken}`
+          }
+        }
+      );
+
+    if (response.status === 401) {
+      liveToken = null;
+
+      closeLivePanel();
+
+      showToast(
+        "Live session expired."
+      );
+
+      return;
+    }
+
+    const data =
+      await response.json();
+
+    if (!data.success) {
+      return;
+    }
+
+    $("liveVisitors").innerHTML =
+      "";
+
+    for (const visitor of data.data) {
+      addLiveVisitor(
+        visitor
+      );
+    }
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function addLiveVisitor(
+  visitor
+) {
+  const container =
+    $("liveVisitors");
+
+  if (!container) {
+    return;
+  }
+
+  const existing =
+    container.querySelector(
+      `[data-visitor-id="${visitor.visitorId}"]`
+    );
+
+  if (existing) {
+    return;
+  }
+
+  const item =
+    document.createElement("div");
+
+  item.className =
+    "live-item";
+
+  item.dataset.visitorId =
+    visitor.visitorId;
+
+  item.innerHTML = `
+
+    <div class="live-item-head">
+
+      <div>
+
+        <h3>
+          ${escapeHTML(
+            visitor.country ||
+            "Unknown"
+          )}
+        </h3>
+
+        <small>
+          ${escapeHTML(
+            visitor.city ||
+            "Unknown"
+          )}
+        </small>
+
+      </div>
+
+      <div class="flag">
+        ${escapeHTML(
+          visitor.flag || "🌐"
+        )}
+      </div>
+
+    </div>
+
+    <div class="ip">
+      ${escapeHTML(
+        visitor.ip || "Hidden"
+      )}
+    </div>
+
+    <div class="details">
+
+      📱 ${escapeHTML(
+        visitor.device?.type ||
+        "Unknown"
+      )}
+
+      ·
+
+      💻 ${escapeHTML(
+        visitor.device?.os ||
+        "Unknown"
+      )}
+
+      <br>
+
+      🌐 ${escapeHTML(
+        visitor.device?.browser ||
+        "Unknown"
+      )}
+
+      <br>
+
+      🏢 ${escapeHTML(
+        visitor.isp ||
+        "Unknown"
+      )}
+
+      <br>
+
+      🔢 ${escapeHTML(
+        visitor.asn ||
+        "Unknown"
+      )}
+
+      <br>
+
+      🕐 ${formatTime(
+        new Date(visitor.createdAt)
+      )}
+
+    </div>
+  `;
+
+  container.prepend(item);
+
+  while (
+    container.children.length > 100
+  ) {
+    container.lastElementChild.remove();
+  }
+}
+
+/* =========================================================
+   UTILS
+========================================================= */
+
+function formatTime(date) {
+  if (
+    !date ||
+    Number.isNaN(date.getTime())
+  ) {
+    return "Unknown";
+  }
+
+  return date.toLocaleString(
+    undefined,
+    {
+      dateStyle: "short",
+      timeStyle: "medium"
+    }
+  );
+}
+
+function escapeHTML(value) {
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -535,13 +718,63 @@ function escapeHTML(value) {
     .replaceAll("'", "&#039;");
 }
 
+function showToast(message) {
+  const toast =
+    $("toast");
+
+  toast.textContent =
+    message;
+
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 3000);
+}
+
+/* =========================================================
+   EVENTS
+========================================================= */
+
+$("liveButton")
+  .addEventListener(
+    "click",
+    openPasswordModal
+  );
+
+$("closeModal")
+  .addEventListener(
+    "click",
+    closePasswordModal
+  );
+
+$("unlockButton")
+  .addEventListener(
+    "click",
+    unlockLive
+  );
+
+$("closeLive")
+  .addEventListener(
+    "click",
+    closeLivePanel
+  );
+
+$("livePassword")
+  .addEventListener(
+    "keydown",
+    event => {
+      if (event.key === "Enter") {
+        unlockLive();
+      }
+    }
+  );
+
 /* =========================================================
    START
 ========================================================= */
 
 initMap();
-
-loadVisitor();
 
 loadHistory();
 
@@ -549,7 +782,23 @@ loadStats();
 
 connectLive();
 
+/*
+  Browser itself is the visitor.
+  This is the ONLY place where /api/track
+  is called from the dashboard.
+*/
+trackVisitor();
+
 setInterval(
   loadStats,
-  10000
+  30000
+);
+
+setInterval(
+  () => {
+    if (liveToken) {
+      loadProtectedLive();
+    }
+  },
+  30000
 );

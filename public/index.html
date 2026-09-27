@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
   <meta charset="UTF-8">
 
   <meta
     name="viewport"
-    content="width=device-width,initial-scale=1"
+    content="width=device-width, initial-scale=1.0"
   >
 
   <meta
@@ -15,7 +13,7 @@
     content="Rakib IP Intelligence Dashboard"
   >
 
-  <title>Rakib IP Intelligence</title>
+  <title>RAKIB // IP INTELLIGENCE</title>
 
   <link
     rel="stylesheet"
@@ -26,98 +24,135 @@
     rel="stylesheet"
     href="/style.css"
   >
-
 </head>
 
 <body>
 
-<div class="background"></div>
+<div class="scanlines"></div>
+
+<div id="toast"></div>
+
+<header class="topbar">
+
+  <div class="brand">
+
+    <div class="brand-icon">
+      R
+    </div>
+
+    <div>
+      <div class="brand-title">
+        RAKIB
+      </div>
+
+      <div class="brand-sub">
+        IP INTELLIGENCE // v3.0
+      </div>
+    </div>
+
+  </div>
+
+  <div class="status">
+
+    <span class="status-dot"></span>
+
+    <span id="systemStatus">
+      SYSTEM ONLINE
+    </span>
+
+  </div>
+
+</header>
+
 
 <main class="container">
 
-  <header class="topbar">
+  <!-- HERO -->
 
-    <div class="brand">
+  <section class="hero">
 
-      <div class="brand-logo">
+    <div>
+
+      <div class="eyebrow">
+        NETWORK OBSERVATION SYSTEM
+      </div>
+
+      <h1>
+        DIGITAL
+        <span>FOOTPRINT</span>
+      </h1>
+
+      <p>
+        Privacy-safe approximate IP intelligence,
+        device analytics and persistent visitor history.
+      </p>
+
+    </div>
+
+    <div class="hero-code">
+      <div>NODE://RAKIB</div>
+      <div>DB://MONGODB</div>
+      <div>LIVE://LOCKED</div>
+    </div>
+
+  </section>
+
+
+  <!-- STATS -->
+
+  <section class="stats-grid">
+
+    <div class="stat-card">
+
+      <div class="stat-icon">
         ◉
       </div>
 
       <div>
-
-        <div class="brand-mini">
-          RAKIB SYSTEM
-        </div>
-
-        <h1>
-          IP <span>Intelligence</span>
-        </h1>
-
+        <span>TOTAL VISITORS</span>
+        <strong id="totalVisitors">0</strong>
       </div>
 
     </div>
 
-    <div class="live-badge">
-
-      <i></i>
-
-      LIVE
-
-    </div>
-
-  </header>
-
-
-  <div
-    id="status"
-    class="status"
-  >
-    Connecting to visitor intelligence...
-  </div>
-
-
-  <section class="stats">
 
     <div class="stat-card">
 
-      <span>👥</span>
+      <div class="stat-icon">
+        ◈
+      </div>
 
       <div>
-        <small>VISITORS</small>
-        <strong id="total">0</strong>
+        <span>TODAY</span>
+        <strong id="todayVisitors">0</strong>
       </div>
 
     </div>
 
+
     <div class="stat-card">
 
-      <span>🌍</span>
+      <div class="stat-icon">
+        ◇
+      </div>
 
       <div>
-        <small>COUNTRIES</small>
-        <strong id="countries">0</strong>
+        <span>COUNTRIES</span>
+        <strong id="countryCount">0</strong>
       </div>
 
     </div>
 
+
     <div class="stat-card">
 
-      <span>📱</span>
-
-      <div>
-        <small>MOBILE</small>
-        <strong id="mobile">0</strong>
+      <div class="stat-icon">
+        ⬡
       </div>
 
-    </div>
-
-    <div class="stat-card">
-
-      <span>💻</span>
-
       <div>
-        <small>DESKTOP</small>
-        <strong id="desktop">0</strong>
+        <span>LIVE CHANNEL</span>
+        <strong id="liveCount">0</strong>
       </div>
 
     </div>
@@ -125,142 +160,91 @@
   </section>
 
 
-  <section class="main-grid">
+  <!-- LIVE ACTION -->
+
+  <section class="control-panel">
+
+    <div class="control-left">
+
+      <div class="control-badge">
+        LIVE
+      </div>
+
+      <div>
+
+        <h2>
+          Live Visitor Stream
+        </h2>
+
+        <p>
+          Real-time visitor events require
+          authorized access.
+        </p>
+
+      </div>
+
+    </div>
+
+    <button
+      id="liveButton"
+      class="live-button"
+    >
+      <span>🔐</span>
+      OPEN LIVE ACTION
+    </button>
+
+  </section>
+
+
+  <!-- DASHBOARD -->
+
+  <section class="dashboard-grid">
 
     <div class="panel map-panel">
 
-      <div class="panel-head">
+      <div class="panel-header">
 
         <div>
+          <span class="panel-label">
+            GEO INTELLIGENCE
+          </span>
 
-          <small>APPROXIMATE NETWORK LOCATION</small>
-
-          <h2>🌍 Visitor Map</h2>
-
+          <h2>
+            Visitor Map
+          </h2>
         </div>
 
-        <span class="tag">
-          IP GEO
+        <span class="live-chip">
+          ● MAP
         </span>
 
       </div>
 
       <div id="map"></div>
 
-      <div
-        id="map-note"
-        class="map-note"
-      >
-        Location is approximate IP geolocation.
-      </div>
-
     </div>
 
 
     <div class="panel current-panel">
 
-      <div class="panel-head">
+      <div class="panel-header">
 
         <div>
+          <span class="panel-label">
+            LAST SIGNAL
+          </span>
 
-          <small>CURRENT VISITOR</small>
-
-          <h2>Visitor Profile</h2>
-
-        </div>
-
-        <span class="tag green">
-          ACTIVE
-        </span>
-
-      </div>
-
-
-      <div class="profile-ip">
-
-        <span>🌐</span>
-
-        <div>
-
-          <small>PUBLIC IP</small>
-
-          <strong id="ip">—</strong>
-
+          <h2>
+            Current Visitor
+          </h2>
         </div>
 
       </div>
 
+      <div id="currentVisitor">
 
-      <div class="info-grid">
-
-        <div>
-          <small>LOCATION</small>
-          <b id="location">—</b>
-        </div>
-
-        <div>
-          <small>COUNTRY</small>
-          <b id="country">—</b>
-        </div>
-
-        <div>
-          <small>ISP</small>
-          <b id="isp">—</b>
-        </div>
-
-        <div>
-          <small>ASN</small>
-          <b id="asn">—</b>
-        </div>
-
-        <div>
-          <small>TIMEZONE</small>
-          <b id="timezone">—</b>
-        </div>
-
-        <div>
-          <small>POSTAL</small>
-          <b id="postal">—</b>
-        </div>
-
-      </div>
-
-
-      <div class="device-box">
-
-        <div class="device-icon">
-          📱
-        </div>
-
-        <div>
-
-          <small>DEVICE</small>
-
-          <strong id="device">
-            —
-          </strong>
-
-          <p id="os">
-            —
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <div class="browser-box">
-
-        <span>🌐</span>
-
-        <div>
-
-          <small>BROWSER</small>
-
-          <b id="browser">
-            —
-          </b>
-
+        <div class="empty">
+          Waiting for signal...
         </div>
 
       </div>
@@ -270,102 +254,271 @@
   </section>
 
 
+  <!-- LIVE VISITORS -->
+
   <section class="panel">
 
-    <div class="panel-head">
+    <div class="panel-header">
 
       <div>
 
-        <small>REAL-TIME ACTIVITY</small>
+        <span class="panel-label">
+          EVENT STREAM
+        </span>
 
-        <h2>🔴 Live Visitors</h2>
+        <h2>
+          Recent Visitors
+        </h2>
 
       </div>
 
-      <span
-        class="tag"
-        id="liveCount"
-      >
-        0 LIVE
-      </span>
+      <div class="stream-status">
+        <span></span>
+        <label id="streamText">
+          CONNECTING
+        </label>
+      </div>
 
     </div>
-
 
     <div
       id="visitorList"
       class="visitor-list"
     >
-
       <div class="empty">
-        Waiting for visitors...
+        No visitor records yet.
       </div>
+    </div>
+
+  </section>
+
+
+  <!-- ANALYTICS -->
+
+  <section class="analytics-grid">
+
+    <div class="panel">
+
+      <div class="panel-header">
+        <div>
+          <span class="panel-label">
+            ORIGIN
+          </span>
+
+          <h2>
+            Countries
+          </h2>
+        </div>
+      </div>
+
+      <div id="countriesList"></div>
+
+    </div>
+
+
+    <div class="panel">
+
+      <div class="panel-header">
+        <div>
+          <span class="panel-label">
+            HARDWARE
+          </span>
+
+          <h2>
+            Devices
+          </h2>
+        </div>
+      </div>
+
+      <div id="devicesList"></div>
+
+    </div>
+
+
+    <div class="panel">
+
+      <div class="panel-header">
+        <div>
+          <span class="panel-label">
+            NETWORK
+          </span>
+
+          <h2>
+            ISP Signals
+          </h2>
+        </div>
+      </div>
+
+      <div id="ispList"></div>
 
     </div>
 
   </section>
 
 
-  <section class="panel details-panel">
+  <!-- PRIVACY -->
 
-    <div class="panel-head">
+  <section class="privacy-box">
 
-      <div>
-
-        <small>NETWORK DETAILS</small>
-
-        <h2>Technical Information</h2>
-
-      </div>
-
+    <div class="privacy-icon">
+      🔒
     </div>
 
+    <div>
 
-    <div class="technical">
+      <strong>
+        PRIVACY MODE ACTIVE
+      </strong>
 
-      <div>
-        <span>Device</span>
-        <b id="techDevice">—</b>
-      </div>
-
-      <div>
-        <span>OS</span>
-        <b id="techOS">—</b>
-      </div>
-
-      <div>
-        <span>Browser</span>
-        <b id="techBrowser">—</b>
-      </div>
-
-      <div>
-        <span>Engine</span>
-        <b id="engine">—</b>
-      </div>
-
-      <div>
-        <span>Coordinates</span>
-        <b id="coordinates">—</b>
-      </div>
-
-      <div>
-        <span>Region</span>
-        <b id="region">—</b>
-      </div>
+      <p>
+        This system stores a hashed IP identifier
+        and displays only a masked IP. Location is
+        approximate IP-based geolocation. It does not
+        collect GPS coordinates or exact street address.
+      </p>
 
     </div>
 
   </section>
-
-
-  <footer>
-
-    IP location is approximate network geolocation.
-    No GPS or exact street address is collected.
-
-  </footer>
 
 </main>
+
+
+<!-- PASSWORD MODAL -->
+
+<div
+  id="passwordModal"
+  class="modal hidden"
+>
+
+  <div class="modal-box">
+
+    <button
+      id="closeModal"
+      class="modal-close"
+    >
+      ×
+    </button>
+
+    <div class="lock">
+      🔐
+    </div>
+
+    <div class="panel-label">
+      RESTRICTED CHANNEL
+    </div>
+
+    <h2>
+      Live Access
+    </h2>
+
+    <p>
+      Enter the administrator password
+      to unlock the live visitor action.
+    </p>
+
+    <input
+      id="livePassword"
+      type="password"
+      placeholder="ACCESS PASSWORD"
+      autocomplete="off"
+    >
+
+    <button
+      id="unlockButton"
+      class="unlock"
+    >
+      UNLOCK LIVE
+    </button>
+
+    <div
+      id="passwordError"
+      class="password-error"
+    ></div>
+
+  </div>
+
+</div>
+
+
+<!-- LIVE PANEL -->
+
+<div
+  id="livePanel"
+  class="live-overlay hidden"
+>
+
+  <div class="live-window">
+
+    <div class="live-window-head">
+
+      <div>
+
+        <div class="panel-label">
+          AUTHORIZED CHANNEL
+        </div>
+
+        <h2>
+          LIVE ACTION
+        </h2>
+
+      </div>
+
+      <button
+        id="closeLive"
+        class="modal-close"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <div class="live-console">
+
+      <div class="console-line">
+        <span>STATUS</span>
+        <strong>CONNECTED</strong>
+      </div>
+
+      <div class="console-line">
+        <span>DATABASE</span>
+        <strong>MONGODB ONLINE</strong>
+      </div>
+
+      <div class="console-line">
+        <span>STREAM</span>
+        <strong id="liveConsoleStatus">
+          LISTENING
+        </strong>
+      </div>
+
+    </div>
+
+    <div
+      id="liveVisitors"
+      class="live-visitors"
+    ></div>
+
+  </div>
+
+</div>
+
+
+<footer>
+
+  <span>
+    RAKIB IP INTELLIGENCE
+  </span>
+
+  <span>
+    •
+  </span>
+
+  <span>
+    PRIVACY-SAFE ANALYTICS
+  </span>
+
+</footer>
 
 
 <script
@@ -375,5 +528,4 @@
 <script src="/app.js"></script>
 
 </body>
-
 </html>
