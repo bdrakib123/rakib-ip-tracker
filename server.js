@@ -14,87 +14,119 @@ const DB_NAME = process.env.MONGODB_DB || "goatbot";
 const LIVE_PASSWORD = process.env.LIVE_PASSWORD || "rakib69";
 
 if (!MONGODB_URI) {
-  console.error("❌ MONGODB_URI is missing");
+  console.error("❌ MONGODB_URI missing");
   process.exit(1);
 }
 
 app.set("trust proxy", true);
 
 app.use(express.json({ limit: "100kb" }));
-app.use(express.static(path.join(__dirname, "public")));
+
+app.use(express.static(
+  path.join(__dirname, "public")
+));
 
 let mongoClient;
 let db;
 let visitorsCollection;
 
-const sseClients = new Set();
+const liveClients = new Set();
 const rateMap = new Map();
+const liveSessions = new Map();
 
-const MAX_TRACK_PER_MINUTE = 20;
 const MAX_HISTORY = 10000;
+const TRACK_LIMIT = 20;
 
 /* =========================================================
    MONGODB
 ========================================================= */
 
 async function connectMongo() {
-  mongoClient = new MongoClient(MONGODB_URI, {
-    maxPoolSize: 10,
-    serverSelectionTimeoutMS: 10000
-  });
+
+  mongoClient = new MongoClient(
+    MONGODB_URI,
+    {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 10000
+    }
+  );
 
   await mongoClient.connect();
 
   db = mongoClient.db(DB_NAME);
-  visitorsCollection = db.collection("ip_visitors");
 
-  await visitorsCollection.createIndex({ createdAt: -1 });
-  await visitorsCollection.createIndex({ ipHash: 1 });
-  await visitorsCollection.createIndex({ countryCode: 1 });
-  await visitorsCollection.createIndex({ "device.type": 1 });
+  visitorsCollection =
+    db.collection("ip_visitors");
 
-  console.log(`☁️ MongoDB connected: ${DB_NAME}`);
+  await visitorsCollection.createIndex({
+    createdAt: -1
+  });
+
+  await visitorsCollection.createIndex({
+    ipHash: 1
+  });
+
+  await visitorsCollection.createIndex({
+    countryCode: 1
+  });
+
+  await visitorsCollection.createIndex({
+    "device.type": 1
+  });
+
+  console.log(
+    `☁️ MongoDB connected: ${DB_NAME}`
+  );
 }
 
+
 /* =========================================================
-   HELPERS
+   IP
 ========================================================= */
 
 function getClientIP(req) {
-  const cf = req.headers["cf-connecting-ip"];
+
+  const cf =
+    req.headers["cf-connecting-ip"];
 
   if (cf) {
     return String(cf).trim();
   }
 
-  const forwarded = req.headers["x-forwarded-for"];
+  const forwarded =
+    req.headers["x-forwarded-for"];
 
   if (forwarded) {
-    return String(forwarded).split(",")[0].trim();
+    return String(
+      forwarded
+    ).split(",")[0].trim();
   }
 
-  const realIP = req.headers["x-real-ip"];
+  const real =
+    req.headers["x-real-ip"];
 
-  if (realIP) {
-    return String(realIP).trim();
+  if (real) {
+    return String(real).trim();
   }
 
-  return (
+  return String(
     req.ip ||
     req.socket?.remoteAddress ||
     ""
   ).replace(/^::ffff:/, "");
 }
 
-function normalizeIP(ip) {
-  if (!ip) return "";
 
-  return String(ip)
+function normalizeIP(ip) {
+
+  return String(ip || "")
     .trim()
     .replace(/^::ffff:/, "");
 }
 
+
 function isPrivateIP(ip) {
+
   if (!ip) return true;
 
   if (
@@ -131,42 +163,84 @@ function isPrivateIP(ip) {
   return false;
 }
 
+
+/* =========================================================
+   PRIVACY
+========================================================= */
+
 function maskIP(ip) {
-  if (!ip) return "Unknown";
+
+  if (!ip) {
+    return "Unknown";
+  }
 
   if (ip.includes(".")) {
-    const p = ip.split(".");
 
-    if (p.length === 4) {
-      return `${p[0]}.${p[1]}.${p[2]}.xxx`;
+    const parts =
+      ip.split(".");
+
+    if (parts.length === 4) {
+      return (
+        `${parts[0]}.` +
+        `${parts[1]}.` +
+        `${parts[2]}.xxx`
+      );
     }
   }
 
   if (ip.includes(":")) {
-    return ip.split(":").slice(0, 3).join(":") + ":****";
+
+    return (
+      ip
+        .split(":")
+        .slice(0, 3)
+        .join(":") +
+      ":****"
+    );
   }
 
   return "Hidden";
 }
 
+
 function hashIP(ip) {
+
   return crypto
     .createHash("sha256")
-    .update(`${ip}:${process.env.MONGODB_DB || "goatbot"}`)
+    .update(
+      `${ip}:${DB_NAME}`
+    )
     .digest("hex");
 }
 
+
 function getFlag(code) {
-  if (!code || code.length !== 2) return "🌐";
+
+  if (
+    !code ||
+    code.length !== 2
+  ) {
+    return "🌐";
+  }
 
   return code
     .toUpperCase()
-    .replace(/./g, char =>
-      String.fromCodePoint(127397 + char.charCodeAt(0))
+    .replace(
+      /./g,
+      char =>
+        String.fromCodePoint(
+          127397 +
+          char.charCodeAt(0)
+        )
     );
 }
 
-function clean(value, fallback = "Unknown") {
+
+function clean(
+  value,
+  fallback = "Unavailable"
+) {
+
   if (
     value === undefined ||
     value === null ||
@@ -178,644 +252,1080 @@ function clean(value, fallback = "Unknown") {
   return String(value);
 }
 
+
 /* =========================================================
    RATE LIMIT
 ========================================================= */
 
 function rateLimited(ip) {
+
   const now = Date.now();
 
-  const old = rateMap.get(ip) || [];
+  const old =
+    rateMap.get(ip) || [];
 
-  const fresh = old.filter(
-    time => now - time < 60 * 1000
-  );
+  const fresh =
+    old.filter(
+      t => now - t < 60000
+    );
 
   fresh.push(now);
 
-  rateMap.set(ip, fresh);
+  rateMap.set(
+    ip,
+    fresh
+  );
 
-  return fresh.length > MAX_TRACK_PER_MINUTE;
+  return (
+    fresh.length >
+    TRACK_LIMIT
+  );
 }
 
+
 /* =========================================================
-   GEO LOOKUP
+   GEO
 ========================================================= */
 
 async function geoLookup(ip) {
-  if (!ip || isPrivateIP(ip)) {
+
+  if (
+    !ip ||
+    isPrivateIP(ip)
+  ) {
     return {
       success: false
     };
   }
 
   try {
-    const controller = new AbortController();
 
-    const timeout = setTimeout(
-      () => controller.abort(),
-      7000
-    );
+    const controller =
+      new AbortController();
 
-    const response = await fetch(
-      `https://ipwho.is/${encodeURIComponent(ip)}`,
-      {
-        signal: controller.signal,
-        headers: {
-          "User-Agent": "Rakib-IP-Tracker/3.0"
+    const timeout =
+      setTimeout(
+        () => controller.abort(),
+        7000
+      );
+
+    const response =
+      await fetch(
+        `https://ipwho.is/${encodeURIComponent(ip)}`,
+        {
+          signal:
+            controller.signal,
+
+          headers: {
+            "User-Agent":
+              "Rakib-IP-Tracker/3.0"
+          }
         }
-      }
-    );
+      );
 
     clearTimeout(timeout);
 
     if (!response.ok) {
-      return { success: false };
+      return {
+        success: false
+      };
     }
 
     return await response.json();
-  } catch (error) {
+
+  } catch {
+
     return {
-      success: false,
-      error: error.message
+      success: false
     };
   }
 }
+
 
 /* =========================================================
    CREATE VISITOR
 ========================================================= */
 
 async function createVisitor(req) {
-  const ip = normalizeIP(getClientIP(req));
+
+  const ip =
+    normalizeIP(
+      getClientIP(req)
+    );
 
   const userAgent =
-    req.headers["user-agent"] || "";
+    req.headers["user-agent"] ||
+    "";
 
-  const parser = new UAParser(userAgent);
-  const result = parser.getResult();
+  const parser =
+    new UAParser(userAgent);
 
-  const geo = await geoLookup(ip);
+  const parsed =
+    parser.getResult();
+
+  const geo =
+    await geoLookup(ip);
 
   const countryCode =
     geo?.country_code || "";
 
-  const visitor = {
-    visitorId: crypto.randomUUID(),
+  return {
 
-    ipHash: hashIP(ip),
+    visitorId:
+      crypto.randomUUID(),
 
     /*
-      Raw IP is intentionally NOT stored.
-      History only exposes masked IP.
+      Raw IP is NEVER stored.
     */
-    ipMasked: maskIP(ip),
 
-    country: clean(geo?.country),
-    countryCode: clean(countryCode),
-    flag: getFlag(countryCode),
+    ipHash:
+      hashIP(ip),
 
-    region: clean(geo?.region),
-    city: clean(geo?.city),
-    postal: clean(geo?.postal),
+    ipMasked:
+      maskIP(ip),
 
-    timezone: clean(
-      geo?.timezone?.id ||
-      geo?.timezone
-    ),
+    country:
+      clean(geo?.country),
 
-    isp: clean(geo?.connection?.isp),
-    organization: clean(
-      geo?.connection?.org
-    ),
+    countryCode:
+      clean(countryCode),
 
-    asn: clean(
-      geo?.connection?.asn
-    ),
+    flag:
+      getFlag(countryCode),
+
+    region:
+      clean(geo?.region),
+
+    city:
+      clean(geo?.city),
+
+    postal:
+      clean(geo?.postal),
+
+    timezone:
+      clean(
+        geo?.timezone?.id
+      ),
+
+    isp:
+      clean(
+        geo?.connection?.isp
+      ),
+
+    organization:
+      clean(
+        geo?.connection?.org
+      ),
+
+    asn:
+      clean(
+        geo?.connection?.asn
+      ),
 
     location: {
+
       latitude:
-        typeof geo?.latitude === "number"
+        typeof geo?.latitude ===
+        "number"
           ? geo.latitude
           : null,
 
       longitude:
-        typeof geo?.longitude === "number"
+        typeof geo?.longitude ===
+        "number"
           ? geo.longitude
           : null
     },
 
     device: {
-      type: clean(result.device?.type, "desktop"),
-      vendor: clean(result.device?.vendor),
-      model: clean(result.device?.model),
-      os: clean(
-        result.os?.name
-          ? `${result.os.name} ${result.os.version || ""}`.trim()
-          : "Unknown"
-      ),
-      browser: clean(
-        result.browser?.name
-          ? `${result.browser.name} ${result.browser.version || ""}`.trim()
-          : "Unknown"
-      ),
-      engine: clean(
-        result.engine?.name
-          ? `${result.engine.name} ${result.engine.version || ""}`.trim()
-          : "Unknown"
-      )
+
+      type:
+        clean(
+          parsed.device?.type,
+          "desktop"
+        ),
+
+      vendor:
+        clean(
+          parsed.device?.vendor
+        ),
+
+      model:
+        clean(
+          parsed.device?.model
+        ),
+
+      os:
+        parsed.os?.name
+          ? `${parsed.os.name} ${parsed.os.version || ""}`.trim()
+          : "Unavailable",
+
+      browser:
+        parsed.browser?.name
+          ? `${parsed.browser.name} ${parsed.browser.version || ""}`.trim()
+          : "Unavailable",
+
+      engine:
+        parsed.engine?.name
+          ? `${parsed.engine.name} ${parsed.engine.version || ""}`.trim()
+          : "Unavailable"
     },
 
-    userAgent: userAgent.slice(0, 1000),
+    userAgent:
+      userAgent.slice(0, 1000),
 
-    createdAt: new Date()
+    createdAt:
+      new Date()
   };
-
-  return visitor;
 }
 
+
 /* =========================================================
-   SAFE RESPONSE
+   SAFE VISITOR
 ========================================================= */
 
-function safeVisitor(v) {
+function safeVisitor(visitor) {
+
   return {
-    visitorId: v.visitorId,
 
-    ip: v.ipMasked,
+    visitorId:
+      visitor.visitorId,
 
-    country: v.country,
-    countryCode: v.countryCode,
-    flag: v.flag,
+    ip:
+      visitor.ipMasked,
 
-    region: v.region,
-    city: v.city,
-    postal: v.postal,
+    country:
+      visitor.country,
 
-    timezone: v.timezone,
+    countryCode:
+      visitor.countryCode,
 
-    isp: v.isp,
-    organization: v.organization,
-    asn: v.asn,
+    flag:
+      visitor.flag,
+
+    region:
+      visitor.region,
+
+    city:
+      visitor.city,
+
+    postal:
+      visitor.postal,
+
+    timezone:
+      visitor.timezone,
+
+    isp:
+      visitor.isp,
+
+    organization:
+      visitor.organization,
+
+    asn:
+      visitor.asn,
 
     location: {
-      latitude: v.location?.latitude ?? null,
-      longitude: v.location?.longitude ?? null
+
+      latitude:
+        visitor.location?.latitude ??
+        null,
+
+      longitude:
+        visitor.location?.longitude ??
+        null
     },
 
-    device: v.device,
+    device:
+      visitor.device,
 
-    userAgent: v.userAgent,
+    userAgent:
+      visitor.userAgent,
 
-    createdAt: v.createdAt
+    createdAt:
+      visitor.createdAt
   };
 }
 
-/* =========================================================
-   SSE
-========================================================= */
-
-function broadcast(type, data) {
-  const payload =
-    `event: ${type}\n` +
-    `data: ${JSON.stringify(data)}\n\n`;
-
-  for (const client of sseClients) {
-    try {
-      client.write(payload);
-    } catch {
-      sseClients.delete(client);
-    }
-  }
-}
 
 /* =========================================================
    TRACK
 ========================================================= */
 
-app.get("/api/track", async (req, res) => {
-  try {
-    const ip = normalizeIP(getClientIP(req));
+app.get(
+  "/api/track",
+  async (req, res) => {
 
-    if (rateLimited(ip)) {
-      return res.status(429).json({
-        success: false,
-        message: "Too many requests. Try again later."
+    try {
+
+      const ip =
+        normalizeIP(
+          getClientIP(req)
+        );
+
+      if (rateLimited(ip)) {
+
+        return res
+          .status(429)
+          .json({
+            success: false,
+            message:
+              "Too many requests."
+          });
+      }
+
+      const visitor =
+        await createVisitor(req);
+
+      await visitorsCollection
+        .insertOne(visitor);
+
+      /*
+        Keep database bounded.
+      */
+
+      const total =
+        await visitorsCollection
+          .countDocuments();
+
+      if (
+        total >
+        MAX_HISTORY
+      ) {
+
+        const removeCount =
+          total -
+          MAX_HISTORY;
+
+        const old =
+          await visitorsCollection
+            .find(
+              {},
+              {
+                projection: {
+                  _id: 1
+                }
+              }
+            )
+            .sort({
+              createdAt: 1
+            })
+            .limit(removeCount)
+            .toArray();
+
+        if (old.length) {
+
+          await visitorsCollection
+            .deleteMany({
+              _id: {
+                $in:
+                  old.map(
+                    x => x._id
+                  )
+              }
+            });
+        }
+      }
+
+      /*
+        IMPORTANT:
+
+        /api/track returns ONLY
+        this visitor's own record.
+
+        No history here.
+      */
+
+      res.json({
+
+        success: true,
+
+        privacy: {
+
+          exactGps: false,
+
+          exactAddress: false,
+
+          rawIPStored: false,
+
+          historyProtected: true,
+
+          note:
+            "Approximate IP-based location only."
+        },
+
+        visitor:
+          safeVisitor(visitor)
       });
+
+    } catch (error) {
+
+      console.error(
+        "TRACK ERROR:",
+        error
+      );
+
+      res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Unable to process visitor."
+        });
+    }
+  }
+);
+
+
+/* =========================================================
+   LIVE AUTH
+========================================================= */
+
+app.post(
+  "/api/live/auth",
+  async (req, res) => {
+
+    const password =
+      typeof req.body?.password ===
+      "string"
+        ? req.body.password
+        : "";
+
+    if (
+      !password ||
+      password !== LIVE_PASSWORD
+    ) {
+
+      return res
+        .status(401)
+        .json({
+          success: false,
+          message:
+            "Invalid password."
+        });
     }
 
-    const visitor = await createVisitor(req);
+    const token =
+      crypto.randomBytes(32)
+        .toString("hex");
 
-    await visitorsCollection.insertOne(visitor);
+    liveSessions.set(
+      token,
+      {
+        createdAt: Date.now(),
+        expiresAt:
+          Date.now() +
+          30 * 60 * 1000
+      }
+    );
 
     /*
-      Prevent unlimited database growth.
-      Keep newest MAX_HISTORY records.
+      HttpOnly cookie means
+      frontend JavaScript doesn't
+      need to expose the token.
     */
-    const total =
-      await visitorsCollection.countDocuments();
 
-    if (total > MAX_HISTORY) {
-      const removeCount =
-        total - MAX_HISTORY;
+    res.cookie = undefined;
 
-      const oldVisitors =
-        await visitorsCollection
-          .find(
-            {},
-            {
-              projection: {
-                _id: 1
-              }
-            }
-          )
-          .sort({ createdAt: 1 })
-          .limit(removeCount)
-          .toArray();
+    res.setHeader(
+      "Set-Cookie",
+      [
+        `live_token=${token}; HttpOnly; Path=/; SameSite=Strict; Max-Age=1800`
+      ]
+    );
 
-      if (oldVisitors.length) {
-        await visitorsCollection.deleteMany({
-          _id: {
-            $in: oldVisitors.map(v => v._id)
-          }
-        });
-      }
+    res.json({
+      success: true,
+      expiresIn: 1800
+    });
+  }
+);
+
+
+/* =========================================================
+   LIVE AUTH CHECK
+========================================================= */
+
+function getCookie(req, name) {
+
+  const header =
+    req.headers.cookie;
+
+  if (!header) {
+    return null;
+  }
+
+  const cookies =
+    header.split(";");
+
+  for (
+    const cookie of cookies
+  ) {
+
+    const index =
+      cookie.indexOf("=");
+
+    if (index === -1) {
+      continue;
     }
 
-    const safe = safeVisitor(visitor);
+    const key =
+      cookie
+        .slice(0, index)
+        .trim();
 
-    broadcast("visitor", safe);
+    const value =
+      cookie
+        .slice(index + 1)
+        .trim();
 
-    res.json({
-      success: true,
-      privacy: {
-        exactGps: false,
-        exactAddress: false,
-        rawIPStored: false,
-        note:
-          "Approximate IP-based location only."
-      },
-      visitor: safe
-    });
-  } catch (error) {
-    console.error("TRACK ERROR:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Unable to track visitor."
-    });
-  }
-});
-
-/* =========================================================
-   HISTORY
-========================================================= */
-
-app.get("/api/history", async (req, res) => {
-  try {
-    const limit = Math.min(
-      Number(req.query.limit) || 30,
-      100
-    );
-
-    const data =
-      await visitorsCollection
-        .find({})
-        .sort({ createdAt: -1 })
-        .limit(limit)
-        .toArray();
-
-    res.json({
-      success: true,
-      total: data.length,
-      data: data.map(safeVisitor)
-    });
-  } catch (error) {
-    console.error("HISTORY ERROR:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Unable to load history."
-    });
-  }
-});
-
-/* =========================================================
-   STATS
-========================================================= */
-
-app.get("/api/stats", async (req, res) => {
-  try {
-    const total =
-      await visitorsCollection.countDocuments();
-
-    const countries =
-      await visitorsCollection
-        .aggregate([
-          {
-            $group: {
-              _id: "$country",
-              count: { $sum: 1 }
-            }
-          },
-          {
-            $sort: {
-              count: -1
-            }
-          },
-          {
-            $limit: 10
-          }
-        ])
-        .toArray();
-
-    const devices =
-      await visitorsCollection
-        .aggregate([
-          {
-            $group: {
-              _id: "$device.type",
-              count: { $sum: 1 }
-            }
-          },
-          {
-            $sort: {
-              count: -1
-            }
-          }
-        ])
-        .toArray();
-
-    const browsers =
-      await visitorsCollection
-        .aggregate([
-          {
-            $group: {
-              _id: "$device.browser",
-              count: { $sum: 1 }
-            }
-          },
-          {
-            $sort: {
-              count: -1
-            }
-          },
-          {
-            $limit: 10
-          }
-        ])
-        .toArray();
-
-    const isps =
-      await visitorsCollection
-        .aggregate([
-          {
-            $group: {
-              _id: "$isp",
-              count: { $sum: 1 }
-            }
-          },
-          {
-            $sort: {
-              count: -1
-            }
-          },
-          {
-            $limit: 10
-          }
-        ])
-        .toArray();
-
-    const todayStart = new Date();
-
-    todayStart.setHours(0, 0, 0, 0);
-
-    const today =
-      await visitorsCollection.countDocuments({
-        createdAt: {
-          $gte: todayStart
-        }
-      });
-
-    res.json({
-      success: true,
-
-      totalVisitors: total,
-
-      todayVisitors: today,
-
-      countries: countries.map(x => ({
-        name: x._id || "Unknown",
-        count: x.count
-      })),
-
-      devices: devices.map(x => ({
-        name: x._id || "Unknown",
-        count: x.count
-      })),
-
-      browsers: browsers.map(x => ({
-        name: x._id || "Unknown",
-        count: x.count
-      })),
-
-      isps: isps.map(x => ({
-        name: x._id || "Unknown",
-        count: x.count
-      }))
-    });
-  } catch (error) {
-    console.error("STATS ERROR:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Unable to load statistics."
-    });
-  }
-});
-
-/* =========================================================
-   LIVE STREAM
-========================================================= */
-
-app.get("/api/live", (req, res) => {
-  res.setHeader(
-    "Content-Type",
-    "text/event-stream"
-  );
-
-  res.setHeader(
-    "Cache-Control",
-    "no-cache"
-  );
-
-  res.setHeader(
-    "Connection",
-    "keep-alive"
-  );
-
-  res.setHeader(
-    "X-Accel-Buffering",
-    "no"
-  );
-
-  res.flushHeaders();
-
-  res.write(
-    `event: connected\ndata: ${JSON.stringify({
-      success: true,
-      time: new Date()
-    })}\n\n`
-  );
-
-  sseClients.add(res);
-
-  req.on("close", () => {
-    sseClients.delete(res);
-  });
-});
-
-/* =========================================================
-   LIVE PASSWORD
-========================================================= */
-
-app.post("/api/live/auth", (req, res) => {
-  const password =
-    typeof req.body?.password === "string"
-      ? req.body.password
-      : "";
-
-  if (
-    password.length === 0 ||
-    password !== LIVE_PASSWORD
-  ) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid live access password."
-    });
+    if (key === name) {
+      return decodeURIComponent(
+        value
+      );
+    }
   }
 
-  const token = crypto
-    .randomBytes(32)
-    .toString("hex");
+  return null;
+}
 
-  /*
-    Lightweight in-memory live tokens.
-    Token expires after 30 minutes.
-  */
-  if (!global.liveTokens) {
-    global.liveTokens = new Map();
-  }
 
-  global.liveTokens.set(token, {
-    expires: Date.now() + 30 * 60 * 1000
-  });
+function requireLiveAuth(
+  req,
+  res,
+  next
+) {
 
-  res.json({
-    success: true,
-    token,
-    expiresIn: 1800
-  });
-});
-
-function requireLiveAuth(req, res, next) {
   const token =
-    req.headers.authorization?.replace(
-      /^Bearer\s+/i,
-      ""
+    getCookie(
+      req,
+      "live_token"
     );
 
-  if (
-    !token ||
-    !global.liveTokens?.has(token)
-  ) {
-    return res.status(401).json({
-      success: false,
-      message: "Live authentication required."
-    });
+  if (!token) {
+
+    return res
+      .status(401)
+      .json({
+        success: false,
+        message:
+          "Live access required."
+      });
   }
 
   const session =
-    global.liveTokens.get(token);
+    liveSessions.get(token);
 
-  if (session.expires < Date.now()) {
-    global.liveTokens.delete(token);
+  if (
+    !session ||
+    session.expiresAt <
+      Date.now()
+  ) {
 
-    return res.status(401).json({
-      success: false,
-      message: "Live session expired."
-    });
+    liveSessions.delete(token);
+
+    return res
+      .status(401)
+      .json({
+        success: false,
+        message:
+          "Live session expired."
+      });
   }
 
   next();
 }
 
+
+/* =========================================================
+   HISTORY - PASSWORD PROTECTED
+========================================================= */
+
+app.get(
+  "/api/history",
+  requireLiveAuth,
+  async (req, res) => {
+
+    try {
+
+      const limit =
+        Math.min(
+          Number(req.query.limit) ||
+            30,
+          100
+        );
+
+      const records =
+        await visitorsCollection
+          .find({})
+          .sort({
+            createdAt: -1
+          })
+          .limit(limit)
+          .toArray();
+
+      res.json({
+
+        success: true,
+
+        total:
+          records.length,
+
+        data:
+          records.map(
+            safeVisitor
+          )
+      });
+
+    } catch (error) {
+
+      console.error(
+        "HISTORY ERROR:",
+        error
+      );
+
+      res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Unable to load history."
+        });
+    }
+  }
+);
+
+
+/* =========================================================
+   STATS - PASSWORD PROTECTED
+========================================================= */
+
+app.get(
+  "/api/stats",
+  requireLiveAuth,
+  async (req, res) => {
+
+    try {
+
+      const total =
+        await visitorsCollection
+          .countDocuments();
+
+      const countries =
+        await visitorsCollection
+          .aggregate([
+
+            {
+              $group: {
+                _id: "$country",
+                count: {
+                  $sum: 1
+                }
+              }
+            },
+
+            {
+              $sort: {
+                count: -1
+              }
+            },
+
+            {
+              $limit: 10
+            }
+
+          ])
+          .toArray();
+
+      const devices =
+        await visitorsCollection
+          .aggregate([
+
+            {
+              $group: {
+                _id:
+                  "$device.type",
+                count: {
+                  $sum: 1
+                }
+              }
+            },
+
+            {
+              $sort: {
+                count: -1
+              }
+            }
+
+          ])
+          .toArray();
+
+      const browsers =
+        await visitorsCollection
+          .aggregate([
+
+            {
+              $group: {
+                _id:
+                  "$device.browser",
+                count: {
+                  $sum: 1
+                }
+              }
+            },
+
+            {
+              $sort: {
+                count: -1
+              }
+            },
+
+            {
+              $limit: 10
+            }
+
+          ])
+          .toArray();
+
+      const isps =
+        await visitorsCollection
+          .aggregate([
+
+            {
+              $group: {
+                _id: "$isp",
+                count: {
+                  $sum: 1
+                }
+              }
+            },
+
+            {
+              $sort: {
+                count: -1
+              }
+            },
+
+            {
+              $limit: 10
+            }
+
+          ])
+          .toArray();
+
+      const start =
+        new Date();
+
+      start.setHours(
+        0,
+        0,
+        0,
+        0
+      );
+
+      const today =
+        await visitorsCollection
+          .countDocuments({
+            createdAt: {
+              $gte: start
+            }
+          });
+
+      res.json({
+
+        success: true,
+
+        totalVisitors:
+          total,
+
+        todayVisitors:
+          today,
+
+        countries:
+          countries.map(
+            x => ({
+              name:
+                x._id ||
+                "Unknown",
+              count:
+                x.count
+            })
+          ),
+
+        devices:
+          devices.map(
+            x => ({
+              name:
+                x._id ||
+                "Unknown",
+              count:
+                x.count
+            })
+          ),
+
+        browsers:
+          browsers.map(
+            x => ({
+              name:
+                x._id ||
+                "Unknown",
+              count:
+                x.count
+            })
+          ),
+
+        isps:
+          isps.map(
+            x => ({
+              name:
+                x._id ||
+                "Unknown",
+              count:
+                x.count
+            })
+          )
+      });
+
+    } catch (error) {
+
+      console.error(
+        "STATS ERROR:",
+        error
+      );
+
+      res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Unable to load statistics."
+        });
+    }
+  }
+);
+
+
+/* =========================================================
+   LIVE STREAM - PASSWORD PROTECTED
+========================================================= */
+
+app.get(
+  "/api/live",
+  requireLiveAuth,
+  (req, res) => {
+
+    res.setHeader(
+      "Content-Type",
+      "text/event-stream"
+    );
+
+    res.setHeader(
+      "Cache-Control",
+      "no-cache"
+    );
+
+    res.setHeader(
+      "Connection",
+      "keep-alive"
+    );
+
+    res.setHeader(
+      "X-Accel-Buffering",
+      "no"
+    );
+
+    res.flushHeaders();
+
+    res.write(
+      `event: connected\n` +
+      `data: ${JSON.stringify({
+        success: true,
+        time:
+          new Date()
+      })}\n\n`
+    );
+
+    liveClients.add(res);
+
+    req.on(
+      "close",
+      () => {
+        liveClients.delete(res);
+      }
+    );
+  }
+);
+
+
+/* =========================================================
+   BROADCAST
+========================================================= */
+
+function broadcast(
+  event,
+  data
+) {
+
+  const payload =
+    `event: ${event}\n` +
+    `data: ${JSON.stringify(data)}\n\n`;
+
+  for (
+    const client of liveClients
+  ) {
+
+    try {
+      client.write(payload);
+    } catch {
+      liveClients.delete(
+        client
+      );
+    }
+  }
+}
+
+
 /*
-  Password-protected snapshot.
+  Only authenticated live clients
+  receive this event because only
+  /api/live can register.
 */
+
+const originalInsert =
+  visitorsCollection;
+
+function sendLiveVisitor(
+  visitor
+) {
+
+  broadcast(
+    "visitor",
+    safeVisitor(visitor)
+  );
+}
+
+
+/* =========================================================
+   PROTECTED LIVE HISTORY
+========================================================= */
+
 app.get(
   "/api/live/history",
   requireLiveAuth,
   async (req, res) => {
+
     try {
-      const data =
+
+      const records =
         await visitorsCollection
           .find({})
-          .sort({ createdAt: -1 })
+          .sort({
+            createdAt: -1
+          })
           .limit(100)
           .toArray();
 
       res.json({
+
         success: true,
-        data: data.map(safeVisitor)
+
+        data:
+          records.map(
+            safeVisitor
+          )
       });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: "Unable to load live data."
-      });
+
+    } catch {
+
+      res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Unable to load live history."
+        });
     }
   }
 );
+
 
 /* =========================================================
    HEALTH
 ========================================================= */
 
-app.get("/health", async (req, res) => {
-  let mongo = "offline";
+app.get(
+  "/health",
+  async (req, res) => {
 
-  try {
-    await db.command({
-      ping: 1
+    let mongo =
+      "offline";
+
+    try {
+
+      await db.command({
+        ping: 1
+      });
+
+      mongo =
+        "online";
+
+    } catch {}
+
+    res.json({
+
+      success: true,
+
+      service:
+        "Rakib IP Tracker",
+
+      version:
+        "3.0.0",
+
+      mongo,
+
+      protectedLive:
+        true,
+
+      liveClients:
+        liveClients.size,
+
+      time:
+        new Date().toISOString()
     });
+  }
+);
 
-    mongo = "online";
-  } catch {}
-
-  res.json({
-    success: true,
-    service: "Rakib IP Intelligence",
-    version: "3.0.0",
-    mongo,
-    liveClients: sseClients.size,
-    time: new Date().toISOString()
-  });
-});
 
 /* =========================================================
    FRONTEND
 ========================================================= */
 
-app.use((req, res) => {
-  res.sendFile(
-    path.join(
-      __dirname,
-      "public",
-      "index.html"
-    )
-  );
-});
+app.use(
+  (req, res) => {
+
+    res.sendFile(
+      path.join(
+        __dirname,
+        "public",
+        "index.html"
+      )
+    );
+  }
+);
+
+
+/* =========================================================
+   MONGO INSERT HOOK
+========================================================= */
+
+/*
+  We intercept the collection insert
+  so every new visitor is sent only
+  to authenticated live streams.
+*/
+
+const originalInsertOne =
+  visitorsCollection?.insertOne;
+
 
 /* =========================================================
    START
@@ -823,49 +1333,148 @@ app.use((req, res) => {
 
 connectMongo()
   .then(() => {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log("");
-      console.log("╔══════════════════════════════════╗");
-      console.log("║   RAKIB IP INTELLIGENCE v3.0    ║");
-      console.log("╠══════════════════════════════════╣");
-      console.log(`║ PORT       : ${PORT}`);
-      console.log(`║ DATABASE   : ${DB_NAME}`);
-      console.log("║ MONGODB    : ONLINE");
-      console.log("║ LIVE       : PASSWORD PROTECTED");
-      console.log("╚══════════════════════════════════╝");
-      console.log("");
-    });
+
+    /*
+      Patch insertOne after Mongo
+      connection is established.
+    */
+
+    const collection =
+      visitorsCollection;
+
+    const original =
+      collection.insertOne.bind(
+        collection
+      );
+
+    collection.insertOne =
+      async function(document, options) {
+
+        const result =
+          await original(
+            document,
+            options
+          );
+
+        /*
+          Only authenticated
+          SSE clients exist here.
+        */
+
+        broadcast(
+          "visitor",
+          safeVisitor(document)
+        );
+
+        return result;
+      };
+
+    app.listen(
+      PORT,
+      "0.0.0.0",
+      () => {
+
+        console.log("");
+        console.log(
+          "╔══════════════════════════════════════╗"
+        );
+        console.log(
+          "║     RAKIB IP INTELLIGENCE v3.0      ║"
+        );
+        console.log(
+          "╠══════════════════════════════════════╣"
+        );
+        console.log(
+          `║ PORT     : ${PORT}`
+        );
+        console.log(
+          `║ DATABASE : ${DB_NAME}`
+        );
+        console.log(
+          "║ MONGODB  : ONLINE"
+        );
+        console.log(
+          "║ HISTORY  : PASSWORD PROTECTED"
+        );
+        console.log(
+          "║ LIVE     : PASSWORD PROTECTED"
+        );
+        console.log(
+          "║ RAW IP   : NOT STORED"
+        );
+        console.log(
+          "╚══════════════════════════════════════╝"
+        );
+        console.log("");
+      }
+    );
   })
   .catch(error => {
-    console.error("❌ MongoDB connection failed:");
+
+    console.error(
+      "❌ MongoDB connection failed:"
+    );
+
     console.error(error);
+
     process.exit(1);
   });
+
 
 /* =========================================================
    CLEANUP
 ========================================================= */
 
-setInterval(() => {
-  const now = Date.now();
+setInterval(
+  () => {
 
-  for (const [ip, times] of rateMap) {
-    const fresh = times.filter(
-      t => now - t < 60 * 1000
-    );
+    const now =
+      Date.now();
 
-    if (fresh.length) {
-      rateMap.set(ip, fresh);
-    } else {
-      rateMap.delete(ip);
-    }
-  }
+    for (
+      const [
+        ip,
+        times
+      ] of rateMap
+    ) {
 
-  if (global.liveTokens) {
-    for (const [token, session] of global.liveTokens) {
-      if (session.expires < now) {
-        global.liveTokens.delete(token);
+      const fresh =
+        times.filter(
+          t =>
+            now - t <
+            60000
+        );
+
+      if (fresh.length) {
+        rateMap.set(
+          ip,
+          fresh
+        );
+      } else {
+        rateMap.delete(
+          ip
+        );
       }
     }
-  }
-}, 60 * 1000);
+
+    for (
+      const [
+        token,
+        session
+      ] of liveSessions
+    ) {
+
+      if (
+        session.expiresAt <
+        now
+      ) {
+
+        liveSessions.delete(
+          token
+        );
+      }
+    }
+
+  },
+  60000
+);

@@ -1,71 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+<meta charset="UTF-8">
 
-  <meta
-    name="description"
-    content="Rakib IP Intelligence Dashboard"
-  >
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
 
-  <title>RAKIB // IP INTELLIGENCE</title>
+<title>Rakib IP Intelligence</title>
 
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  >
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
 
-  <link
-    rel="stylesheet"
-    href="/style.css"
-  >
+<link
+  rel="stylesheet"
+  href="/style.css"
+/>
+
 </head>
 
 <body>
 
-<div class="scanlines"></div>
+<div class="bg-grid"></div>
 
-<div id="toast"></div>
-
-<header class="topbar">
+<header>
 
   <div class="brand">
 
-    <div class="brand-icon">
+    <div class="brand-logo">
       R
     </div>
 
     <div>
-      <div class="brand-title">
-        RAKIB
-      </div>
 
-      <div class="brand-sub">
-        IP INTELLIGENCE // v3.0
-      </div>
+      <h1>
+        RAKIB
+        <span>IP INTELLIGENCE</span>
+      </h1>
+
+      <small>
+        PRIVACY-SAFE NETWORK ANALYTICS
+      </small>
+
     </div>
 
   </div>
 
-  <div class="status">
 
-    <span class="status-dot"></span>
+  <div class="system-status">
 
-    <span id="systemStatus">
-      SYSTEM ONLINE
-    </span>
+    <i></i>
+
+    SYSTEM ONLINE
 
   </div>
 
 </header>
 
 
-<main class="container">
+<main>
+
 
   <!-- HERO -->
 
@@ -73,86 +71,42 @@
 
     <div>
 
-      <div class="eyebrow">
-        NETWORK OBSERVATION SYSTEM
+      <div class="tag">
+        ◉ NETWORK SIGNAL DETECTED
       </div>
 
-      <h1>
-        DIGITAL
-        <span>FOOTPRINT</span>
-      </h1>
+      <h2>
+        YOUR DIGITAL
+        <strong>FOOTPRINT</strong>
+      </h2>
 
       <p>
-        Privacy-safe approximate IP intelligence,
-        device analytics and persistent visitor history.
+        Detailed information about your current
+        network connection, approximate location
+        and device environment.
       </p>
 
     </div>
 
-    <div class="hero-code">
-      <div>NODE://RAKIB</div>
-      <div>DB://MONGODB</div>
-      <div>LIVE://LOCKED</div>
-    </div>
 
-  </section>
+    <div class="hero-card">
 
-
-  <!-- STATS -->
-
-  <section class="stats-grid">
-
-    <div class="stat-card">
-
-      <div class="stat-icon">
-        ◉
+      <div class="hero-card-top">
+        LIVE CONNECTION
       </div>
 
-      <div>
-        <span>TOTAL VISITORS</span>
-        <strong id="totalVisitors">0</strong>
+      <div
+        id="heroIP"
+        class="hero-ip"
+      >
+        Detecting...
       </div>
 
-    </div>
-
-
-    <div class="stat-card">
-
-      <div class="stat-icon">
-        ◈
-      </div>
-
-      <div>
-        <span>TODAY</span>
-        <strong id="todayVisitors">0</strong>
-      </div>
-
-    </div>
-
-
-    <div class="stat-card">
-
-      <div class="stat-icon">
-        ◇
-      </div>
-
-      <div>
-        <span>COUNTRIES</span>
-        <strong id="countryCount">0</strong>
-      </div>
-
-    </div>
-
-
-    <div class="stat-card">
-
-      <div class="stat-icon">
-        ⬡
-      </div>
-
-      <div>
-        <span>LIVE CHANNEL</span>
-        <strong id="liveCount">0</strong>
+      <div class="hero-location">
+        <span id="heroFlag">🌐</span>
+        <span id="heroLocation">
+          Locating...
+        </span>
       </div>
 
     </div>
@@ -160,196 +114,372 @@
   </section>
 
 
-  <!-- LIVE ACTION -->
+  <!-- MAIN INFORMATION -->
 
-  <section class="control-panel">
+  <section class="main-grid">
 
-    <div class="control-left">
 
-      <div class="control-badge">
-        LIVE
+    <!-- LOCATION -->
+
+    <div class="panel location-panel">
+
+      <div class="panel-title">
+
+        <div>
+
+          <small>
+            01 // GEO INTELLIGENCE
+          </small>
+
+          <h3>
+            Approximate Location
+          </h3>
+
+        </div>
+
+        <span class="panel-icon">
+          ◎
+        </span>
+
+      </div>
+
+
+      <div
+        id="map"
+        class="map"
+      ></div>
+
+
+      <div class="location-details">
+
+        <div>
+          <span>COUNTRY</span>
+          <strong id="country">
+            —
+          </strong>
+        </div>
+
+        <div>
+          <span>REGION</span>
+          <strong id="region">
+            —
+          </strong>
+        </div>
+
+        <div>
+          <span>CITY</span>
+          <strong id="city">
+            —
+          </strong>
+        </div>
+
+        <div>
+          <span>POSTAL</span>
+          <strong id="postal">
+            —
+          </strong>
+        </div>
+
+        <div>
+          <span>TIMEZONE</span>
+          <strong id="timezone">
+            —
+          </strong>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- CONNECTION -->
+
+    <div class="panel">
+
+      <div class="panel-title">
+
+        <div>
+
+          <small>
+            02 // CONNECTION
+          </small>
+
+          <h3>
+            Network Details
+          </h3>
+
+        </div>
+
+        <span class="panel-icon">
+          ◈
+        </span>
+
+      </div>
+
+
+      <div class="detail-list">
+
+        <div class="detail">
+
+          <span>
+            PUBLIC IP
+          </span>
+
+          <strong
+            id="ip"
+            class="cyan"
+          >
+            Detecting...
+          </strong>
+
+        </div>
+
+
+        <div class="detail">
+
+          <span>
+            ISP
+          </span>
+
+          <strong id="isp">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="detail">
+
+          <span>
+            ORGANIZATION
+          </span>
+
+          <strong id="organization">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="detail">
+
+          <span>
+            ASN
+          </span>
+
+          <strong id="asn">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="detail">
+
+          <span>
+            COUNTRY CODE
+          </span>
+
+          <strong id="countryCode">
+            —
+          </strong>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- DEVICE -->
+
+    <div class="panel">
+
+      <div class="panel-title">
+
+        <div>
+
+          <small>
+            03 // DEVICE
+          </small>
+
+          <h3>
+            Device Intelligence
+          </h3>
+
+        </div>
+
+        <span class="panel-icon">
+          ◇
+        </span>
+
+      </div>
+
+
+      <div class="device-box">
+
+        <div class="device-type">
+
+          <div
+            id="deviceIcon"
+            class="device-icon"
+          >
+            📱
+          </div>
+
+          <div>
+
+            <small>
+              DEVICE TYPE
+            </small>
+
+            <strong id="deviceType">
+              Detecting...
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <div class="device-details">
+
+          <div>
+            <span>VENDOR</span>
+            <strong id="vendor">—</strong>
+          </div>
+
+          <div>
+            <span>MODEL</span>
+            <strong id="model">—</strong>
+          </div>
+
+          <div>
+            <span>OPERATING SYSTEM</span>
+            <strong id="os">—</strong>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- BROWSER -->
+
+    <div class="panel">
+
+      <div class="panel-title">
+
+        <div>
+
+          <small>
+            04 // SOFTWARE
+          </small>
+
+          <h3>
+            Browser Environment
+          </h3>
+
+        </div>
+
+        <span class="panel-icon">
+          ◉
+        </span>
+
+      </div>
+
+
+      <div class="detail-list">
+
+        <div class="detail">
+
+          <span>
+            BROWSER
+          </span>
+
+          <strong id="browser">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="detail">
+
+          <span>
+            ENGINE
+          </span>
+
+          <strong id="engine">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="detail">
+
+          <span>
+            USER AGENT
+          </span>
+
+          <strong
+            id="userAgent"
+            class="ua"
+          >
+            —
+          </strong>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- SIGNAL -->
+
+  <section class="signal-panel">
+
+    <div class="signal-left">
+
+      <div class="signal-icon">
+        ✓
       </div>
 
       <div>
 
-        <h2>
-          Live Visitor Stream
-        </h2>
+        <small>
+          CONNECTION STATUS
+        </small>
+
+        <h3>
+          Your visitor information has been detected
+        </h3>
 
         <p>
-          Real-time visitor events require
-          authorized access.
+          The information shown above belongs only
+          to the browser currently viewing this page.
         </p>
 
       </div>
 
     </div>
 
-    <button
-      id="liveButton"
-      class="live-button"
-    >
-      <span>🔐</span>
-      OPEN LIVE ACTION
-    </button>
 
-  </section>
+    <div class="signal-time">
 
+      <small>
+        DETECTED AT
+      </small>
 
-  <!-- DASHBOARD -->
-
-  <section class="dashboard-grid">
-
-    <div class="panel map-panel">
-
-      <div class="panel-header">
-
-        <div>
-          <span class="panel-label">
-            GEO INTELLIGENCE
-          </span>
-
-          <h2>
-            Visitor Map
-          </h2>
-        </div>
-
-        <span class="live-chip">
-          ● MAP
-        </span>
-
-      </div>
-
-      <div id="map"></div>
-
-    </div>
-
-
-    <div class="panel current-panel">
-
-      <div class="panel-header">
-
-        <div>
-          <span class="panel-label">
-            LAST SIGNAL
-          </span>
-
-          <h2>
-            Current Visitor
-          </h2>
-        </div>
-
-      </div>
-
-      <div id="currentVisitor">
-
-        <div class="empty">
-          Waiting for signal...
-        </div>
-
-      </div>
-
-    </div>
-
-  </section>
-
-
-  <!-- LIVE VISITORS -->
-
-  <section class="panel">
-
-    <div class="panel-header">
-
-      <div>
-
-        <span class="panel-label">
-          EVENT STREAM
-        </span>
-
-        <h2>
-          Recent Visitors
-        </h2>
-
-      </div>
-
-      <div class="stream-status">
-        <span></span>
-        <label id="streamText">
-          CONNECTING
-        </label>
-      </div>
-
-    </div>
-
-    <div
-      id="visitorList"
-      class="visitor-list"
-    >
-      <div class="empty">
-        No visitor records yet.
-      </div>
-    </div>
-
-  </section>
-
-
-  <!-- ANALYTICS -->
-
-  <section class="analytics-grid">
-
-    <div class="panel">
-
-      <div class="panel-header">
-        <div>
-          <span class="panel-label">
-            ORIGIN
-          </span>
-
-          <h2>
-            Countries
-          </h2>
-        </div>
-      </div>
-
-      <div id="countriesList"></div>
-
-    </div>
-
-
-    <div class="panel">
-
-      <div class="panel-header">
-        <div>
-          <span class="panel-label">
-            HARDWARE
-          </span>
-
-          <h2>
-            Devices
-          </h2>
-        </div>
-      </div>
-
-      <div id="devicesList"></div>
-
-    </div>
-
-
-    <div class="panel">
-
-      <div class="panel-header">
-        <div>
-          <span class="panel-label">
-            NETWORK
-          </span>
-
-          <h2>
-            ISP Signals
-          </h2>
-        </div>
-      </div>
-
-      <div id="ispList"></div>
+      <strong id="timestamp">
+        —
+      </strong>
 
     </div>
 
@@ -358,7 +488,7 @@
 
   <!-- PRIVACY -->
 
-  <section class="privacy-box">
+  <section class="privacy">
 
     <div class="privacy-icon">
       🔒
@@ -366,25 +496,63 @@
 
     <div>
 
-      <strong>
-        PRIVACY MODE ACTIVE
-      </strong>
+      <h3>
+        Privacy Protection Active
+      </h3>
 
       <p>
-        This system stores a hashed IP identifier
-        and displays only a masked IP. Location is
-        approximate IP-based geolocation. It does not
-        collect GPS coordinates or exact street address.
+        This page shows approximate IP-based
+        geolocation. It does not access GPS,
+        exact street address, camera, microphone
+        or private device information.
+      </p>
+
+      <p>
+        Your IP is masked in stored history.
+        Visitor history and live visitor data
+        are available only through the protected
+        administrator action.
       </p>
 
     </div>
 
   </section>
 
+
+  <!-- ADMIN ACTION -->
+
+  <section class="admin-action">
+
+    <div>
+
+      <small>
+        ADMINISTRATOR CHANNEL
+      </small>
+
+      <h3>
+        Live Visitor Action
+      </h3>
+
+      <p>
+        Protected history and live visitor
+        analytics.
+      </p>
+
+    </div>
+
+    <button
+      id="openLive"
+    >
+      🔐 OPEN LIVE ACTION
+    </button>
+
+  </section>
+
+
 </main>
 
 
-<!-- PASSWORD MODAL -->
+<!-- PASSWORD -->
 
 <div
   id="passwordModal"
@@ -394,8 +562,8 @@
   <div class="modal-box">
 
     <button
-      id="closeModal"
-      class="modal-close"
+      id="closePassword"
+      class="close"
     >
       ×
     </button>
@@ -404,36 +572,36 @@
       🔐
     </div>
 
-    <div class="panel-label">
-      RESTRICTED CHANNEL
-    </div>
+    <small>
+      ADMINISTRATOR ACCESS
+    </small>
 
     <h2>
-      Live Access
+      Live Action
     </h2>
 
     <p>
       Enter the administrator password
-      to unlock the live visitor action.
+      to access visitor history and live data.
     </p>
 
     <input
-      id="livePassword"
+      id="password"
       type="password"
       placeholder="ACCESS PASSWORD"
       autocomplete="off"
     >
 
     <button
-      id="unlockButton"
+      id="unlock"
       class="unlock"
     >
-      UNLOCK LIVE
+      UNLOCK
     </button>
 
     <div
       id="passwordError"
-      class="password-error"
+      class="error"
     ></div>
 
   </div>
@@ -441,63 +609,162 @@
 </div>
 
 
-<!-- LIVE PANEL -->
+<!-- LIVE -->
 
 <div
-  id="livePanel"
-  class="live-overlay hidden"
+  id="liveModal"
+  class="modal hidden"
 >
 
-  <div class="live-window">
+  <div class="live-box">
 
-    <div class="live-window-head">
+    <button
+      id="closeLive"
+      class="close"
+    >
+      ×
+    </button>
+
+
+    <div class="live-header">
 
       <div>
 
-        <div class="panel-label">
-          AUTHORIZED CHANNEL
-        </div>
+        <small>
+          AUTHORIZED ADMIN CHANNEL
+        </small>
 
         <h2>
-          LIVE ACTION
+          Visitor History
         </h2>
 
       </div>
 
-      <button
-        id="closeLive"
-        class="modal-close"
-      >
-        ×
-      </button>
+      <div class="live-status">
+        <i></i>
+        LIVE
+      </div>
 
     </div>
 
-    <div class="live-console">
 
-      <div class="console-line">
-        <span>STATUS</span>
-        <strong>CONNECTED</strong>
+    <!-- ADMIN STATS -->
+
+    <div class="admin-stats">
+
+      <div>
+        <small>
+          TOTAL
+        </small>
+
+        <strong id="adminTotal">
+          0
+        </strong>
       </div>
 
-      <div class="console-line">
-        <span>DATABASE</span>
-        <strong>MONGODB ONLINE</strong>
+      <div>
+        <small>
+          TODAY
+        </small>
+
+        <strong id="adminToday">
+          0
+        </strong>
       </div>
 
-      <div class="console-line">
-        <span>STREAM</span>
-        <strong id="liveConsoleStatus">
-          LISTENING
+      <div>
+        <small>
+          COUNTRIES
+        </small>
+
+        <strong id="adminCountries">
+          0
+        </strong>
+      </div>
+
+      <div>
+        <small>
+          DEVICES
+        </small>
+
+        <strong id="adminDevices">
+          0
         </strong>
       </div>
 
     </div>
 
+
+    <!-- HISTORY -->
+
+    <div class="history-header">
+
+      <div>
+        <small>
+          VISITOR DATABASE
+        </small>
+
+        <h3>
+          Recent Visitors
+        </h3>
+      </div>
+
+      <span>
+        MONGODB
+      </span>
+
+    </div>
+
+
     <div
-      id="liveVisitors"
-      class="live-visitors"
-    ></div>
+      id="history"
+      class="history"
+    >
+      Loading...
+    </div>
+
+
+    <!-- ANALYTICS -->
+
+    <div class="analytics">
+
+      <div>
+
+        <small>
+          TOP COUNTRIES
+        </small>
+
+        <div id="countries">
+          —
+        </div>
+
+      </div>
+
+      <div>
+
+        <small>
+          TOP DEVICES
+        </small>
+
+        <div id="devices">
+          —
+        </div>
+
+      </div>
+
+      <div>
+
+        <small>
+          TOP ISPs
+        </small>
+
+        <div id="isps">
+          —
+        </div>
+
+      </div>
+
+    </div>
 
   </div>
 
@@ -506,17 +773,11 @@
 
 <footer>
 
-  <span>
-    RAKIB IP INTELLIGENCE
-  </span>
-
-  <span>
-    •
-  </span>
-
-  <span>
-    PRIVACY-SAFE ANALYTICS
-  </span>
+  RAKIB IP INTELLIGENCE
+  <span>•</span>
+  PRIVACY SAFE
+  <span>•</span>
+  MONGODB
 
 </footer>
 
