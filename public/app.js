@@ -1,36 +1,41 @@
-let map;
-let currentVisitor = null;
-let liveStream = null;
-
+let map = null;
+let marker = null;
+let liveSource = null;
 
 /* =========================================================
    HELPERS
 ========================================================= */
 
-const $ = id =>
-  document.getElementById(id);
-
-
-function text(
-  id,
-  value
-) {
-
-  const el = $(id);
-
-  if (el) {
-    el.textContent =
-      value ??
-      "Unavailable";
-  }
+function $(id) {
+  return document.getElementById(id);
 }
 
+function safe(value, fallback = "Unknown") {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return fallback;
+  }
+
+  return String(value);
+}
+
+function formatDate(value) {
+  if (!value) return "Unknown";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+
+  return date.toLocaleString();
+}
 
 function escapeHTML(value) {
-
-  return String(
-    value ?? ""
-  )
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -38,613 +43,388 @@ function escapeHTML(value) {
     .replaceAll("'", "&#039;");
 }
 
+/* =========================================================
+   CURRENT VISITOR
+========================================================= */
 
-function formatTime(date) {
+async function loadCurrentVisitor() {
+  try {
+    const response = await fetch(
+      "/api/track",
+      {
+        cache: "no-store"
+      }
+    );
 
-  if (
-    !date ||
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return "Unknown";
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error("Tracking failed");
+    }
+
+    renderCurrent(result.visitor);
+  } catch (error) {
+    console.error(error);
+
+    $("currentIP").textContent = "Unavailable";
   }
-
-  return date.toLocaleString();
 }
 
+function renderCurrent(visitor) {
+
+  const geo = visitor.geo || {};
+  const device = visitor.device || {};
+  const os = visitor.os || {};
+  const browser = visitor.browser || {};
+  const engine = visitor.engine || {};
+
+  $("currentIP").textContent =
+    safe(visitor.ip, "Unavailable");
+
+  $("location").textContent =
+    `${safe(geo.city)}, ${safe(geo.country)}`;
+
+  $("region").textContent =
+    safe(geo.region);
+
+  $("isp").textContent =
+    safe(geo.isp);
+
+  $("asn").textContent =
+    safe(geo.asn);
+
+  let deviceText = safe(device.type);
+
+  if (
+    device.vendor &&
+    device.vendor !== "Unknown"
+  ) {
+    deviceText += ` • ${device.vendor}`;
+  }
+
+  if (
+    device.model &&
+    device.model !== "Unknown"
+  ) {
+    deviceText += ` ${device.model}`;
+  }
+
+  $("device").textContent = deviceText;
+
+  $("os").textContent =
+    `${safe(os.name)} ${safe(os.version, "")}`.trim();
+
+  $("browser").textContent =
+    `${safe(browser.name)} ${safe(browser.version, "")}`.trim();
+
+  $("engine").textContent =
+    `${safe(engine.name)} ${safe(engine.version, "")}`.trim();
+
+  $("country").textContent =
+    safe(geo.country);
+
+  $("countryCode").textContent =
+    safe(geo.countryCode);
+
+  $("postal").textContent =
+    safe(geo.postal);
+
+  $("timezone").textContent =
+    safe(geo.timezone);
+
+  $("organization").textContent =
+    safe(geo.organization);
+
+  $("browserVersion").textContent =
+    safe(browser.version);
+
+  $("userAgent").textContent =
+    safe(visitor.userAgent);
+
+  if (
+    typeof geo.latitude === "number" &&
+    typeof geo.longitude === "number"
+  ) {
+    $("coordinates").textContent =
+      `${geo.latitude.toFixed(5)}, ${geo.longitude.toFixed(5)}`;
+
+    loadMap(
+      geo.latitude,
+      geo.longitude,
+      `${safe(geo.city)}, ${safe(geo.country)}`
+    );
+  } else {
+    $("coordinates").textContent =
+      "Location unavailable";
+  }
+}
 
 /* =========================================================
    MAP
 ========================================================= */
 
-function initMap() {
+function loadMap(lat, lon, label) {
 
-  map =
-    L.map(
-      "map",
-      {
-        zoomControl: true,
-        worldCopyJump: true
-      }
-    )
-    .setView(
-      [
-        23.8103,
-        90.4125
-      ],
-      3
+  if (!map) {
+
+    map = L.map("map", {
+      zoomControl: true
+    }).setView(
+      [lat, lon],
+      10
     );
 
-  L.tileLayer(
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    {
-      maxZoom: 18,
-      attribution:
-        "© OpenStreetMap"
-    }
-  ).addTo(map);
-}
-
-
-function showMap(visitor) {
-
-  const lat =
-    visitor.location?.latitude;
-
-  const lng =
-    visitor.location?.longitude;
-
-  if (
-    typeof lat !== "number" ||
-    typeof lng !== "number"
-  ) {
-    return;
-  }
-
-  const marker =
-    L.circleMarker(
-      [lat, lng],
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
       {
-        radius: 9,
-        color: "#52ffe0",
-        fillColor: "#52ffe0",
-        fillOpacity: .55,
-        weight: 2
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap"
       }
     ).addTo(map);
 
-  marker.bindPopup(`
-    <b>
-      ${escapeHTML(
-        visitor.flag ||
-        "🌐"
-      )}
-      ${escapeHTML(
-        visitor.country ||
-        "Unknown"
-      )}
-    </b>
-    <br>
-    ${escapeHTML(
-      visitor.city ||
-      "Unknown"
-    )}
-  `).openPopup();
+  } else {
 
-  map.setView(
-    [lat, lng],
-    6
-  );
+    map.setView(
+      [lat, lon],
+      10
+    );
+
+    if (marker) {
+      marker.remove();
+    }
+  }
+
+  marker = L.marker(
+    [lat, lon]
+  )
+    .addTo(map)
+    .bindPopup(
+      `<b>${escapeHTML(label)}</b><br>Approximate IP location`
+    )
+    .openPopup();
 }
 
-
 /* =========================================================
-   OWN VISITOR
+   PREVIEW HISTORY
 ========================================================= */
 
-async function loadOwnVisitor() {
+async function loadPreview() {
+
+  const container = $("previewHistory");
 
   try {
 
-    const response =
-      await fetch(
-        "/api/track",
-        {
-          cache: "no-store"
-        }
-      );
+    const response = await fetch(
+      "/api/history-preview",
+      {
+        cache: "no-store"
+      }
+    );
 
-    const data =
-      await response.json();
+    const result = await response.json();
 
-    if (
-      !data.success
-    ) {
-      throw new Error(
-        data.message
-      );
+    if (!result.success) {
+      throw new Error("Preview failed");
     }
 
-    currentVisitor =
-      data.visitor;
+    if (!result.data.length) {
 
-    renderOwnVisitor(
-      data.visitor
-    );
+      container.innerHTML = `
+        <div class="preview-item">
+          <div class="preview-main">
+            No visitor history yet
+          </div>
+        </div>
+      `;
+
+      return;
+    }
+
+    container.innerHTML =
+      result.data
+        .map(item => {
+
+          const device =
+            item.device?.type || "Unknown";
+
+          const browser =
+            item.browser?.name || "Unknown";
+
+          return `
+            <div class="preview-item">
+
+              <div>
+                <div class="preview-ip">
+                  ${escapeHTML(item.ip)}
+                </div>
+
+                <div class="preview-sub">
+                  MASKED IP
+                </div>
+              </div>
+
+              <div>
+                <div class="preview-main">
+                  ${escapeHTML(item.city)}
+                </div>
+
+                <div class="preview-sub">
+                  ${escapeHTML(item.country)}
+                </div>
+              </div>
+
+              <div>
+                <div class="preview-main">
+                  ${escapeHTML(device)}
+                </div>
+
+                <div class="preview-sub">
+                  ${escapeHTML(browser)}
+                </div>
+              </div>
+
+              <div>
+                <div class="preview-main">
+                  ${escapeHTML(
+                    formatDate(item.timestamp)
+                  )}
+                </div>
+
+                <div class="preview-sub">
+                  RECORDED
+                </div>
+              </div>
+
+            </div>
+          `;
+        })
+        .join("");
 
   } catch (error) {
 
-    console.error(
-      error
-    );
+    console.error(error);
 
-    text(
-      "heroIP",
-      "Detection failed"
-    );
-
-    text(
-      "ip",
-      "Unavailable"
-    );
+    container.innerHTML = `
+      <div class="preview-item">
+        Unable to load visitor preview.
+      </div>
+    `;
   }
 }
 
-
-function renderOwnVisitor(
-  visitor
-) {
-
-  const device =
-    visitor.device ||
-    {};
-
-  text(
-    "heroIP",
-    visitor.ip
-  );
-
-  text(
-    "heroFlag",
-    visitor.flag ||
-      "🌐"
-  );
-
-  text(
-    "heroLocation",
-    [
-      visitor.city,
-      visitor.region,
-      visitor.country
-    ]
-      .filter(Boolean)
-      .join(", ")
-  );
-
-
-  text(
-    "ip",
-    visitor.ip
-  );
-
-  text(
-    "country",
-    visitor.country
-  );
-
-  text(
-    "countryCode",
-    visitor.countryCode
-  );
-
-  text(
-    "region",
-    visitor.region
-  );
-
-  text(
-    "city",
-    visitor.city
-  );
-
-  text(
-    "postal",
-    visitor.postal
-  );
-
-  text(
-    "timezone",
-    visitor.timezone
-  );
-
-
-  text(
-    "isp",
-    visitor.isp
-  );
-
-  text(
-    "organization",
-    visitor.organization
-  );
-
-  text(
-    "asn",
-    visitor.asn
-  );
-
-
-  text(
-    "deviceType",
-    device.type
-  );
-
-  text(
-    "vendor",
-    device.vendor
-  );
-
-  text(
-    "model",
-    device.model
-  );
-
-  text(
-    "os",
-    device.os
-  );
-
-  text(
-    "browser",
-    device.browser
-  );
-
-  text(
-    "engine",
-    device.engine
-  );
-
-  text(
-    "userAgent",
-    device.userAgent ||
-      visitor.userAgent
-  );
-
-
-  const icon =
-    device.type ===
-    "mobile"
-      ? "📱"
-      : device.type ===
-        "tablet"
-        ? "📲"
-        : "💻";
-
-  text(
-    "deviceIcon",
-    icon
-  );
-
-
-  text(
-    "timestamp",
-    formatTime(
-      new Date(
-        visitor.createdAt
-      )
-    )
-  );
-
-
-  showMap(
-    visitor
-  );
-}
-
-
 /* =========================================================
-   PASSWORD
+   LOGIN MODAL
 ========================================================= */
 
-function openPassword() {
+function openModal() {
+  $("loginModal").classList.remove("hidden");
 
-  $("passwordModal")
-    .classList.remove(
-      "hidden"
-    );
+  $("passwordInput").value = "";
 
-  $("password").value = "";
+  $("loginError").textContent = "";
 
-  $("passwordError")
-    .textContent = "";
-
-  setTimeout(
-    () =>
-      $("password").focus(),
-    100
-  );
+  setTimeout(() => {
+    $("passwordInput").focus();
+  }, 100);
 }
 
-
-function closePassword() {
-
-  $("passwordModal")
-    .classList.add(
-      "hidden"
-    );
+function closeModal() {
+  $("loginModal").classList.add("hidden");
 }
 
-
-async function unlockLive() {
+async function login() {
 
   const password =
-    $("password").value;
+    $("passwordInput").value;
 
   if (!password) {
-
-    $("passwordError")
-      .textContent =
-      "ENTER PASSWORD";
-
+    $("loginError").textContent =
+      "Enter the password.";
     return;
   }
 
-  $("unlock").disabled =
-    true;
-
-  $("unlock").textContent =
-    "AUTHENTICATING...";
+  $("loginSubmit").disabled = true;
 
   try {
 
-    const response =
-      await fetch(
-        "/api/live/auth",
-        {
-          method: "POST",
+    const response = await fetch(
+      "/api/live/login",
+      {
+        method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
+        headers: {
+          "Content-Type": "application/json"
+        },
 
-          body:
-            JSON.stringify({
-              password
-            })
-        }
-      );
+        body: JSON.stringify({
+          password
+        })
+      }
+    );
 
-    const data =
+    const result =
       await response.json();
 
-    if (
-      !response.ok ||
-      !data.success
-    ) {
-      throw new Error(
-        "Invalid password"
-      );
+    if (!response.ok || !result.success) {
+
+      $("loginError").textContent =
+        "Incorrect password.";
+
+      return;
     }
 
-    closePassword();
+    closeModal();
 
-    $("liveModal")
-      .classList.remove(
-        "hidden"
-      );
+    await unlockAdmin();
 
-    await loadHistory();
+  } catch (error) {
 
-    await loadStats();
-
-    connectProtectedLive();
-
-  } catch {
-
-    $("passwordError")
-      .textContent =
-      "ACCESS DENIED";
+    $("loginError").textContent =
+      "Login failed. Try again.";
 
   } finally {
 
-    $("unlock").disabled =
-      false;
-
-    $("unlock").textContent =
-      "UNLOCK";
+    $("loginSubmit").disabled = false;
   }
 }
 
-
 /* =========================================================
-   HISTORY
+   ADMIN
 ========================================================= */
 
-async function loadHistory() {
-
-  const history =
-    $("history");
-
-  history.innerHTML =
-    `<div class="loading">
-      Loading visitor database...
-    </div>`;
+async function checkAuth() {
 
   try {
 
     const response =
-      await fetch(
-        "/api/history?limit=50",
-        {
-          credentials:
-            "same-origin"
-        }
-      );
+      await fetch("/api/live/status");
 
-    if (
-      response.status === 401
-    ) {
-
-      history.innerHTML =
-        `<div class="loading">
-          🔒 Access expired.
-        </div>`;
-
-      return;
-    }
-
-    const data =
+    const result =
       await response.json();
 
-    if (
-      !data.success
-    ) {
-      throw new Error();
+    if (result.authenticated) {
+      await unlockAdmin();
     }
 
-    if (
-      !data.data.length
-    ) {
-
-      history.innerHTML =
-        `<div class="loading">
-          No visitor records yet.
-        </div>`;
-
-      return;
-    }
-
-    history.innerHTML =
-      data.data
-        .map(
-          visitor =>
-            historyCard(
-              visitor
-            )
-        )
-        .join("");
-
-  } catch {
-
-    history.innerHTML =
-      `<div class="loading">
-        Unable to load history.
-      </div>`;
-  }
+  } catch {}
 }
 
+async function unlockAdmin() {
 
-function historyCard(
-  visitor
-) {
+  $("adminPanel").classList.remove("hidden");
 
-  const device =
-    visitor.device ||
-    {};
+  await Promise.all([
+    loadAdminHistory(),
+    loadStats()
+  ]);
 
-  return `
+  startLiveStream();
 
-    <div class="history-card">
-
-      <div class="flag">
-        ${escapeHTML(
-          visitor.flag ||
-          "🌐"
-        )}
-      </div>
-
-
-      <div>
-
-        <strong>
-          ${escapeHTML(
-            visitor.country ||
-            "Unknown"
-          )}
-        </strong>
-
-        <small>
-          ${escapeHTML(
-            visitor.city ||
-            "Unknown"
-          )}
-        </small>
-
-      </div>
-
-
-      <div>
-
-        <small>
-          IP
-        </small>
-
-        <div class="ip">
-          ${escapeHTML(
-            visitor.ip ||
-            "Hidden"
-          )}
-        </div>
-
-      </div>
-
-
-      <div>
-
-        <small>
-          DEVICE
-        </small>
-
-        <strong>
-          ${escapeHTML(
-            device.type ||
-            "Unknown"
-          )}
-        </strong>
-
-        <small>
-          ${escapeHTML(
-            device.os ||
-            "Unknown"
-          )}
-        </small>
-
-      </div>
-
-
-      <div>
-
-        <small>
-          ISP
-        </small>
-
-        <strong>
-          ${escapeHTML(
-            visitor.isp ||
-            "Unknown"
-          )}
-        </strong>
-
-        <small>
-          ${formatTime(
-            new Date(
-              visitor.createdAt
-            )
-          )}
-        </small>
-
-      </div>
-
-    </div>
-  `;
+  $("adminPanel").scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
 }
-
-
-/* =========================================================
-   STATS
-========================================================= */
 
 async function loadStats() {
 
@@ -654,249 +434,432 @@ async function loadStats() {
       await fetch(
         "/api/stats",
         {
-          credentials:
-            "same-origin"
+          cache: "no-store"
         }
       );
 
-    if (
-      response.status === 401
-    ) {
+    if (response.status === 401) {
       return;
     }
 
-    const data =
+    const result =
       await response.json();
 
-    if (
-      !data.success
-    ) {
+    if (!result.success) {
       return;
     }
 
-    text(
-      "adminTotal",
-      data.totalVisitors
-    );
+    $("statTotal").textContent =
+      result.total;
 
-    text(
-      "adminToday",
-      data.todayVisitors
-    );
+    $("statUnique").textContent =
+      result.uniqueIPs;
 
-    text(
-      "adminCountries",
-      data.countries.length
-    );
-
-    text(
-      "adminDevices",
-      data.devices.length
-    );
-
-
-    renderAnalytics(
-      "countries",
-      data.countries
-    );
-
-    renderAnalytics(
-      "devices",
-      data.devices
-    );
-
-    renderAnalytics(
-      "isps",
-      data.isps
-    );
+    $("stat24").textContent =
+      result.last24h;
 
   } catch (error) {
 
-    console.error(
-      error
-    );
+    console.error(error);
+
   }
 }
-
-
-function renderAnalytics(
-  id,
-  items
-) {
-
-  const el =
-    $(id);
-
-  if (
-    !items ||
-    !items.length
-  ) {
-
-    el.innerHTML =
-      "No data";
-
-    return;
-  }
-
-  el.innerHTML =
-    `<div class="analytics-list">
-      ${
-        items
-          .slice(0, 6)
-          .map(
-            item => `
-              <div
-                class="analytics-row"
-              >
-                <span>
-                  ${escapeHTML(
-                    item.name
-                  )}
-                </span>
-
-                <b>
-                  ${item.count}
-                </b>
-              </div>
-            `
-          )
-          .join("")
-      }
-    </div>`;
-}
-
 
 /* =========================================================
-   PROTECTED LIVE
+   ADMIN HISTORY
 ========================================================= */
 
-function connectProtectedLive() {
+async function loadAdminHistory() {
 
-  if (liveStream) {
-    liveStream.close();
+  const container =
+    $("adminHistory");
+
+  try {
+
+    const response =
+      await fetch(
+        "/api/history",
+        {
+          cache: "no-store"
+        }
+      );
+
+    if (response.status === 401) {
+      $("adminPanel").classList.add("hidden");
+      return;
+    }
+
+    const result =
+      await response.json();
+
+    if (!result.success) {
+      throw new Error("History failed");
+    }
+
+    if (!result.data.length) {
+
+      container.innerHTML = `
+        <div class="admin-row">
+          No records found.
+        </div>
+      `;
+
+      return;
+    }
+
+    container.innerHTML =
+      result.data
+        .map(renderAdminRecord)
+        .join("");
+
+  } catch (error) {
+
+    console.error(error);
+
+    container.innerHTML = `
+      <div class="admin-row">
+        Unable to load full history.
+      </div>
+    `;
+  }
+}
+
+function renderAdminRecord(item) {
+
+  const geo = item.geo || {};
+  const device = item.device || {};
+  const os = item.os || {};
+  const browser = item.browser || {};
+
+  return `
+    <div class="admin-row">
+
+      <div class="admin-row-top">
+
+        <div>
+          <div class="admin-ip">
+            ${escapeHTML(item.ip)}
+          </div>
+
+          <div class="preview-sub">
+            ${escapeHTML(
+              safe(geo.city)
+            )},
+            ${escapeHTML(
+              safe(geo.country)
+            )}
+          </div>
+        </div>
+
+        <div class="admin-time">
+          ${escapeHTML(
+            formatDate(item.timestamp)
+          )}
+        </div>
+
+      </div>
+
+      <div class="admin-grid">
+
+        <div>
+          <span>ISP</span>
+          <strong>
+            ${escapeHTML(
+              safe(geo.isp)
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>ASN</span>
+          <strong>
+            ${escapeHTML(
+              safe(geo.asn)
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Device</span>
+          <strong>
+            ${escapeHTML(
+              `${safe(device.type)} ${
+                device.vendor || ""
+              } ${
+                device.model || ""
+              }`
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>OS</span>
+          <strong>
+            ${escapeHTML(
+              `${safe(os.name)} ${
+                os.version || ""
+              }`
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Browser</span>
+          <strong>
+            ${escapeHTML(
+              `${safe(browser.name)} ${
+                browser.version || ""
+              }`
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Region</span>
+          <strong>
+            ${escapeHTML(
+              safe(geo.region)
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Postal</span>
+          <strong>
+            ${escapeHTML(
+              safe(geo.postal)
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Timezone</span>
+          <strong>
+            ${escapeHTML(
+              safe(geo.timezone)
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Organization</span>
+          <strong>
+            ${escapeHTML(
+              safe(geo.organization)
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Coordinates</span>
+          <strong>
+            ${escapeHTML(
+              typeof geo.latitude === "number"
+                ? `${geo.latitude}, ${geo.longitude}`
+                : "Unavailable"
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Engine</span>
+          <strong>
+            ${escapeHTML(
+              `${safe(item.engine?.name)} ${
+                item.engine?.version || ""
+              }`
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Country Code</span>
+          <strong>
+            ${escapeHTML(
+              safe(geo.countryCode)
+            )}
+          </strong>
+        </div>
+
+      </div>
+
+      <div
+        class="user-agent"
+        style="margin-top:12px"
+      >
+        ${escapeHTML(
+          safe(item.userAgent)
+        )}
+      </div>
+
+    </div>
+  `;
+}
+
+/* =========================================================
+   LIVE STREAM
+========================================================= */
+
+function startLiveStream() {
+
+  if (liveSource) {
+    try {
+      liveSource.close();
+    } catch {}
   }
 
-  /*
-    Cookie is HttpOnly, so browser automatically
-    sends it with EventSource.
-  */
+  $("liveStatus").textContent =
+    "CONNECTING";
 
-  liveStream =
-    new EventSource(
-      "/api/live"
-    );
+  liveSource =
+    new EventSource("/api/live");
 
-  liveStream.addEventListener(
-    "visitor",
-    event => {
+  liveSource.onopen = () => {
 
-      try {
+    $("liveStatus").textContent =
+      "LIVE";
 
-        const visitor =
-          JSON.parse(
-            event.data
+  };
+
+  liveSource.onerror = () => {
+
+    $("liveStatus").textContent =
+      "RECONNECTING";
+
+  };
+
+  liveSource.onmessage = event => {
+
+    try {
+
+      const data =
+        JSON.parse(event.data);
+
+      if (
+        data.type === "visitor"
+      ) {
+
+        const item =
+          data.visitor;
+
+        const html =
+          renderAdminRecord(item);
+
+        $("adminHistory")
+          .insertAdjacentHTML(
+            "afterbegin",
+            html
           );
 
-        /*
-          Reload the protected history
-          so the admin sees the new
-          visitor in correct order.
-        */
+        const rows =
+          $("adminHistory")
+            .querySelectorAll(
+              ".admin-row"
+            );
 
-        loadHistory();
+        if (rows.length > 1000) {
+          rows[rows.length - 1].remove();
+        }
 
         loadStats();
-
-      } catch {}
-    }
-  );
-
-  liveStream.onerror =
-    () => {
-
-      if (liveStream) {
-        liveStream.close();
       }
-    };
-}
 
+    } catch (error) {
+      console.error(error);
+    }
+  };
+}
 
 /* =========================================================
-   CLOSE LIVE
+   LOGOUT
 ========================================================= */
 
-function closeLive() {
+async function logout() {
 
-  if (liveStream) {
+  try {
 
-    liveStream.close();
+    await fetch(
+      "/api/live/logout",
+      {
+        method: "POST"
+      }
+    );
 
-    liveStream =
-      null;
+  } catch {}
+
+  if (liveSource) {
+    try {
+      liveSource.close();
+    } catch {}
+
+    liveSource = null;
   }
 
-  $("liveModal")
-    .classList.add(
-      "hidden"
-    );
-}
+  $("adminPanel")
+    .classList.add("hidden");
 
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
 
 /* =========================================================
    EVENTS
 ========================================================= */
 
-$("openLive")
+$("unlockButton")
   .addEventListener(
     "click",
-    openPassword
+    openModal
   );
 
-
-$("closePassword")
+$("closeModal")
   .addEventListener(
     "click",
-    closePassword
+    closeModal
   );
 
-
-$("unlock")
+$("loginSubmit")
   .addEventListener(
     "click",
-    unlockLive
+    login
   );
 
-
-$("closeLive")
+$("logoutButton")
   .addEventListener(
     "click",
-    closeLive
+    logout
   );
 
-
-$("password")
+$("passwordInput")
   .addEventListener(
     "keydown",
     event => {
-
-      if (
-        event.key ===
-        "Enter"
-      ) {
-
-        unlockLive();
+      if (event.key === "Enter") {
+        login();
       }
     }
   );
 
+$("loginModal")
+  .addEventListener(
+    "click",
+    event => {
+      if (
+        event.target.classList.contains(
+          "modal-backdrop"
+        )
+      ) {
+        closeModal();
+      }
+    }
+  );
 
 /* =========================================================
    START
 ========================================================= */
 
-initMap();
-
-/*
-  ONLY THIS VISITOR'S DATA.
-*/
-loadOwnVisitor();
+loadCurrentVisitor();
+loadPreview();
+checkAuth();

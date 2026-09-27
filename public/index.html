@@ -1,786 +1,528 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8">
 
-<meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0"
->
+  <meta
+    name="theme-color"
+    content="#070b16"
+  >
 
-<title>Rakib IP Intelligence</title>
+  <title>Rakib IP Intelligence</title>
 
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
 
-<link
-  rel="stylesheet"
-  href="/style.css"
-/>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;600;700;800&display=swap"
+    rel="stylesheet"
+  >
 
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
 </head>
 
 <body>
 
 <div class="bg-grid"></div>
+<div class="orb orb-one"></div>
+<div class="orb orb-two"></div>
 
-<header>
+<header class="topbar">
 
   <div class="brand">
-
-    <div class="brand-logo">
-      R
-    </div>
+    <div class="brand-icon">R</div>
 
     <div>
+      <div class="brand-name">
+        RAKIB<span>IP</span>
+      </div>
 
-      <h1>
-        RAKIB
-        <span>IP INTELLIGENCE</span>
-      </h1>
-
-      <small>
-        PRIVACY-SAFE NETWORK ANALYTICS
-      </small>
-
+      <div class="brand-sub">
+        INTELLIGENCE SYSTEM
+      </div>
     </div>
-
   </div>
 
-
-  <div class="system-status">
-
-    <i></i>
-
+  <div class="status">
+    <span class="status-dot"></span>
     SYSTEM ONLINE
-
   </div>
 
 </header>
 
-
-<main>
-
-
-  <!-- HERO -->
+<main class="container">
 
   <section class="hero">
 
-    <div>
+    <div class="hero-copy">
 
-      <div class="tag">
-        ◉ NETWORK SIGNAL DETECTED
+      <div class="eyebrow">
+        <span></span>
+        VISITOR INTELLIGENCE
       </div>
+
+      <h1>
+        Your Digital
+        <strong>Footprint</strong>
+      </h1>
+
+      <p>
+        Real-time IP, location, device and browser intelligence.
+        Your own connection details are shown below.
+      </p>
+
+    </div>
+
+    <div class="hero-chip">
+      <span>LIVE</span>
+      TRACKING
+    </div>
+
+  </section>
+
+  <!-- CURRENT VISITOR -->
+
+  <section class="section-heading">
+
+    <div>
+      <span class="mini-label">CURRENT SESSION</span>
 
       <h2>
-        YOUR DIGITAL
-        <strong>FOOTPRINT</strong>
+        Your Connection
       </h2>
-
-      <p>
-        Detailed information about your current
-        network connection, approximate location
-        and device environment.
-      </p>
-
     </div>
 
-
-    <div class="hero-card">
-
-      <div class="hero-card-top">
-        LIVE CONNECTION
-      </div>
-
-      <div
-        id="heroIP"
-        class="hero-ip"
-      >
-        Detecting...
-      </div>
-
-      <div class="hero-location">
-        <span id="heroFlag">🌐</span>
-        <span id="heroLocation">
-          Locating...
-        </span>
-      </div>
-
+    <div class="live-pill">
+      <span></span>
+      LIVE
     </div>
 
   </section>
 
+  <section class="ip-hero glass">
 
-  <!-- MAIN INFORMATION -->
-
-  <section class="main-grid">
-
-
-    <!-- LOCATION -->
-
-    <div class="panel location-panel">
-
-      <div class="panel-title">
-
-        <div>
-
-          <small>
-            01 // GEO INTELLIGENCE
-          </small>
-
-          <h3>
-            Approximate Location
-          </h3>
-
-        </div>
-
-        <span class="panel-icon">
-          ◎
-        </span>
-
-      </div>
-
-
-      <div
-        id="map"
-        class="map"
-      ></div>
-
-
-      <div class="location-details">
-
-        <div>
-          <span>COUNTRY</span>
-          <strong id="country">
-            —
-          </strong>
-        </div>
-
-        <div>
-          <span>REGION</span>
-          <strong id="region">
-            —
-          </strong>
-        </div>
-
-        <div>
-          <span>CITY</span>
-          <strong id="city">
-            —
-          </strong>
-        </div>
-
-        <div>
-          <span>POSTAL</span>
-          <strong id="postal">
-            —
-          </strong>
-        </div>
-
-        <div>
-          <span>TIMEZONE</span>
-          <strong id="timezone">
-            —
-          </strong>
-        </div>
-
-      </div>
-
+    <div class="ip-label">
+      YOUR PUBLIC IP ADDRESS
     </div>
-
-
-    <!-- CONNECTION -->
-
-    <div class="panel">
-
-      <div class="panel-title">
-
-        <div>
-
-          <small>
-            02 // CONNECTION
-          </small>
-
-          <h3>
-            Network Details
-          </h3>
-
-        </div>
-
-        <span class="panel-icon">
-          ◈
-        </span>
-
-      </div>
-
-
-      <div class="detail-list">
-
-        <div class="detail">
-
-          <span>
-            PUBLIC IP
-          </span>
-
-          <strong
-            id="ip"
-            class="cyan"
-          >
-            Detecting...
-          </strong>
-
-        </div>
-
-
-        <div class="detail">
-
-          <span>
-            ISP
-          </span>
-
-          <strong id="isp">
-            —
-          </strong>
-
-        </div>
-
-
-        <div class="detail">
-
-          <span>
-            ORGANIZATION
-          </span>
-
-          <strong id="organization">
-            —
-          </strong>
-
-        </div>
-
-
-        <div class="detail">
-
-          <span>
-            ASN
-          </span>
-
-          <strong id="asn">
-            —
-          </strong>
-
-        </div>
-
-
-        <div class="detail">
-
-          <span>
-            COUNTRY CODE
-          </span>
-
-          <strong id="countryCode">
-            —
-          </strong>
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <!-- DEVICE -->
-
-    <div class="panel">
-
-      <div class="panel-title">
-
-        <div>
-
-          <small>
-            03 // DEVICE
-          </small>
-
-          <h3>
-            Device Intelligence
-          </h3>
-
-        </div>
-
-        <span class="panel-icon">
-          ◇
-        </span>
-
-      </div>
-
-
-      <div class="device-box">
-
-        <div class="device-type">
-
-          <div
-            id="deviceIcon"
-            class="device-icon"
-          >
-            📱
-          </div>
-
-          <div>
-
-            <small>
-              DEVICE TYPE
-            </small>
-
-            <strong id="deviceType">
-              Detecting...
-            </strong>
-
-          </div>
-
-        </div>
-
-
-        <div class="device-details">
-
-          <div>
-            <span>VENDOR</span>
-            <strong id="vendor">—</strong>
-          </div>
-
-          <div>
-            <span>MODEL</span>
-            <strong id="model">—</strong>
-          </div>
-
-          <div>
-            <span>OPERATING SYSTEM</span>
-            <strong id="os">—</strong>
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <!-- BROWSER -->
-
-    <div class="panel">
-
-      <div class="panel-title">
-
-        <div>
-
-          <small>
-            04 // SOFTWARE
-          </small>
-
-          <h3>
-            Browser Environment
-          </h3>
-
-        </div>
-
-        <span class="panel-icon">
-          ◉
-        </span>
-
-      </div>
-
-
-      <div class="detail-list">
-
-        <div class="detail">
-
-          <span>
-            BROWSER
-          </span>
-
-          <strong id="browser">
-            —
-          </strong>
-
-        </div>
-
-
-        <div class="detail">
-
-          <span>
-            ENGINE
-          </span>
-
-          <strong id="engine">
-            —
-          </strong>
-
-        </div>
-
-
-        <div class="detail">
-
-          <span>
-            USER AGENT
-          </span>
-
-          <strong
-            id="userAgent"
-            class="ua"
-          >
-            —
-          </strong>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  </section>
-
-
-  <!-- SIGNAL -->
-
-  <section class="signal-panel">
-
-    <div class="signal-left">
-
-      <div class="signal-icon">
-        ✓
-      </div>
-
-      <div>
-
-        <small>
-          CONNECTION STATUS
-        </small>
-
-        <h3>
-          Your visitor information has been detected
-        </h3>
-
-        <p>
-          The information shown above belongs only
-          to the browser currently viewing this page.
-        </p>
-
-      </div>
-
-    </div>
-
-
-    <div class="signal-time">
-
-      <small>
-        DETECTED AT
-      </small>
-
-      <strong id="timestamp">
-        —
-      </strong>
-
-    </div>
-
-  </section>
-
-
-  <!-- PRIVACY -->
-
-  <section class="privacy">
-
-    <div class="privacy-icon">
-      🔒
-    </div>
-
-    <div>
-
-      <h3>
-        Privacy Protection Active
-      </h3>
-
-      <p>
-        This page shows approximate IP-based
-        geolocation. It does not access GPS,
-        exact street address, camera, microphone
-        or private device information.
-      </p>
-
-      <p>
-        Your IP is masked in stored history.
-        Visitor history and live visitor data
-        are available only through the protected
-        administrator action.
-      </p>
-
-    </div>
-
-  </section>
-
-
-  <!-- ADMIN ACTION -->
-
-  <section class="admin-action">
-
-    <div>
-
-      <small>
-        ADMINISTRATOR CHANNEL
-      </small>
-
-      <h3>
-        Live Visitor Action
-      </h3>
-
-      <p>
-        Protected history and live visitor
-        analytics.
-      </p>
-
-    </div>
-
-    <button
-      id="openLive"
-    >
-      🔐 OPEN LIVE ACTION
-    </button>
-
-  </section>
-
-
-</main>
-
-
-<!-- PASSWORD -->
-
-<div
-  id="passwordModal"
-  class="modal hidden"
->
-
-  <div class="modal-box">
-
-    <button
-      id="closePassword"
-      class="close"
-    >
-      ×
-    </button>
-
-    <div class="lock">
-      🔐
-    </div>
-
-    <small>
-      ADMINISTRATOR ACCESS
-    </small>
-
-    <h2>
-      Live Action
-    </h2>
-
-    <p>
-      Enter the administrator password
-      to access visitor history and live data.
-    </p>
-
-    <input
-      id="password"
-      type="password"
-      placeholder="ACCESS PASSWORD"
-      autocomplete="off"
-    >
-
-    <button
-      id="unlock"
-      class="unlock"
-    >
-      UNLOCK
-    </button>
 
     <div
-      id="passwordError"
-      class="error"
-    ></div>
-
-  </div>
-
-</div>
-
-
-<!-- LIVE -->
-
-<div
-  id="liveModal"
-  class="modal hidden"
->
-
-  <div class="live-box">
-
-    <button
-      id="closeLive"
-      class="close"
-    >
-      ×
-    </button>
-
-
-    <div class="live-header">
-
-      <div>
-
-        <small>
-          AUTHORIZED ADMIN CHANNEL
-        </small>
-
-        <h2>
-          Visitor History
-        </h2>
-
-      </div>
-
-      <div class="live-status">
-        <i></i>
-        LIVE
-      </div>
-
-    </div>
-
-
-    <!-- ADMIN STATS -->
-
-    <div class="admin-stats">
-
-      <div>
-        <small>
-          TOTAL
-        </small>
-
-        <strong id="adminTotal">
-          0
-        </strong>
-      </div>
-
-      <div>
-        <small>
-          TODAY
-        </small>
-
-        <strong id="adminToday">
-          0
-        </strong>
-      </div>
-
-      <div>
-        <small>
-          COUNTRIES
-        </small>
-
-        <strong id="adminCountries">
-          0
-        </strong>
-      </div>
-
-      <div>
-        <small>
-          DEVICES
-        </small>
-
-        <strong id="adminDevices">
-          0
-        </strong>
-      </div>
-
-    </div>
-
-
-    <!-- HISTORY -->
-
-    <div class="history-header">
-
-      <div>
-        <small>
-          VISITOR DATABASE
-        </small>
-
-        <h3>
-          Recent Visitors
-        </h3>
-      </div>
-
-      <span>
-        MONGODB
-      </span>
-
-    </div>
-
-
-    <div
-      id="history"
-      class="history"
+      id="currentIP"
+      class="big-ip"
     >
       Loading...
     </div>
 
+    <div class="ip-note">
+      This is the public IP address visible to this website.
+    </div>
 
-    <!-- ANALYTICS -->
+  </section>
 
-    <div class="analytics">
+  <section class="cards">
+
+    <article class="info-card glass">
+
+      <div class="card-icon">🌍</div>
 
       <div>
-
-        <small>
-          TOP COUNTRIES
-        </small>
-
-        <div id="countries">
-          —
+        <div class="card-label">
+          LOCATION
         </div>
 
+        <div
+          id="location"
+          class="card-value"
+        >
+          Loading...
+        </div>
+
+        <div
+          id="region"
+          class="card-muted"
+        >
+          —
+        </div>
+      </div>
+
+    </article>
+
+    <article class="info-card glass">
+
+      <div class="card-icon">📡</div>
+
+      <div>
+        <div class="card-label">
+          ISP
+        </div>
+
+        <div
+          id="isp"
+          class="card-value"
+        >
+          Loading...
+        </div>
+
+        <div
+          id="asn"
+          class="card-muted"
+        >
+          —
+        </div>
+      </div>
+
+    </article>
+
+    <article class="info-card glass">
+
+      <div class="card-icon">📱</div>
+
+      <div>
+        <div class="card-label">
+          DEVICE
+        </div>
+
+        <div
+          id="device"
+          class="card-value"
+        >
+          Loading...
+        </div>
+
+        <div
+          id="os"
+          class="card-muted"
+        >
+          —
+        </div>
+      </div>
+
+    </article>
+
+    <article class="info-card glass">
+
+      <div class="card-icon">🌐</div>
+
+      <div>
+        <div class="card-label">
+          BROWSER
+        </div>
+
+        <div
+          id="browser"
+          class="card-value"
+        >
+          Loading...
+        </div>
+
+        <div
+          id="engine"
+          class="card-muted"
+        >
+          —
+        </div>
+      </div>
+
+    </article>
+
+  </section>
+
+  <!-- MAP -->
+
+  <section class="map-section glass">
+
+    <div class="section-top">
+
+      <div>
+        <div class="mini-label">
+          GEOLOCATION
+        </div>
+
+        <h2>
+          Approximate Location
+        </h2>
+      </div>
+
+      <div
+        id="coordinates"
+        class="coordinates"
+      >
+        —
+      </div>
+
+    </div>
+
+    <div
+      id="map"
+      class="map"
+    ></div>
+
+  </section>
+
+  <!-- USER AGENT -->
+
+  <section class="details glass">
+
+    <div class="mini-label">
+      CONNECTION DETAILS
+    </div>
+
+    <h2>
+      Browser Signature
+    </h2>
+
+    <div
+      id="userAgent"
+      class="user-agent"
+    >
+      Loading...
+    </div>
+
+    <div class="detail-grid">
+
+      <div>
+        <span>Country</span>
+        <strong id="country">—</strong>
+      </div>
+
+      <div>
+        <span>Country Code</span>
+        <strong id="countryCode">—</strong>
+      </div>
+
+      <div>
+        <span>Postal</span>
+        <strong id="postal">—</strong>
+      </div>
+
+      <div>
+        <span>Timezone</span>
+        <strong id="timezone">—</strong>
+      </div>
+
+      <div>
+        <span>Organization</span>
+        <strong id="organization">—</strong>
+      </div>
+
+      <div>
+        <span>Browser Version</span>
+        <strong id="browserVersion">—</strong>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- HISTORY -->
+
+  <section class="section-heading history-heading">
+
+    <div>
+      <span class="mini-label">
+        VISITOR DATABASE
+      </span>
+
+      <h2>
+        Visitor History
+      </h2>
+    </div>
+
+    <button
+      id="unlockButton"
+      class="unlock-button"
+    >
+      🔐 Unlock Full History
+    </button>
+
+  </section>
+
+  <section class="history glass">
+
+    <div class="history-lock">
+
+      <div class="lock-icon">
+        🔒
       </div>
 
       <div>
 
-        <small>
-          TOP DEVICES
-        </small>
-
-        <div id="devices">
-          —
+        <div class="lock-title">
+          FULL HISTORY LOCKED
         </div>
 
-      </div>
-
-      <div>
-
-        <small>
-          TOP ISPs
-        </small>
-
-        <div id="isps">
-          —
+        <div class="lock-text">
+          Recent activity is shown with masked IP addresses.
+          Unlock to view complete records.
         </div>
 
       </div>
 
     </div>
 
+    <div
+      id="previewHistory"
+      class="history-list"
+    >
+      Loading...
+    </div>
+
+  </section>
+
+  <!-- ADMIN -->
+
+  <section
+    id="adminPanel"
+    class="admin-panel glass hidden"
+  >
+
+    <div class="admin-header">
+
+      <div>
+        <div class="mini-label">
+          ADMIN MODE
+        </div>
+
+        <h2>
+          Full Visitor Intelligence
+        </h2>
+      </div>
+
+      <button
+        id="logoutButton"
+        class="logout"
+      >
+        Logout
+      </button>
+
+    </div>
+
+    <div class="stats-grid">
+
+      <div class="stat glass">
+        <span>Total Records</span>
+        <strong id="statTotal">0</strong>
+      </div>
+
+      <div class="stat glass">
+        <span>Unique IPs</span>
+        <strong id="statUnique">0</strong>
+      </div>
+
+      <div class="stat glass">
+        <span>Last 24 Hours</span>
+        <strong id="stat24">0</strong>
+      </div>
+
+    </div>
+
+    <div class="live-header">
+
+      <div>
+        <div class="mini-label">
+          LIVE STREAM
+        </div>
+
+        <h3>
+          Incoming Visitors
+        </h3>
+      </div>
+
+      <span
+        id="liveStatus"
+        class="live-status"
+      >
+        CONNECTING
+      </span>
+
+    </div>
+
+    <div
+      id="adminHistory"
+      class="admin-history"
+    ></div>
+
+  </section>
+
+</main>
+
+<!-- LOGIN MODAL -->
+
+<div
+  id="loginModal"
+  class="modal hidden"
+>
+
+  <div class="modal-backdrop"></div>
+
+  <div class="modal-box glass">
+
+    <button
+      id="closeModal"
+      class="modal-close"
+    >
+      ×
+    </button>
+
+    <div class="modal-icon">
+      🔐
+    </div>
+
+    <div class="mini-label">
+      RESTRICTED AREA
+    </div>
+
+    <h2>
+      Unlock History
+    </h2>
+
+    <p>
+      Enter the administrator password to access
+      complete visitor records.
+    </p>
+
+    <input
+      id="passwordInput"
+      type="password"
+      placeholder="Enter password"
+      autocomplete="current-password"
+    >
+
+    <div
+      id="loginError"
+      class="login-error"
+    ></div>
+
+    <button
+      id="loginSubmit"
+      class="login-submit"
+    >
+      UNLOCK
+    </button>
+
   </div>
 
 </div>
 
-
 <footer>
-
-  RAKIB IP INTELLIGENCE
+  <span>RAKIB IP INTELLIGENCE</span>
   <span>•</span>
-  PRIVACY SAFE
-  <span>•</span>
-  MONGODB
-
+  <span>IP-based approximate geolocation</span>
 </footer>
-
 
 <script
   src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
