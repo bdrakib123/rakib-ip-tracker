@@ -1181,3 +1181,107 @@ footer {
   }
 
 }
+
+
+/* =========================================================
+   HISTORY GEOLOCATION MAP
+========================================================= */
+
+.history-location {
+  display: grid;
+
+  grid-template-columns:
+    260px 1fr;
+
+  gap: 14px;
+
+  margin-top: 16px;
+}
+
+.history-location-info {
+  padding: 18px;
+
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(54,230,255,.045),
+      rgba(155,108,255,.035)
+    );
+
+  border: 1px solid rgba(255,255,255,.05);
+}
+
+.history-location-title {
+  margin-top: 10px;
+
+  font-size: 15px;
+
+  font-weight: 700;
+}
+
+.history-location-country {
+  margin-top: 6px;
+
+  color: #7f8da6;
+
+  font-size: 11px;
+}
+
+.history-coordinates {
+  margin-top: 18px;
+
+  color: #36e6ff;
+
+  font-family: monospace;
+
+  font-size: 10px;
+}
+
+.history-map {
+  min-height: 230px;
+
+  overflow: hidden;
+
+  border-radius: 15px;
+
+  border: 1px solid rgba(54,230,255,.12);
+
+  background: #080d19;
+}
+
+.history-map .leaflet-container {
+  width: 100%;
+  height: 230px;
+}
+
+.map-unavailable {
+  height: 100%;
+
+  min-height: 230px;
+
+  display: grid;
+
+  place-items: center;
+
+  color: #68768f;
+
+  font-size: 11px;
+}
+
+@media (max-width: 700px) {
+
+  .history-location {
+    grid-template-columns: 1fr;
+  }
+
+  .history-map {
+    min-height: 250px;
+  }
+
+  .history-map .leaflet-container {
+    height: 250px;
+  }
+
+}

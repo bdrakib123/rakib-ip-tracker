@@ -512,6 +512,8 @@ async function loadAdminHistory() {
         .map(renderAdminRecord)
         .join("");
 
+    initializeHistoryMaps(container);
+
   } catch (error) {
 
     console.error(error);
@@ -525,11 +527,22 @@ async function loadAdminHistory() {
 }
 
 function renderAdminRecord(item) {
-
   const geo = item.geo || {};
   const device = item.device || {};
   const os = item.os || {};
   const browser = item.browser || {};
+  const engine = item.engine || {};
+
+  const hasCoords =
+    typeof geo.latitude === "number" &&
+    typeof geo.longitude === "number";
+
+  const safeId = String(
+    item.id ||
+    Math.random().toString(36).slice(2)
+  ).replace(/[^a-zA-Z0-9_-]/g, "");
+
+  const mapId = `history-map-${safeId}`;
 
   return `
     <div class="admin-row">
@@ -542,19 +555,65 @@ function renderAdminRecord(item) {
           </div>
 
           <div class="preview-sub">
-            ${escapeHTML(
-              safe(geo.city)
-            )},
-            ${escapeHTML(
-              safe(geo.country)
-            )}
+            ${escapeHTML(safe(geo.city))},
+            ${escapeHTML(safe(geo.country))}
           </div>
         </div>
 
         <div class="admin-time">
-          ${escapeHTML(
-            formatDate(item.timestamp)
-          )}
+          ${escapeHTML(formatDate(item.timestamp))}
+        </div>
+
+      </div>
+
+      <div class="history-location">
+
+        <div class="history-location-info">
+
+          <div class="mini-label">
+            APPROXIMATE GEOLOCATION
+          </div>
+
+          <div class="history-location-title">
+            ${escapeHTML(safe(geo.city))},
+            ${escapeHTML(safe(geo.region))}
+          </div>
+
+          <div class="history-location-country">
+            ${escapeHTML(safe(geo.country))}
+            ${
+              geo.countryCode
+                ? ` • ${escapeHTML(geo.countryCode)}`
+                : ""
+            }
+          </div>
+
+          <div class="history-coordinates">
+            ${
+              hasCoords
+                ? `${geo.latitude.toFixed(5)}, ${geo.longitude.toFixed(5)}`
+                : "Coordinates unavailable"
+            }
+          </div>
+
+        </div>
+
+        <div
+          id="${escapeHTML(mapId)}"
+          class="history-map"
+          data-lat="${hasCoords ? geo.latitude : ""}"
+          data-lon="${hasCoords ? geo.longitude : ""}"
+          data-label="${escapeHTML(
+            `${safe(geo.city)}, ${safe(geo.country)}`
+          )}"
+        >
+          ${
+            hasCoords
+              ? ""
+              : `<div class="map-unavailable">
+                   📍 Location unavailable
+                 </div>`
+          }
         </div>
 
       </div>
@@ -564,18 +623,14 @@ function renderAdminRecord(item) {
         <div>
           <span>ISP</span>
           <strong>
-            ${escapeHTML(
-              safe(geo.isp)
-            )}
+            ${escapeHTML(safe(geo.isp))}
           </strong>
         </div>
 
         <div>
           <span>ASN</span>
           <strong>
-            ${escapeHTML(
-              safe(geo.asn)
-            )}
+            ${escapeHTML(safe(geo.asn))}
           </strong>
         </div>
 
@@ -583,11 +638,9 @@ function renderAdminRecord(item) {
           <span>Device</span>
           <strong>
             ${escapeHTML(
-              `${safe(device.type)} ${
-                device.vendor || ""
-              } ${
-                device.model || ""
-              }`
+              `${safe(device.type)}
+               ${device.vendor || ""}
+               ${device.model || ""}`
             )}
           </strong>
         </div>
@@ -596,9 +649,8 @@ function renderAdminRecord(item) {
           <span>OS</span>
           <strong>
             ${escapeHTML(
-              `${safe(os.name)} ${
-                os.version || ""
-              }`
+              `${safe(os.name)}
+               ${os.version || ""}`
             )}
           </strong>
         </div>
@@ -607,9 +659,8 @@ function renderAdminRecord(item) {
           <span>Browser</span>
           <strong>
             ${escapeHTML(
-              `${safe(browser.name)} ${
-                browser.version || ""
-              }`
+              `${safe(browser.name)}
+               ${browser.version || ""}`
             )}
           </strong>
         </div>
@@ -617,47 +668,39 @@ function renderAdminRecord(item) {
         <div>
           <span>Region</span>
           <strong>
-            ${escapeHTML(
-              safe(geo.region)
-            )}
+            ${escapeHTML(safe(geo.region))}
           </strong>
         </div>
 
         <div>
           <span>Postal</span>
           <strong>
-            ${escapeHTML(
-              safe(geo.postal)
-            )}
+            ${escapeHTML(safe(geo.postal))}
           </strong>
         </div>
 
         <div>
           <span>Timezone</span>
           <strong>
-            ${escapeHTML(
-              safe(geo.timezone)
-            )}
+            ${escapeHTML(safe(geo.timezone))}
           </strong>
         </div>
 
         <div>
           <span>Organization</span>
           <strong>
-            ${escapeHTML(
-              safe(geo.organization)
-            )}
+            ${escapeHTML(safe(geo.organization))}
           </strong>
         </div>
 
         <div>
           <span>Coordinates</span>
           <strong>
-            ${escapeHTML(
-              typeof geo.latitude === "number"
+            ${
+              hasCoords
                 ? `${geo.latitude}, ${geo.longitude}`
                 : "Unavailable"
-            )}
+            }
           </strong>
         </div>
 
@@ -665,9 +708,8 @@ function renderAdminRecord(item) {
           <span>Engine</span>
           <strong>
             ${escapeHTML(
-              `${safe(item.engine?.name)} ${
-                item.engine?.version || ""
-              }`
+              `${safe(engine.name)}
+               ${engine.version || ""}`
             )}
           </strong>
         </div>
@@ -675,9 +717,7 @@ function renderAdminRecord(item) {
         <div>
           <span>Country Code</span>
           <strong>
-            ${escapeHTML(
-              safe(geo.countryCode)
-            )}
+            ${escapeHTML(safe(geo.countryCode))}
           </strong>
         </div>
 
@@ -687,14 +727,78 @@ function renderAdminRecord(item) {
         class="user-agent"
         style="margin-top:12px"
       >
-        ${escapeHTML(
-          safe(item.userAgent)
-        )}
+        ${escapeHTML(safe(item.userAgent))}
       </div>
 
     </div>
   `;
 }
+
+/* =========================================================
+   HISTORY MAPS
+========================================================= */
+
+function initializeHistoryMaps(root = document) {
+  const maps = root.querySelectorAll(
+    ".history-map[data-lat][data-lon]"
+  );
+
+  maps.forEach(element => {
+
+    if (element.dataset.initialized === "true") {
+      return;
+    }
+
+    const lat = Number(element.dataset.lat);
+    const lon = Number(element.dataset.lon);
+    const label =
+      element.dataset.label ||
+      "Approximate location";
+
+    if (
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lon)
+    ) {
+      return;
+    }
+
+    try {
+
+      const historyMap = L.map(element, {
+        zoomControl: true,
+        attributionControl: true,
+        scrollWheelZoom: false
+      }).setView(
+        [lat, lon],
+        10
+      );
+
+      L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 19,
+          attribution: "&copy; OpenStreetMap"
+        }
+      ).addTo(historyMap);
+
+      L.marker([lat, lon])
+        .addTo(historyMap)
+        .bindPopup(
+          `<b>${escapeHTML(label)}</b><br>` +
+          `Approximate IP location`
+        );
+
+      element.dataset.initialized = "true";
+
+    } catch (error) {
+      console.error(
+        "History map error:",
+        error
+      );
+    }
+  });
+}
+
 
 /* =========================================================
    LIVE STREAM
@@ -750,6 +854,13 @@ function startLiveStream() {
             "afterbegin",
             html
           );
+
+        const newestRow =
+          $("adminHistory").firstElementChild;
+
+        if (newestRow) {
+          initializeHistoryMaps(newestRow);
+        }
 
         const rows =
           $("adminHistory")
