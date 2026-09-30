@@ -1,6 +1,12 @@
 let map = null;
 let marker = null;
 let liveSource = null;
+let liveWorldMap = null;
+let liveWorldMarkers = new Map();
+let liveTraffic = [];
+let liveVisitorCount = 0;
+let liveNotificationPermission = false;
+
 
 /* =========================================================
    HELPERS
@@ -1371,6 +1377,755 @@ function applyHistoryFilters() {
 ========================================================= */
 
 
+
+
+/* =========================================================
+   LIVE PREMIUM DASHBOARD
+========================================================= */
+
+function initializeLivePremiumDashboard() {
+
+  initializeLiveWorldMap();
+  initializeLiveTrafficChart();
+
+  if (
+    "Notification" in window &&
+    Notification.permission === "default"
+  ) {
+    Notification.requestPermission()
+      .then(permission => {
+        liveNotificationPermission =
+          permission === "granted";
+      })
+      .catch(() => {});
+  } else if (
+    "Notification" in window
+  ) {
+    liveNotificationPermission =
+      Notification.permission === "granted";
+  }
+}
+
+
+/* =========================================================
+   LIVE WORLD MAP
+========================================================= */
+
+function initializeLiveWorldMap() {
+
+  const el =
+    $("liveWorldMap");
+
+  if (!el || !window.L) return;
+
+  if (liveWorldMap) {
+    try {
+      liveWorldMap.remove();
+    } catch {}
+  }
+
+  liveWorldMap =
+    L.map(el, {
+      zoomControl: true,
+      worldCopyJump: true
+    }).setView(
+      [20, 0],
+      2
+    );
+
+  L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      maxZoom: 19,
+      attribution:
+        "&copy; OpenStreetMap contributors"
+    }
+  ).addTo(liveWorldMap);
+}
+
+
+function addLiveWorldVisitor(item) {
+
+  if (!liveWorldMap) {
+    initializeLiveWorldMap();
+  }
+
+  if (!liveWorldMap) return;
+
+  const geo =
+    item?.geo || {};
+
+  const lat =
+    Number(
+      geo.lat ??
+      geo.latitude
+    );
+
+  const lon =
+    Number(
+      geo.lon ??
+      geo.longitude
+    );
+
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lon)
+  ) {
+    return;
+  }
+
+  const key =
+    String(
+      item._id ||
+      item.id ||
+      `${lat},${lon},${Date.now()}`
+    );
+
+  // Prevent duplicate marker.
+  if (liveWorldMarkers.has(key)) {
+    return;
+  }
+
+  const marker =
+    L.circleMarker(
+      [lat, lon],
+      {
+        radius: 8,
+        weight: 2,
+        fillOpacity: .82
+      }
+    ).addTo(liveWorldMap);
+
+  const city =
+    geo.city ||
+    geo.region ||
+    geo.country ||
+    "Unknown";
+
+  const device =
+    item.device?.type ||
+    "Unknown";
+
+  const browser =
+    item.browser?.name ||
+    "Unknown";
+
+  const security =
+    geo.security || {};
+
+  marker.bindPopup(`
+    <div style="min-width:190px">
+      <strong>🟢 Live Visitor</strong><br>
+      📍 ${escapeHtml(city)}<br>
+      🌍 ${escapeHtml(
+        geo.country || "Unknown"
+      )}<br>
+      📱 ${escapeHtml(device)}<br>
+      🌐 ${escapeHtml(browser)}<br>
+      🛡️ VPN:
+      ${security.vpn ? "YES" : "NO"}
+    </div>
+  `);
+
+  liveWorldMarkers.set(
+    key,
+    marker
+  );
+
+  // Keep map visually centered on new visitor.
+  if (
+    liveWorldMarkers.size === 1
+  ) {
+    liveWorldMap.setView(
+      [lat, lon],
+      5,
+      {
+        animate: true
+      }
+    );
+  }
+}
+
+
+/* =========================================================
+   LIVE TRAFFIC CHART
+========================================================= */
+
+function initializeLiveTrafficChart() {
+
+  const canvas =
+    $("liveTrafficChart");
+
+  if (!canvas) return;
+
+  if (!liveTraffic.length) {
+    const now = Date.now();
+
+    liveTraffic =
+      Array.from(
+        { length: 30 },
+        (_, i) => ({
+          time:
+            now -
+            (29 - i) * 60000,
+          count: 0
+        })
+      );
+  }
+
+  drawLiveTrafficChart();
+}
+
+
+function recordLiveTraffic() {
+
+  const now =
+    Date.now();
+
+  const minute =
+    Math.floor(now / 60000) *
+    60000;
+
+  let last =
+    liveTraffic[
+      liveTraffic.length - 1
+    ];
+
+  if (
+    !last ||
+    last.time !== minute
+  ) {
+
+    liveTraffic.push({
+      time: minute,
+      count: 1
+    });
+
+  } else {
+
+    last.count++;
+  }
+
+  // Keep last 30 minutes.
+  if (
+    liveTraffic.length > 30
+  ) {
+    liveTraffic =
+      liveTraffic.slice(-30);
+  }
+
+  drawLiveTrafficChart();
+}
+
+
+function drawLiveTrafficChart() {
+
+  const canvas =
+    $("liveTrafficChart");
+
+  if (!canvas) return;
+
+  const ctx =
+    canvas.getContext("2d");
+
+  if (!ctx) return;
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+  const dpr =
+    window.devicePixelRatio || 1;
+
+  canvas.width =
+    Math.max(
+      1,
+      Math.floor(
+        rect.width * dpr
+      )
+    );
+
+  canvas.height =
+    Math.max(
+      1,
+      Math.floor(
+        rect.height * dpr
+      )
+    );
+
+  ctx.setTransform(
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+  );
+
+  const width =
+    rect.width;
+
+  const height =
+    rect.height;
+
+  ctx.clearRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+  const data =
+    liveTraffic.length
+      ? liveTraffic
+      : [];
+
+  if (!data.length) return;
+
+  const max =
+    Math.max(
+      1,
+      ...data.map(
+        x => x.count
+      )
+    );
+
+  const padding = 24;
+
+  const graphWidth =
+    width -
+    padding * 2;
+
+  const graphHeight =
+    height -
+    padding * 2;
+
+  // Grid
+  ctx.globalAlpha = .12;
+  ctx.lineWidth = 1;
+
+  for (
+    let i = 0;
+    i <= 4;
+    i++
+  ) {
+
+    const y =
+      padding +
+      graphHeight *
+      (i / 4);
+
+    ctx.beginPath();
+    ctx.moveTo(
+      padding,
+      y
+    );
+    ctx.lineTo(
+      width - padding,
+      y
+    );
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+
+  const points =
+    data.map(
+      (item, index) => {
+
+        const x =
+          padding +
+          (
+            index /
+            Math.max(
+              1,
+              data.length - 1
+            )
+          ) *
+          graphWidth;
+
+        const y =
+          padding +
+          graphHeight -
+          (
+            item.count /
+            max
+          ) *
+          graphHeight;
+
+        return {
+          x,
+          y
+        };
+      }
+    );
+
+  // Fill
+  const gradient =
+    ctx.createLinearGradient(
+      0,
+      padding,
+      0,
+      height
+    );
+
+  gradient.addColorStop(
+    0,
+    "rgba(120,180,255,.28)"
+  );
+
+  gradient.addColorStop(
+    1,
+    "rgba(120,180,255,0)"
+  );
+
+  ctx.beginPath();
+
+  points.forEach(
+    (point, index) => {
+
+      if (index === 0) {
+        ctx.moveTo(
+          point.x,
+          point.y
+        );
+      } else {
+        ctx.lineTo(
+          point.x,
+          point.y
+        );
+      }
+    }
+  );
+
+  ctx.lineTo(
+    points.at(-1).x,
+    height - padding
+  );
+
+  ctx.lineTo(
+    points[0].x,
+    height - padding
+  );
+
+  ctx.closePath();
+
+  ctx.fillStyle =
+    gradient;
+
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+
+  points.forEach(
+    (point, index) => {
+
+      if (index === 0) {
+        ctx.moveTo(
+          point.x,
+          point.y
+        );
+      } else {
+        ctx.lineTo(
+          point.x,
+          point.y
+        );
+      }
+    }
+  );
+
+  ctx.lineWidth = 3;
+
+  ctx.strokeStyle =
+    "rgba(150,200,255,.95)";
+
+  ctx.stroke();
+
+  // Points
+  points.forEach(point => {
+
+    ctx.beginPath();
+
+    ctx.arc(
+      point.x,
+      point.y,
+      3,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fillStyle =
+      "rgba(255,255,255,.9)";
+
+    ctx.fill();
+
+  });
+}
+
+
+/* =========================================================
+   LIVE VISITOR NOTIFICATION
+========================================================= */
+
+function notifyNewVisitor(item) {
+
+  const geo =
+    item?.geo || {};
+
+  const city =
+    geo.city ||
+    geo.region ||
+    geo.country ||
+    "Unknown";
+
+  const browser =
+    item.browser?.name ||
+    "Unknown";
+
+  const device =
+    item.device?.type ||
+    "Unknown";
+
+  const message =
+    `📍 ${city} • ${device} • ${browser}`;
+
+  showToast(
+    `🟢 New Visitor — ${message}`
+  );
+
+  if (
+    liveNotificationPermission &&
+    "Notification" in window
+  ) {
+
+    try {
+
+      new Notification(
+        "🟢 New Visitor",
+        {
+          body: message,
+          icon: "/favicon.ico"
+        }
+      );
+
+    } catch {}
+  }
+}
+
+
+/* =========================================================
+   SHARE EXPIRY
+========================================================= */
+
+async function createExpiringShare(
+  visitorId,
+  expiryMinutes
+) {
+
+  try {
+
+    const response =
+      await fetch(
+        `/api/location-share/${encodeURIComponent(visitorId)}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+          body: JSON.stringify({
+            expiryMinutes:
+              expiryMinutes || null
+          })
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (
+      !response.ok ||
+      !data.ok
+    ) {
+      throw new Error(
+        data.error ||
+        "Unable to create share"
+      );
+    }
+
+    return data.url;
+
+  } catch (error) {
+
+    showToast(
+      error.message ||
+      "Unable to create share"
+    );
+
+    return null;
+  }
+}
+
+
+async function copyExpiringShare(
+  visitorId,
+  selectId
+) {
+
+  const select =
+    $(selectId);
+
+  const minutes =
+    select
+      ? select.value
+      : "";
+
+  const url =
+    await createExpiringShare(
+      visitorId,
+      minutes
+    );
+
+  if (!url) return;
+
+  await copyTextToClipboard(
+    url
+  );
+
+  showToast(
+    "🔗 Share link copied"
+  );
+
+  loadShareManager();
+}
+
+
+async function qrExpiringShare(
+  visitorId,
+  selectId
+) {
+
+  const select =
+    $(selectId);
+
+  const minutes =
+    select
+      ? select.value
+      : "";
+
+  const url =
+    await createExpiringShare(
+      visitorId,
+      minutes
+    );
+
+  if (!url) return;
+
+  showQRShare(
+    url
+  );
+
+  loadShareManager();
+}
+
+
+function showQRShare(url) {
+
+  const modal =
+    $("qrShareModal");
+
+  const qr =
+    $("qrShareCode");
+
+  const text =
+    $("qrShareUrl");
+
+  if (
+    !modal ||
+    !qr
+  ) return;
+
+  qr.innerHTML = "";
+
+  if (
+    window.QRCode
+  ) {
+
+    new QRCode(
+      qr,
+      {
+        text: url,
+        width: 230,
+        height: 230,
+        correctLevel:
+          QRCode.CorrectLevel.M
+      }
+    );
+
+  } else {
+
+    qr.innerHTML = `
+      <div class="qr-fallback">
+        QR library unavailable
+      </div>
+    `;
+  }
+
+  if (text) {
+    text.textContent =
+      url;
+  }
+
+  modal.classList.add(
+    "show"
+  );
+}
+
+
+function closeQRShare() {
+
+  const modal =
+    $("qrShareModal");
+
+  if (modal) {
+    modal.classList.remove(
+      "show"
+    );
+  }
+}
+
+
+/* =========================================================
+   LIVE EVENT HOOK
+========================================================= */
+
+function handlePremiumLiveVisitor(
+  item
+) {
+
+  liveVisitorCount++;
+
+  const count =
+    $("liveVisitorCount");
+
+  if (count) {
+    count.textContent =
+      liveVisitorCount;
+  }
+
+  addLiveWorldVisitor(
+    item
+  );
+
+  recordLiveTraffic();
+
+  notifyNewVisitor(
+    item
+  );
+}
+
+
 function startLiveStream() {
 
   if (liveSource) {
@@ -1381,6 +2136,8 @@ function startLiveStream() {
 
   $("liveStatus").textContent =
     "CONNECTING";
+
+  initializeLivePremiumDashboard();
 
   liveSource =
     new EventSource("/api/live");
@@ -1412,6 +2169,10 @@ function startLiveStream() {
 
         const item =
           data.visitor;
+
+        handlePremiumLiveVisitor(
+          item
+        );
 
         adminRecords.unshift(item);
 
@@ -2240,3 +3001,1700 @@ document.addEventListener(
 
   }
 );
+
+
+/* =========================================================
+   SMART CYBER INTELLIGENCE ENGINE
+========================================================= */
+
+(function () {
+
+  const smartState = {
+    feed: [],
+    theme: localStorage.getItem(
+      "rakib-smart-theme"
+    ) || "cyber"
+  };
+
+
+  function smartEl(id) {
+    return document.getElementById(id);
+  }
+
+
+  function smartText(
+    value,
+    fallback = "Unknown"
+  ) {
+
+    if (
+      value === undefined ||
+      value === null ||
+      value === ""
+    ) {
+      return fallback;
+    }
+
+    return String(value);
+  }
+
+
+  function smartSecurity(item) {
+
+    return (
+      item?.security ||
+      item?.geo?.security ||
+      {}
+    );
+
+  }
+
+
+  function smartLocation(item) {
+
+    const g =
+      item?.geo || {};
+
+    return [
+      g.city,
+      g.region,
+      g.country
+    ]
+      .filter(Boolean)
+      .join(", ") ||
+      "Unknown location";
+
+  }
+
+
+  function smartDevice(item) {
+
+    const d =
+      item?.device || {};
+
+    return [
+      d.vendor,
+      d.model,
+      d.type
+    ]
+      .filter(Boolean)
+      .join(" ") ||
+      "Unknown device";
+
+  }
+
+
+  function smartBrowser(item) {
+
+    const b =
+      item?.browser || {};
+
+    return [
+      b.name,
+      b.version
+    ]
+      .filter(Boolean)
+      .join(" ") ||
+      "Unknown browser";
+
+  }
+
+
+  function smartRiskCount(item) {
+
+    const s =
+      smartSecurity(item);
+
+    return [
+      s.vpn,
+      s.proxy,
+      s.tor,
+      s.hosting
+    ].filter(Boolean).length;
+
+  }
+
+
+  function smartTime(value) {
+
+    if (!value) {
+      return "now";
+    }
+
+    const d =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        d.getTime()
+      )
+    ) {
+      return "now";
+    }
+
+    return d.toLocaleTimeString(
+      [],
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      }
+    );
+
+  }
+
+
+  /* =======================================================
+     LIVE ACTIVITY FEED
+  ======================================================= */
+
+  function addSmartFeed(item) {
+
+    if (!item) return;
+
+    smartState.feed.unshift(item);
+
+    smartState.feed =
+      smartState.feed.slice(0, 40);
+
+    renderSmartFeed();
+
+  }
+
+
+  function renderSmartFeed() {
+
+    const box =
+      smartEl(
+        "smartActivityFeed"
+      );
+
+    if (!box) return;
+
+    if (!smartState.feed.length) {
+
+      box.innerHTML =
+        `<div class="smart-empty">
+          Waiting for incoming visitors...
+        </div>`;
+
+      return;
+    }
+
+    box.innerHTML =
+      smartState.feed
+        .map(
+          (item, index) => {
+
+            const risks =
+              smartRiskCount(item);
+
+            return `
+              <div
+                class="smart-activity-item"
+                data-smart-feed="${index}"
+              >
+
+                <div class="smart-activity-icon">
+                  ${risks ? "⚠" : "●"}
+                </div>
+
+                <div class="smart-activity-main">
+
+                  <strong>
+                    ${escapeHTML(
+                      smartLocation(item)
+                    )}
+                  </strong>
+
+                  <span>
+                    ${escapeHTML(
+                      smartDevice(item)
+                    )}
+                    ·
+                    ${escapeHTML(
+                      smartBrowser(item)
+                    )}
+
+                    ${
+                      risks
+                        ? ` · ${risks} security signal${risks > 1 ? "s" : ""}`
+                        : ""
+                    }
+                  </span>
+
+                </div>
+
+                <div class="smart-activity-time">
+                  ${escapeHTML(
+                    smartTime(
+                      item.timestamp
+                    )
+                  )}
+                </div>
+
+              </div>
+            `;
+          }
+        )
+        .join("");
+
+    box
+      .querySelectorAll(
+        "[data-smart-feed]"
+      )
+      .forEach(row => {
+
+        row.addEventListener(
+          "click",
+          () => {
+
+            const index =
+              Number(
+                row.dataset.smartFeed
+              );
+
+            openSmartProfile(
+              smartState.feed[index]
+            );
+
+          }
+        );
+
+      });
+
+  }
+
+
+  /* =======================================================
+     ANALYTICS
+  ======================================================= */
+
+  function renderSmartAnalytics() {
+
+    const records =
+      Array.isArray(
+        adminRecords
+      )
+        ? adminRecords
+        : [];
+
+    const countries =
+      new Map();
+
+    const devices =
+      new Map();
+
+    const browsers =
+      new Map();
+
+    let vpn = 0;
+    let proxy = 0;
+    let tor = 0;
+    let hosting = 0;
+    let riskRecords = 0;
+
+    records.forEach(item => {
+
+      const geo =
+        item?.geo || {};
+
+      const device =
+        item?.device || {};
+
+      const browser =
+        item?.browser || {};
+
+      const country =
+        geo.country ||
+        "Unknown";
+
+      const deviceName =
+        device.type ||
+        "Unknown";
+
+      const browserName =
+        browser.name ||
+        "Unknown";
+
+      countries.set(
+        country,
+        (countries.get(country) || 0) + 1
+      );
+
+      devices.set(
+        deviceName,
+        (devices.get(deviceName) || 0) + 1
+      );
+
+      browsers.set(
+        browserName,
+        (browsers.get(browserName) || 0) + 1
+      );
+
+      const s =
+        smartSecurity(item);
+
+      if (s.vpn) vpn++;
+      if (s.proxy) proxy++;
+      if (s.tor) tor++;
+      if (s.hosting) hosting++;
+
+      if (
+        s.vpn ||
+        s.proxy ||
+        s.tor ||
+        s.hosting
+      ) {
+        riskRecords++;
+      }
+
+    });
+
+
+    renderSmartRanking(
+      "smartCountryRanking",
+      countries
+    );
+
+    renderSmartRanking(
+      "smartDeviceRanking",
+      devices
+    );
+
+    renderSmartRanking(
+      "smartBrowserRanking",
+      browsers
+    );
+
+
+    const values = {
+      smartCountries:
+        countries.size,
+
+      smartDevices:
+        devices.size,
+
+      smartRiskCount:
+        riskRecords,
+
+      smartVPN:
+        vpn,
+
+      smartProxy:
+        proxy,
+
+      smartTor:
+        tor,
+
+      smartHosting:
+        hosting
+    };
+
+
+    Object.entries(values)
+      .forEach(
+        ([id, value]) => {
+
+          const el =
+            smartEl(id);
+
+          if (el) {
+            el.textContent =
+              value;
+          }
+
+        }
+      );
+
+
+    const total =
+      Math.max(
+        records.length,
+        1
+      );
+
+    const percentage =
+      Math.min(
+        100,
+        Math.round(
+          riskRecords /
+          total *
+          100
+        )
+      );
+
+
+    const riskBar =
+      smartEl(
+        "smartRiskBar"
+      );
+
+    if (riskBar) {
+
+      const span =
+        riskBar.querySelector(
+          "span"
+        );
+
+      if (span) {
+        span.style.width =
+          percentage + "%";
+      }
+
+    }
+
+
+    const riskText =
+      smartEl(
+        "smartRiskText"
+      );
+
+    if (riskText) {
+
+      riskText.textContent =
+        riskRecords
+          ? `${riskRecords} of ${records.length} records contain technical security signals.`
+          : "No security signals detected.";
+
+    }
+
+  }
+
+
+  function renderSmartRanking(
+    id,
+    collection
+  ) {
+
+    const box =
+      smartEl(id);
+
+    if (!box) return;
+
+
+    const entries =
+      [...collection.entries()]
+        .sort(
+          (a, b) =>
+            b[1] - a[1]
+        )
+        .slice(0, 8);
+
+
+    if (!entries.length) {
+
+      box.innerHTML =
+        `<div class="smart-empty">
+          No data available.
+        </div>`;
+
+      return;
+    }
+
+
+    const max =
+      Math.max(
+        ...entries.map(
+          x => x[1]
+        ),
+        1
+      );
+
+
+    box.innerHTML =
+      entries
+        .map(
+          ([name, count]) => {
+
+            const width =
+              Math.max(
+                5,
+                Math.round(
+                  count /
+                  max *
+                  100
+                )
+              );
+
+            return `
+              <div>
+
+                <div class="smart-rank-label">
+
+                  <span>
+                    ${escapeHTML(
+                      name
+                    )}
+                  </span>
+
+                  <strong>
+                    ${count}
+                  </strong>
+
+                </div>
+
+                <div class="smart-rank-bar">
+
+                  <span
+                    style="width:${width}%"
+                  ></span>
+
+                </div>
+
+              </div>
+            `;
+
+          }
+        )
+        .join("");
+
+  }
+
+
+  /* =======================================================
+     VISITOR PROFILE
+  ======================================================= */
+
+  function openSmartProfile(item) {
+
+    if (!item) return;
+
+    const modal =
+      smartEl(
+        "smartVisitorModal"
+      );
+
+    const content =
+      smartEl(
+        "smartProfileContent"
+      );
+
+    if (!modal || !content) {
+      return;
+    }
+
+
+    const geo =
+      item.geo || {};
+
+    const device =
+      item.device || {};
+
+    const os =
+      item.os || {};
+
+    const browser =
+      item.browser || {};
+
+    const client =
+      item.client || {};
+
+    const security =
+      smartSecurity(item);
+
+
+    const risks = [
+      security.vpn
+        ? "VPN"
+        : null,
+
+      security.proxy
+        ? "Proxy"
+        : null,
+
+      security.tor
+        ? "Tor"
+        : null,
+
+      security.hosting
+        ? "Hosting"
+        : null
+    ].filter(Boolean);
+
+
+    const title =
+      smartEl(
+        "smartProfileTitle"
+      );
+
+    const subtitle =
+      smartEl(
+        "smartProfileSubtitle"
+      );
+
+
+    if (title) {
+      title.textContent =
+        smartText(
+          item.ip,
+          "Visitor"
+        );
+    }
+
+
+    if (subtitle) {
+      subtitle.textContent =
+        smartLocation(item);
+    }
+
+
+    function section(
+      name,
+      fields
+    ) {
+
+      return `
+        <div class="smart-profile-section">
+
+          <h4>
+            ${escapeHTML(name)}
+          </h4>
+
+          ${
+            fields
+              .map(
+                ([label, value]) => `
+                  <div class="smart-profile-field">
+
+                    <span>
+                      ${escapeHTML(label)}
+                    </span>
+
+                    <strong>
+                      ${escapeHTML(
+                        smartText(value)
+                      )}
+                    </strong>
+
+                  </div>
+                `
+              )
+              .join("")
+          }
+
+        </div>
+      `;
+
+    }
+
+
+    content.innerHTML = [
+
+      section(
+        "Network",
+        [
+          ["IP", item.ip],
+          ["ISP", geo.isp],
+          ["ASN", geo.asn],
+          [
+            "Organization",
+            geo.organization
+          ]
+        ]
+      ),
+
+      section(
+        "Location",
+        [
+          ["Country", geo.country],
+          ["Region", geo.region],
+          ["City", geo.city],
+          ["Timezone", geo.timezone],
+          [
+            "Coordinates",
+            geo.latitude !== undefined &&
+            geo.longitude !== undefined
+              ? `${geo.latitude}, ${geo.longitude}`
+              : "Unknown"
+          ]
+        ]
+      ),
+
+      section(
+        "Device",
+        [
+          ["Type", device.type],
+          ["Vendor", device.vendor],
+          ["Model", device.model],
+          ["OS", os.name],
+          ["Browser", browser.name],
+          [
+            "Browser Version",
+            browser.version
+          ]
+        ]
+      ),
+
+      section(
+        "Client Signals",
+        [
+          ["Screen", client.screen],
+          ["Viewport", client.viewport],
+          ["DPR", client.dpr],
+          ["Language", client.language],
+          ["Timezone", client.timezone],
+          ["Platform", client.platform],
+          [
+            "WebGL",
+            client.webglRenderer
+          ]
+        ]
+      ),
+
+      section(
+        "Security",
+        [
+          [
+            "Signals",
+            risks.length
+              ? risks.join(", ")
+              : "None detected"
+          ],
+          [
+            "VPN",
+            security.vpn
+              ? "Detected"
+              : "Not detected"
+          ],
+          [
+            "Proxy",
+            security.proxy
+              ? "Detected"
+              : "Not detected"
+          ],
+          [
+            "Tor",
+            security.tor
+              ? "Detected"
+              : "Not detected"
+          ],
+          [
+            "Hosting",
+            security.hosting
+              ? "Detected"
+              : "Not detected"
+          ]
+        ]
+      ),
+
+      section(
+        "Activity",
+        [
+          [
+            "First Seen",
+            formatDate(
+              item.timestamp
+            )
+          ],
+          [
+            "Last Seen",
+            formatDate(
+              item.timestamp
+            )
+          ],
+          [
+            "Referrer",
+            item.referrer
+          ],
+          [
+            "Language",
+            item.language
+          ]
+        ]
+      )
+
+    ].join("");
+
+
+    modal.classList.add(
+      "show"
+    );
+
+  }
+
+
+  function closeSmartProfile() {
+
+    const modal =
+      smartEl(
+        "smartVisitorModal"
+      );
+
+    if (modal) {
+      modal.classList.remove(
+        "show"
+      );
+    }
+
+  }
+
+
+  /* =======================================================
+     EXPORT
+  ======================================================= */
+
+  function downloadSmartFile(
+    content,
+    filename,
+    type
+  ) {
+
+    const blob =
+      new Blob(
+        [content],
+        { type }
+      );
+
+    const url =
+      URL.createObjectURL(
+        blob
+      );
+
+    const a =
+      document.createElement(
+        "a"
+      );
+
+    a.href = url;
+    a.download = filename;
+
+    document.body.appendChild(a);
+
+    a.click();
+
+    a.remove();
+
+    setTimeout(
+      () => {
+        URL.revokeObjectURL(
+          url
+        );
+      },
+      1000
+    );
+
+  }
+
+
+  function exportSmartJSON() {
+
+    const data =
+      Array.isArray(
+        adminRecords
+      )
+        ? adminRecords
+        : [];
+
+    downloadSmartFile(
+      JSON.stringify(
+        data,
+        null,
+        2
+      ),
+      `rakib-ip-${Date.now()}.json`,
+      "application/json"
+    );
+
+
+    if (
+      typeof showToast ===
+      "function"
+    ) {
+      showToast(
+        "JSON exported"
+      );
+    }
+
+  }
+
+
+  function csvEscape(value) {
+
+    return `"${smartText(
+      value,
+      ""
+    )
+      .replaceAll(
+        '"',
+        '""'
+      )
+      .replaceAll(
+        "\n",
+        " "
+      )}"`;
+
+  }
+
+
+  function exportSmartCSV() {
+
+    const data =
+      Array.isArray(
+        adminRecords
+      )
+        ? adminRecords
+        : [];
+
+
+    const header = [
+      "IP",
+      "Country",
+      "Region",
+      "City",
+      "ISP",
+      "ASN",
+      "Device",
+      "OS",
+      "Browser",
+      "VPN",
+      "Proxy",
+      "Tor",
+      "Hosting",
+      "Timestamp"
+    ];
+
+
+    const rows =
+      data.map(item => {
+
+        const g =
+          item.geo || {};
+
+        const d =
+          item.device || {};
+
+        const o =
+          item.os || {};
+
+        const b =
+          item.browser || {};
+
+        const s =
+          smartSecurity(item);
+
+
+        return [
+          item.ip,
+          g.country,
+          g.region,
+          g.city,
+          g.isp,
+          g.asn,
+          d.type,
+          o.name,
+          b.name,
+          s.vpn ? "YES" : "NO",
+          s.proxy ? "YES" : "NO",
+          s.tor ? "YES" : "NO",
+          s.hosting ? "YES" : "NO",
+          item.timestamp
+        ]
+          .map(csvEscape)
+          .join(",");
+
+      });
+
+
+    downloadSmartFile(
+      [
+        header.map(
+          csvEscape
+        ).join(","),
+        ...rows
+      ].join("\n"),
+      `rakib-ip-${Date.now()}.csv`,
+      "text/csv;charset=utf-8"
+    );
+
+
+    if (
+      typeof showToast ===
+      "function"
+    ) {
+      showToast(
+        "CSV exported"
+      );
+    }
+
+  }
+
+
+  /* =======================================================
+     THEME
+  ======================================================= */
+
+  function applySmartTheme() {
+
+    const root =
+      document.documentElement;
+
+    if (
+      smartState.theme ===
+      "violet"
+    ) {
+
+      root.style.setProperty(
+        "--smart-cyan",
+        "#c084fc"
+      );
+
+      root.style.setProperty(
+        "--smart-purple",
+        "#22d3ee"
+      );
+
+    } else {
+
+      root.style.setProperty(
+        "--smart-cyan",
+        "#00e5ff"
+      );
+
+      root.style.setProperty(
+        "--smart-purple",
+        "#8b5cf6"
+      );
+
+    }
+
+  }
+
+
+  function toggleSmartTheme() {
+
+    smartState.theme =
+      smartState.theme ===
+      "cyber"
+        ? "violet"
+        : "cyber";
+
+    localStorage.setItem(
+      "rakib-smart-theme",
+      smartState.theme
+    );
+
+    applySmartTheme();
+
+    if (
+      typeof showToast ===
+      "function"
+    ) {
+
+      showToast(
+        smartState.theme ===
+          "violet"
+          ? "Violet theme"
+          : "Cyber theme"
+      );
+
+    }
+
+  }
+
+
+  /* =======================================================
+     WIDGET CONTROLS
+  ======================================================= */
+
+  function setupSmartWidgets() {
+
+    document
+      .querySelectorAll(
+        "[data-smart-toggle]"
+      )
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            const target =
+              button.dataset
+                .smartToggle;
+
+            document
+              .querySelectorAll(
+                "." + target
+              )
+              .forEach(el => {
+
+                el.classList.toggle(
+                  "smart-hidden-widget"
+                );
+
+              });
+
+          }
+        );
+
+      });
+
+  }
+
+
+  /* =======================================================
+     LIVE HOOK
+  ======================================================= */
+
+  function hookSmartLive() {
+
+    if (
+      typeof handlePremiumLiveVisitor !==
+      "function"
+    ) {
+      return;
+    }
+
+    if (
+      handlePremiumLiveVisitor
+        .__smartWrapped
+    ) {
+      return;
+    }
+
+
+    const original =
+      handlePremiumLiveVisitor;
+
+
+    function wrapped(item) {
+
+      original(item);
+
+      addSmartFeed(item);
+
+      const counter =
+        smartEl(
+          "smartLiveEvents"
+        );
+
+      if (counter) {
+
+        const current =
+          Number(
+            counter.textContent
+          ) || 0;
+
+        counter.textContent =
+          current + 1;
+
+      }
+
+      renderSmartAnalytics();
+
+    }
+
+
+    wrapped.__smartWrapped =
+      true;
+
+
+    window.handlePremiumLiveVisitor =
+      wrapped;
+
+  }
+
+
+  /* =======================================================
+     INIT
+  ======================================================= */
+
+  function initSmart() {
+
+    applySmartTheme();
+
+    setupSmartWidgets();
+
+
+    const theme =
+      smartEl(
+        "smartThemeButton"
+      );
+
+    if (theme) {
+
+      theme.addEventListener(
+        "click",
+        toggleSmartTheme
+      );
+
+    }
+
+
+    const csv =
+      smartEl(
+        "smartExportCSV"
+      );
+
+    if (csv) {
+
+      csv.addEventListener(
+        "click",
+        exportSmartCSV
+      );
+
+    }
+
+
+    const json =
+      smartEl(
+        "smartExportJSON"
+      );
+
+    if (json) {
+
+      json.addEventListener(
+        "click",
+        exportSmartJSON
+      );
+
+    }
+
+
+    document
+      .querySelectorAll(
+        "[data-smart-close-profile]"
+      )
+      .forEach(el => {
+
+        el.addEventListener(
+          "click",
+          closeSmartProfile
+        );
+
+      });
+
+
+    document.addEventListener(
+      "keydown",
+      event => {
+
+        if (
+          event.key ===
+          "Escape"
+        ) {
+          closeSmartProfile();
+        }
+
+      }
+    );
+
+
+    setTimeout(
+      () => {
+
+        hookSmartLive();
+
+        renderSmartAnalytics();
+
+      },
+      800
+    );
+
+
+    setInterval(
+      () => {
+
+        hookSmartLive();
+
+        renderSmartAnalytics();
+
+      },
+      1500
+    );
+
+  }
+
+
+  if (
+    document.readyState ===
+    "loading"
+  ) {
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      initSmart
+    );
+
+  } else {
+
+    initSmart();
+
+  }
+
+})();
+
+
+/* =========================================================
+   SERVER INTELLIGENCE CLIENT
+========================================================= */
+
+(function initServerIntelligence() {
+
+  const $s = id => document.getElementById(id);
+
+  let serverTimer = null;
+
+  function formatUptime(seconds) {
+    seconds = Math.max(0, Number(seconds || 0));
+
+    const days = Math.floor(seconds / 86400);
+    seconds %= 86400;
+
+    const hours = Math.floor(seconds / 3600);
+    seconds %= 3600;
+
+    const minutes = Math.floor(seconds / 60);
+
+    const secs = Math.floor(seconds % 60);
+
+    const parts = [];
+
+    if (days) parts.push(`${days}d`);
+    if (hours || days) parts.push(`${hours}h`);
+    if (minutes || hours || days) parts.push(`${minutes}m`);
+
+    parts.push(`${secs}s`);
+
+    return parts.join(" ");
+  }
+
+  function formatTime(value) {
+    if (!value) return "—";
+
+    try {
+      return new Date(value).toLocaleTimeString();
+    } catch {
+      return "—";
+    }
+  }
+
+  function setText(id, value) {
+    const el = $s(id);
+    if (el) el.textContent = value;
+  }
+
+  function renderRanking(id, items, nameKey) {
+
+    const el = $s(id);
+
+    if (!el) return;
+
+    if (!Array.isArray(items) || !items.length) {
+      el.innerHTML =
+        '<div class="server-empty">No data yet</div>';
+      return;
+    }
+
+    const max = Math.max(
+      ...items.map(item =>
+        Number(item.count || 0)
+      ),
+      1
+    );
+
+    el.innerHTML = items
+      .slice(0, 10)
+      .map(item => {
+
+        const name =
+          String(item[nameKey] || "Unknown");
+
+        const count =
+          Number(item.count || 0);
+
+        const width =
+          Math.max(
+            3,
+            Math.round((count / max) * 100)
+          );
+
+        return `
+          <div class="server-ranking-row">
+            <span class="server-ranking-name"
+                  title="${escapeHTML(name)}">
+              ${escapeHTML(name)}
+            </span>
+
+            <span class="server-ranking-count">
+              ${count.toLocaleString()}
+            </span>
+
+            <span class="server-ranking-bar">
+              <i style="width:${width}%"></i>
+            </span>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  async function loadServerHealth() {
+
+    try {
+
+      const response =
+        await fetch("/api/server-health", {
+          cache: "no-store"
+        });
+
+      if (!response.ok) {
+        throw new Error("Health request failed");
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error("Health unavailable");
+      }
+
+      const server = data.server || {};
+      const memory = server.memory || {};
+      const load = server.load || {};
+      const analytics = server.analytics || {};
+
+      setText(
+        "serverUptime",
+        formatUptime(server.uptime)
+      );
+
+      setText(
+        "serverRAM",
+        `${memory.rssMB || 0} MB`
+      );
+
+      setText(
+        "serverCPU",
+        Number(load.oneMinute || 0).toFixed(2)
+      );
+
+      setText(
+        "serverRequests",
+        Number(
+          analytics.requests || 0
+        ).toLocaleString()
+      );
+
+      setText(
+        "serverErrors",
+        `${Number(
+          analytics.errorRate || 0
+        ).toFixed(2)}%`
+      );
+
+      setText(
+        "serverSessions",
+        Number(
+          analytics.activeSessions || 0
+        ).toLocaleString()
+      );
+
+      setText(
+        "serverNode",
+        server.node || "—"
+      );
+
+      setText(
+        "serverPID",
+        server.pid || "—"
+      );
+
+      setText(
+        "serverArch",
+        server.arch || "—"
+      );
+
+      setText(
+        "serverLastRequest",
+        formatTime(
+          analytics.lastRequestAt
+        )
+      );
+
+      const dot = $s("serverHealthDot");
+      const text = $s("serverHealthText");
+
+      if (dot) {
+        dot.style.background = "#61ffc3";
+        dot.style.boxShadow =
+          "0 0 14px #61ffc3";
+      }
+
+      if (text) {
+        text.textContent = "ONLINE";
+      }
+
+    } catch (error) {
+
+      console.warn(
+        "Server health:",
+        error.message
+      );
+
+      const text = $s("serverHealthText");
+
+      if (text) {
+        text.textContent = "OFFLINE";
+      }
+
+      const dot = $s("serverHealthDot");
+
+      if (dot) {
+        dot.style.background = "#ff5577";
+        dot.style.boxShadow =
+          "0 0 14px #ff5577";
+      }
+    }
+  }
+
+  async function loadServerOverview() {
+
+    try {
+
+      const response =
+        await fetch("/api/analytics/overview", {
+          cache: "no-store"
+        });
+
+      if (!response.ok) {
+        throw new Error("Overview request failed");
+      }
+
+      const data = await response.json();
+
+      if (!data.success) return;
+
+      const last24 = data.last24h || {};
+      const runtime = data.runtime || {};
+
+      setText(
+        "serverUnique",
+        Number(
+          last24.uniqueVisitors || 0
+        ).toLocaleString()
+      );
+
+      setText(
+        "serverReturning",
+        Number(
+          last24.returningVisitors || 0
+        ).toLocaleString()
+      );
+
+      setText(
+        "server24Requests",
+        Number(
+          last24.requests || 0
+        ).toLocaleString()
+      );
+
+      setText(
+        "server24Pages",
+        Number(
+          last24.pageViews || 0
+        ).toLocaleString()
+      );
+
+      setText(
+        "server24Sessions",
+        Number(
+          last24.sessions || 0
+        ).toLocaleString()
+      );
+
+      setText(
+        "server24Security",
+        Number(
+          last24.securityEvents || 0
+        ).toLocaleString()
+      );
+
+      renderRanking(
+        "serverEndpoints",
+        data.endpoints || [],
+        "path"
+      );
+
+      renderRanking(
+        "serverStatuses",
+        (data.statusCodes || []).map(item => ({
+          path: String(item.status),
+          count: item.count
+        })),
+        "path"
+      );
+
+      if (runtime.averageResponseMs !== undefined) {
+        const panel =
+          document.querySelector(
+            ".server-panel-title"
+          );
+
+        if (panel) {
+          panel.dataset.response =
+            `${runtime.averageResponseMs}ms avg`;
+        }
+      }
+
+    } catch (error) {
+
+      console.warn(
+        "Server overview:",
+        error.message
+      );
+    }
+  }
+
+  async function loadServerAnalytics() {
+
+    await Promise.allSettled([
+      loadServerHealth(),
+      loadServerOverview()
+    ]);
+  }
+
+  function startServerPolling() {
+
+    if (!$s("serverIntelligence")) {
+      return;
+    }
+
+    loadServerAnalytics();
+
+    if (serverTimer) {
+      clearInterval(serverTimer);
+    }
+
+    serverTimer =
+      setInterval(
+        loadServerAnalytics,
+        15000
+      );
+  }
+
+  /*
+   * Public helper so the rest of the dashboard
+   * can refresh server telemetry after login.
+   */
+  window.refreshServerIntelligence =
+    loadServerAnalytics;
+
+  /*
+   * Initial attempt.
+   * Existing dashboard login can call the same
+   * helper again after authentication.
+   */
+  if (
+    document.readyState === "loading"
+  ) {
+    document.addEventListener(
+      "DOMContentLoaded",
+      startServerPolling,
+      { once: true }
+    );
+  } else {
+    startServerPolling();
+  }
+
+})();

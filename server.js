@@ -3,6 +3,8 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const crypto = require("crypto");
+const os = require("os");
+const { performance } = require("perf_hooks");
 const { MongoClient } = require("mongodb");
 const UAParser = require("ua-parser-js");
 
@@ -43,7 +45,30 @@ let mongoClient;
 let db;
 let visitorsCollection;
 
+let sessionsCollection;
+let pageViewsCollection;
+let requestsCollection;
+let securityCollection;
+
 const liveClients = new Set();
+
+/* =========================================================
+   SERVER ANALYTICS STATE
+========================================================= */
+
+const analyticsState = {
+  startedAt: Date.now(),
+  requests: 0,
+  errors: 0,
+  statusCodes: new Map(),
+  endpoints: new Map(),
+  totalResponseTime: 0,
+  lastRequestAt: null
+};
+
+const activeSessions = new Map();
+const SESSION_COOKIE = "rakib_sid";
+const SESSION_MAX_AGE = 1000 * 60 * 30;
 
 /* =========================================================
    EXPRESS
@@ -54,6 +79,167 @@ app.set("trust proxy", true);
 
 app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: false }));
+
+/* =========================================================
+   REQUEST ANALYTICS MIDDLEWARE
+========================================================= */
+
+function getSessionId(req, res) {
+  const existing = String(
+    req.headers.cookie || ""
+  )
+    .split(";")
+    .map(x => x.trim())
+    .find(x => x.startsWith(`${SESSION_COOKIE}=`));
+
+  if (existing) {
+    return decodeURIComponent(existing.split("=")[1] || "");
+  }
+
+  const sessionId = crypto.randomBytes(18).toString("hex");
+
+  res.setHeader(
+    "Set-Cookie",
+    `${SESSION_COOKIE}=${encodeURIComponent(sessionId)}; Path=/; Max-Age=1800; HttpOnly; SameSite=Lax`
+  );
+
+  return sessionId;
+}
+
+function cleanPath(value) {
+  const raw = String(value || "/").split("?")[0];
+  return raw.length > 180 ? raw.slice(0, 180) : raw;
+}
+
+function recordMapIncrement(map, key, amount = 1) {
+  const current = Number(map.get(key) || 0);
+  map.set(key, current + amount);
+
+  if (map.size > 300) {
+    const first = map.keys().next().value;
+    map.delete(first);
+  }
+}
+
+app.use((req, res, next) => {
+  const started = performance.now();
+
+  const sessionId = getSessionId(req, res);
+
+  req.rakibAnalytics = {
+    sessionId
+  };
+
+  /*
+   * Session is touched here because this middleware runs
+   * before all API routes.
+   */
+  if (
+    typeof touchAnalyticsSession === "function" &&
+    !req.path.startsWith("/api/live")
+  ) {
+    touchAnalyticsSession(req).catch(error => {
+      console.error("session touch:", error.message);
+    });
+  }
+
+  res.on("finish", () => {
+    const duration = Math.max(
+      0,
+      Math.round(performance.now() - started)
+    );
+
+    const pathName = cleanPath(req.originalUrl || req.path);
+    const status = Number(res.statusCode || 200);
+
+    analyticsState.requests += 1;
+    analyticsState.totalResponseTime += duration;
+    analyticsState.lastRequestAt = new Date();
+
+    recordMapIncrement(
+      analyticsState.statusCodes,
+      String(status)
+    );
+
+    recordMapIncrement(
+      analyticsState.endpoints,
+      pathName
+    );
+
+    if (status >= 400) {
+      analyticsState.errors += 1;
+    }
+
+    /*
+     * Lightweight security telemetry.
+     * This does NOT classify a visitor as malicious.
+     */
+    const suspiciousPath =
+      /(?:\.env|\.git|wp-admin|wp-login|phpmyadmin|xmlrpc\.php|config\.php|\.well-known\/.*\.php)/i
+        .test(pathName);
+
+    const suspiciousMethod =
+      !["GET", "POST", "HEAD", "OPTIONS"].includes(req.method);
+
+    const securityType =
+      status === 404
+        ? "not_found"
+        : status === 401
+          ? "unauthorized"
+          : status === 403
+            ? "forbidden"
+            : status === 429
+              ? "rate_limited"
+              : suspiciousPath
+                ? "suspicious_path"
+                : suspiciousMethod
+                  ? "unusual_method"
+                  : null;
+
+    if (
+      securityType &&
+      typeof logSecurityEvent === "function"
+    ) {
+      logSecurityEvent(req, securityType, {
+        status,
+        duration,
+        path: pathName
+      }).catch(() => {});
+    }
+
+    const ip = getClientIP(req);
+
+    const isStaticAsset =
+      /\.(?:css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|map)$/i
+        .test(pathName);
+
+    if (
+      requestsCollection &&
+      !pathName.startsWith("/api/live") &&
+      !isStaticAsset
+    ) {
+      requestsCollection.insertOne({
+        sessionId,
+        ipHash: hashIP(ip),
+        path: pathName,
+        method: req.method,
+        status,
+        duration,
+        userAgent: String(
+          req.headers["user-agent"] || ""
+        ).slice(0, 500),
+        referrer: String(
+          req.headers.referer || ""
+        ).slice(0, 500),
+        createdAt: new Date()
+      }).catch(error => {
+        console.error("request analytics:", error.message);
+      });
+    }
+  });
+
+  next();
+});
 
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -459,7 +645,60 @@ async function connectMongo() {
 
   visitorsCollection = db.collection("ip_tracker_visitors");
 
+  sessionsCollection = db.collection("ip_tracker_sessions");
+  pageViewsCollection = db.collection("ip_tracker_pageviews");
+  requestsCollection = db.collection("ip_tracker_requests");
+  securityCollection = db.collection("ip_tracker_security");
+
   await visitorsCollection.createIndex({
+    createdAt: -1
+  });
+
+  await sessionsCollection.createIndex({
+    createdAt: -1
+  });
+
+  await sessionsCollection.createIndex({
+    sessionId: 1
+  });
+
+  await sessionsCollection.createIndex({
+    ipHash: 1
+  });
+
+  await pageViewsCollection.createIndex({
+    createdAt: -1
+  });
+
+  await pageViewsCollection.createIndex({
+    sessionId: 1,
+    createdAt: -1
+  });
+
+  await pageViewsCollection.createIndex({
+    path: 1
+  });
+
+  await requestsCollection.createIndex({
+    createdAt: -1
+  });
+
+  await requestsCollection.createIndex({
+    ipHash: 1,
+    createdAt: -1
+  });
+
+  await requestsCollection.createIndex({
+    path: 1,
+    createdAt: -1
+  });
+
+  await securityCollection.createIndex({
+    createdAt: -1
+  });
+
+  await securityCollection.createIndex({
+    ipHash: 1,
     createdAt: -1
   });
 
@@ -489,7 +728,21 @@ async function createVisitor(req, clientData = {}) {
   const ua = parseUserAgent(userAgent);
   const geo = await getGeoData(ip);
 
+  const sessionId =
+    req.rakibAnalytics?.sessionId || "";
+
+  let previousVisits = 0;
+
+  try {
+    previousVisits =
+      await visitorsCollection.countDocuments({
+        ipHash: hashIP(ip)
+      });
+  } catch {}
+
   const visitor = {
+    sessionId,
+
     ipEncrypted: encryptIP(ip),
     ipHash: hashIP(ip),
     ipMasked: maskIP(ip),
@@ -504,6 +757,12 @@ async function createVisitor(req, clientData = {}) {
 
     referrer: req.headers.referer || "",
     language: req.headers["accept-language"] || "",
+
+    analytics: {
+      sessionId,
+      returningVisitor: previousVisits > 0,
+      previousVisits
+    },
 
     client: {
       screen: clientData.screen || {},
@@ -644,6 +903,12 @@ function adminVisitorResponse(visitor) {
 
     referrer: visitor.referrer || "",
     language: visitor.language || "",
+
+    analytics: visitor.analytics || {
+      sessionId: visitor.sessionId || "",
+      returningVisitor: false,
+      previousVisits: 0
+    },
 
     timestamp: visitor.createdAt
   };
@@ -974,7 +1239,8 @@ app.get("/api/live", requireAdmin, (req, res) => {
 function broadcastLive(visitor) {
   const data = {
     type: "visitor",
-    visitor: adminVisitorResponse(visitor)
+    visitor: adminVisitorResponse(visitor),
+    liveAt: Date.now()
   };
 
   const message = `data: ${JSON.stringify(data)}\n\n`;
@@ -989,8 +1255,694 @@ function broadcastLive(visitor) {
 }
 
 /* =========================================================
+   SECURITY EVENT HELPER
+========================================================= */
+
+async function logSecurityEvent(req, type, details = {}) {
+  try {
+    if (!securityCollection) return;
+
+    const ip = getClientIP(req);
+
+    await securityCollection.insertOne({
+      type: String(type || "unknown").slice(0, 100),
+      ipHash: hashIP(ip),
+      path: cleanPath(req.originalUrl || req.path),
+      method: req.method,
+      details,
+      userAgent: String(
+        req.headers["user-agent"] || ""
+      ).slice(0, 500),
+      createdAt: new Date()
+    });
+  } catch (error) {
+    console.error("security log:", error.message);
+  }
+}
+
+/* =========================================================
+   SERVER ANALYTICS
+========================================================= */
+
+
+
+function getSessionFromRequest(req) {
+  return req.rakibAnalytics?.sessionId || "";
+}
+
+async function touchAnalyticsSession(req) {
+  if (!sessionsCollection) return null;
+
+  const sessionId = getSessionFromRequest(req);
+
+  if (!sessionId) return null;
+
+  const now = new Date();
+  const ip = getClientIP(req);
+  const ipHash = hashIP(ip);
+
+  const existing = activeSessions.get(sessionId);
+
+  if (existing) {
+    existing.lastSeen = Date.now();
+
+    await sessionsCollection.updateOne(
+      { sessionId },
+      {
+        $set: {
+          lastSeen: now,
+          updatedAt: now
+        },
+        $inc: {
+          requestCount: 1
+        }
+      }
+    );
+
+    return existing;
+  }
+
+  const session = {
+    sessionId,
+    ipHash,
+    userAgent: String(
+      req.headers["user-agent"] || ""
+    ).slice(0, 500),
+    referrer: String(
+      req.headers.referer || ""
+    ).slice(0, 500),
+    firstPath: cleanPath(req.originalUrl || req.path),
+    requestCount: 1,
+    createdAt: now,
+    lastSeen: now,
+    updatedAt: now
+  };
+
+  activeSessions.set(sessionId, {
+    ...session,
+    lastSeen: Date.now()
+  });
+
+  await sessionsCollection.updateOne(
+    { sessionId },
+    {
+      $setOnInsert: session,
+      $set: {
+        lastSeen: now,
+        updatedAt: now
+      },
+      $inc: {
+        requestCount: 1
+      }
+    },
+    { upsert: true }
+  );
+
+  return session;
+}
+
+/* =========================================================
+   PAGE VIEW
+========================================================= */
+
+app.post("/api/analytics/pageview", async (req, res) => {
+  try {
+    const sessionId = getSessionFromRequest(req);
+
+    const pathName = cleanPath(
+      req.body?.path ||
+      req.originalUrl ||
+      "/"
+    );
+
+    const title = String(
+      req.body?.title || ""
+    ).slice(0, 200);
+
+    const duration = Math.max(
+      0,
+      Number(req.body?.duration || 0)
+    );
+
+    const ip = getClientIP(req);
+
+    await pageViewsCollection.insertOne({
+      sessionId,
+      ipHash: hashIP(ip),
+      path: pathName,
+      title,
+      duration,
+      referrer: String(
+        req.headers.referer || ""
+      ).slice(0, 500),
+      createdAt: new Date()
+    });
+
+    res.json({
+      success: true
+    });
+  } catch (error) {
+    console.error("/api/analytics/pageview:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to save page view"
+    });
+  }
+});
+
+/* =========================================================
+   SESSION CLEANUP
+========================================================= */
+
+setInterval(() => {
+  const cutoff =
+    Date.now() - SESSION_MAX_AGE;
+
+  for (const [sessionId, session] of activeSessions) {
+    if (
+      Number(session.lastSeen || 0) < cutoff
+    ) {
+      activeSessions.delete(sessionId);
+    }
+  }
+}, 5 * 60 * 1000).unref?.();
+
+/* =========================================================
+   SERVER HEALTH
+========================================================= */
+
+app.get("/api/server-health", requireAdmin, async (req, res) => {
+  try {
+    const memory = process.memoryUsage();
+
+    const usedMemoryMB =
+      Math.round(memory.rss / 1024 / 1024);
+
+    const heapUsedMB =
+      Math.round(memory.heapUsed / 1024 / 1024);
+
+    const heapTotalMB =
+      Math.round(memory.heapTotal / 1024 / 1024);
+
+    const totalMemoryMB =
+      Math.round(os.totalmem() / 1024 / 1024);
+
+    const freeMemoryMB =
+      Math.round(os.freemem() / 1024 / 1024);
+
+    const load = os.loadavg();
+
+    const uptimeSeconds =
+      Math.round(process.uptime());
+
+    const averageResponse =
+      analyticsState.requests
+        ? Math.round(
+            analyticsState.totalResponseTime /
+            analyticsState.requests
+          )
+        : 0;
+
+    res.json({
+      success: true,
+
+      server: {
+        uptime: uptimeSeconds,
+        startedAt: new Date(
+          analyticsState.startedAt
+        ).toISOString(),
+
+        node: process.version,
+        platform: process.platform,
+        arch: process.arch,
+
+        pid: process.pid,
+
+        hostname: os.hostname(),
+
+        cpuCount: os.cpus().length,
+
+        load: {
+          oneMinute: Number(load[0].toFixed(2)),
+          fiveMinutes: Number(load[1].toFixed(2)),
+          fifteenMinutes: Number(load[2].toFixed(2))
+        },
+
+        memory: {
+          rssMB: usedMemoryMB,
+          heapUsedMB,
+          heapTotalMB,
+          systemTotalMB: totalMemoryMB,
+          systemFreeMB: freeMemoryMB,
+          systemUsedPercent: Number(
+            (
+              ((totalMemoryMB - freeMemoryMB) /
+                totalMemoryMB) *
+              100
+            ).toFixed(1)
+          )
+        },
+
+        analytics: {
+          requests: analyticsState.requests,
+          errors: analyticsState.errors,
+          errorRate: analyticsState.requests
+            ? Number(
+                (
+                  (analyticsState.errors /
+                    analyticsState.requests) *
+                  100
+                ).toFixed(2)
+              )
+            : 0,
+          averageResponseMs: averageResponse,
+          activeSessions: activeSessions.size,
+          lastRequestAt:
+            analyticsState.lastRequestAt
+        }
+      }
+    });
+  } catch (error) {
+    console.error("/api/server-health:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to load server health"
+    });
+  }
+});
+
+/* =========================================================
+   ANALYTICS OVERVIEW
+========================================================= */
+
+app.get("/api/analytics/overview", requireAdmin, async (req, res) => {
+  try {
+    const now = Date.now();
+
+    const lastHour = new Date(
+      now - 60 * 60 * 1000
+    );
+
+    const last24h = new Date(
+      now - 24 * 60 * 60 * 1000
+    );
+
+    const [
+      requestsLastHour,
+      requestsLast24h,
+      pageViewsLast24h,
+      sessionsLast24h,
+      securityLast24h,
+      returningVisitors24h,
+      uniqueVisitors24h
+    ] = await Promise.all([
+      requestsCollection.countDocuments({
+        createdAt: { $gte: lastHour }
+      }),
+
+      requestsCollection.countDocuments({
+        createdAt: { $gte: last24h }
+      }),
+
+      pageViewsCollection.countDocuments({
+        createdAt: { $gte: last24h }
+      }),
+
+      sessionsCollection.countDocuments({
+        createdAt: { $gte: last24h }
+      }),
+
+      securityCollection.countDocuments({
+        createdAt: { $gte: last24h }
+      }),
+
+      visitorsCollection.countDocuments({
+        createdAt: { $gte: last24h },
+        "analytics.returningVisitor": true
+      }),
+
+      visitorsCollection.distinct("ipHash", {
+        createdAt: { $gte: last24h }
+      })
+    ]);
+
+    const statusCodes =
+      [...analyticsState.statusCodes.entries()]
+        .map(([status, count]) => ({
+          status: Number(status),
+          count
+        }))
+        .sort((a, b) => b.count - a.count);
+
+    const endpoints =
+      [...analyticsState.endpoints.entries()]
+        .map(([path, count]) => ({
+          path,
+          count
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 20);
+
+    res.json({
+      success: true,
+
+      activeSessions: activeSessions.size,
+
+      lastHour: {
+        requests: requestsLastHour
+      },
+
+      last24h: {
+        requests: requestsLast24h,
+        pageViews: pageViewsLast24h,
+        sessions: sessionsLast24h,
+        securityEvents: securityLast24h,
+        returningVisitors: returningVisitors24h,
+        uniqueVisitors: uniqueVisitors24h.length
+      },
+
+      runtime: {
+        totalRequests: analyticsState.requests,
+        errors: analyticsState.errors,
+        averageResponseMs:
+          analyticsState.requests
+            ? Math.round(
+                analyticsState.totalResponseTime /
+                analyticsState.requests
+              )
+            : 0
+      },
+
+      statusCodes,
+      endpoints
+    });
+  } catch (error) {
+    console.error("/api/analytics/overview:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to load analytics"
+    });
+  }
+});
+
+/* =========================================================
+   REQUEST ANALYTICS
+========================================================= */
+
+app.get("/api/analytics/requests", requireAdmin, async (req, res) => {
+  try {
+    const limit = Math.min(
+      Math.max(
+        Number(req.query.limit || 100),
+        1
+      ),
+      500
+    );
+
+    const data =
+      await requestsCollection
+        .find({})
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .project({
+          _id: 0,
+          sessionId: 1,
+          path: 1,
+          method: 1,
+          status: 1,
+          duration: 1,
+          createdAt: 1,
+          referrer: 1
+        })
+        .toArray();
+
+    res.json({
+      success: true,
+      count: data.length,
+      data
+    });
+  } catch (error) {
+    console.error("/api/analytics/requests:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to load request analytics"
+    });
+  }
+});
+
+/* =========================================================
+   VISITOR SESSION DETAIL
+========================================================= */
+
+app.get(
+  "/api/analytics/session/:sessionId",
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const sessionId =
+        String(req.params.sessionId || "").slice(0, 100);
+
+      if (!sessionId) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing session ID"
+        });
+      }
+
+      const [
+        session,
+        pages,
+        requests,
+        visitors
+      ] = await Promise.all([
+        sessionsCollection.findOne(
+          { sessionId },
+          { projection: { _id: 0 } }
+        ),
+
+        pageViewsCollection
+          .find({ sessionId })
+          .sort({ createdAt: 1 })
+          .limit(500)
+          .project({
+            _id: 0
+          })
+          .toArray(),
+
+        requestsCollection
+          .find({ sessionId })
+          .sort({ createdAt: 1 })
+          .limit(500)
+          .project({
+            _id: 0,
+            path: 1,
+            method: 1,
+            status: 1,
+            duration: 1,
+            createdAt: 1
+          })
+          .toArray(),
+
+        visitorsCollection
+          .find({ sessionId })
+          .sort({ createdAt: 1 })
+          .limit(100)
+          .project({
+            ipEncrypted: 1,
+            ipMasked: 1,
+            geo: 1,
+            device: 1,
+            os: 1,
+            browser: 1,
+            analytics: 1,
+            createdAt: 1
+          })
+          .toArray()
+      ]);
+
+      res.json({
+        success: true,
+
+        session: session || null,
+
+        pages,
+        requests,
+
+        visitors: visitors.map(visitor => ({
+          ip: (() => {
+            try {
+              return decryptIP(visitor.ipEncrypted);
+            } catch {
+              return visitor.ipMasked || "";
+            }
+          })(),
+
+          maskedIP: visitor.ipMasked,
+
+          geo: visitor.geo,
+          device: visitor.device,
+          os: visitor.os,
+          browser: visitor.browser,
+          analytics: visitor.analytics,
+          timestamp: visitor.createdAt
+        }))
+      });
+    } catch (error) {
+      console.error(
+        "/api/analytics/session/:sessionId:",
+        error
+      );
+
+      res.status(500).json({
+        success: false,
+        error: "Unable to load session"
+      });
+    }
+  }
+);
+
+/* =========================================================
+   SESSION ANALYTICS
+========================================================= */
+
+app.get("/api/analytics/sessions", requireAdmin, async (req, res) => {
+  try {
+    const limit = Math.min(
+      Math.max(
+        Number(req.query.limit || 100),
+        1
+      ),
+      500
+    );
+
+    const data =
+      await sessionsCollection
+        .find({})
+        .sort({ lastSeen: -1 })
+        .limit(limit)
+        .project({
+          _id: 0,
+          sessionId: 1,
+          ipHash: 1,
+          userAgent: 1,
+          firstPath: 1,
+          requestCount: 1,
+          createdAt: 1,
+          lastSeen: 1,
+          updatedAt: 1
+        })
+        .toArray();
+
+    res.json({
+      success: true,
+      active: activeSessions.size,
+      count: data.length,
+      data
+    });
+  } catch (error) {
+    console.error("/api/analytics/sessions:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to load sessions"
+    });
+  }
+});
+
+/* =========================================================
+   PAGE ANALYTICS
+========================================================= */
+
+app.get("/api/analytics/pages", requireAdmin, async (req, res) => {
+  try {
+    const pages =
+      await pageViewsCollection
+        .aggregate([
+          {
+            $group: {
+              _id: "$path",
+              views: {
+                $sum: 1
+              },
+              averageDuration: {
+                $avg: "$duration"
+              }
+            }
+          },
+
+          {
+            $sort: {
+              views: -1
+            }
+          },
+
+          {
+            $limit: 50
+          }
+        ])
+        .toArray();
+
+    res.json({
+      success: true,
+
+      pages: pages.map(item => ({
+        path: item._id || "/",
+        views: item.views,
+        averageDuration: Math.round(
+          item.averageDuration || 0
+        )
+      }))
+    });
+  } catch (error) {
+    console.error("/api/analytics/pages:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to load page analytics"
+    });
+  }
+});
+
+/* =========================================================
+   SECURITY ANALYTICS
+========================================================= */
+
+app.get("/api/analytics/security", requireAdmin, async (req, res) => {
+  try {
+    const data =
+      await securityCollection
+        .find({})
+        .sort({ createdAt: -1 })
+        .limit(200)
+        .project({
+          _id: 0
+        })
+        .toArray();
+
+    res.json({
+      success: true,
+      count: data.length,
+      data
+    });
+  } catch (error) {
+    console.error("/api/analytics/security:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to load security analytics"
+    });
+  }
+});
+
+/* =========================================================
    SPA FALLBACK
 ========================================================= */
+
+
 
 app.use((req, res) => {
   res.sendFile(

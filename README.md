@@ -1,31 +1,33 @@
 # ⚡ RAKIB IP INTELLIGENCE
 
-<p align="center">
+## 🌐 Privacy-Safe Visitor Intelligence & Server Analytics
 
-### 🌐 Privacy-Safe IP Intelligence & Visitor Analytics
-
-**MongoDB • Real-Time SSE • Leaflet Maps • Device Detection • Cyber Glass UI**
-
-</p>
+MongoDB • Express 5 • Real-Time SSE • Leaflet • IP Intelligence • Session Analytics • Server Telemetry • Cyber Glass UI
 
 ---
 
 ## 🛰️ Overview
 
-RAKIB IP INTELLIGENCE is a modern privacy-focused visitor analytics dashboard built with Node.js, Express, MongoDB and Leaflet.
+RAKIB IP INTELLIGENCE is a modern privacy-conscious visitor analytics and server intelligence platform built with Node.js, Express 5, MongoDB, UAParser.js, Leaflet, OpenStreetMap and IPWho.is.
 
-It provides approximate IP-based network information, device and browser detection, persistent visitor history, geographic visualization and real-time visitor events through a futuristic cyber/glass interface.
+The system provides approximate IP-based network intelligence, device detection, geographic visualization, visitor history, real-time visitor events, session analytics, page analytics, request monitoring, security telemetry and server health monitoring.
 
-> This system does not collect GPS coordinates or exact street addresses.
+> IP-based geographic information is approximate and should not be treated as an exact physical location.
+
+The system does not intentionally collect GPS coordinates, IMEI, SIM information, contacts, files, camera data or microphone data.
 
 ---
 
-## ✨ Features
+# ✨ Features
 
-### 🌐 IP Intelligence
+## 🌐 IP Intelligence
 
 - Public IP detection
-- Approximate country
+- AES-256-GCM encrypted IP storage
+- IP hash
+- Masked IP
+- Country
+- Country code
 - Region
 - City
 - Postal code
@@ -33,182 +35,545 @@ It provides approximate IP-based network information, device and browser detecti
 - ISP
 - Organization
 - ASN
-- Approximate latitude and longitude
+- Approximate latitude
+- Approximate longitude
 
-### 📱 Device Intelligence
-
-Detects:
+## 📱 Device Intelligence
 
 - Device type
 - Device vendor
 - Device model
 - Operating system
+- OS version
 - Browser
 - Browser version
 - Rendering engine
 - User-Agent
 
-### 🗺️ Geo Intelligence
+## 🧠 Client Intelligence
 
-Interactive Leaflet and OpenStreetMap visitor map.
+Browser-provided technical signals can include:
 
-Visitor markers can show:
+- Screen resolution
+- Viewport size
+- Device pixel ratio
+- Color depth
+- Touch support
+- Touch points
+- Hardware concurrency
+- Device memory
+- Browser language
+- Browser language list
+- Timezone
+- Timezone offset
+- Cookies availability
+- Do Not Track
+- Online status
+- Platform
+- Network connection information
+- WebGL information
+- Canvas fingerprint signal
+
+These signals are intended for analytics and technical diagnostics.
+
+## 🗺️ Geo Intelligence
+
+Interactive geographic visualization powered by Leaflet and OpenStreetMap.
+
+Visitor map information can include:
 
 - Country
 - City
 - Masked IP
 - Approximate coordinates
+- Network/security signals
+
+IP geolocation is approximate and may not represent the visitor's exact physical location.
 
 ---
 
-## ⚡ Real-Time Visitor Stream
+# ⚡ Real-Time Visitor Stream
 
 The dashboard uses Server-Sent Events (SSE) for real-time visitor updates.
 
-    Visitor Browser
-          |
-          v
-      /api/track
-          |
-          v
-    Visitor Processing
-          |
-          v
-       MongoDB
-          |
-          v
-       SSE Event
-          |
-          v
-     Live Dashboard
+Visitor Browser
+      |
+      v
+ /api/track
+      |
+      v
+Visitor Processing
+      |
+      v
+   MongoDB
+      |
+      v
+ Broadcast Event
+      |
+      v
+    SSE
+      |
+      v
+Live Dashboard
 
-New visitor events can appear without refreshing the dashboard.
-
----
-
-## 🔐 Protected Live Action
-
-The Live Action panel is protected by administrator authentication.
-
-The authentication credential is configured through an environment variable and is never stored inside the frontend code.
-
-Configuration:
-
-    LIVE_PASSWORD=YOUR_PRIVATE_PASSWORD
-
-The server creates a temporary access token after successful authentication.
-
-Live sessions automatically expire.
+New visitor events can appear without manually refreshing the dashboard.
 
 ---
 
-## ☁️ MongoDB Persistent Storage
+# 👥 Session Intelligence
 
-Visitor history is stored in MongoDB instead of temporary server memory.
+The server maintains temporary visitor sessions.
 
-This means visitor history remains available after:
+Session analytics include:
 
-    Render Restart
-          |
-          v
-    Server Restart
-          |
-          v
-    New Deployment
-          |
-          v
-       MongoDB
-          |
-          v
-    History Available
+- Session ID
+- First activity
+- Last activity
+- Request count
+- First path
+- Active session count
+- Returning visitor detection
+- Session activity
+- Session detail
 
-The application automatically creates the required collection and indexes.
+Session cookies are:
 
-Collection:
+- HTTP-only
+- SameSite protected
+- Temporary
+- Automatically expired
 
-    ip_visitors
+Default session inactivity window:
+
+30 minutes
 
 ---
 
-## 🛡️ Privacy Design
+# 🧭 Visitor Journey
 
-This project is designed to avoid storing raw IP addresses.
-
-The database stores:
-
-    IP Hash
-    +
-    Masked IP
+Visitor activity can be associated with a session.
 
 Example:
 
-    Original:
-    152.55.178.101
+Visitor
+   |
+   +-- /
+   |    |
+   |    +-- 4.2s
+   |
+   +-- /dashboard
+   |    |
+   |    +-- 8.7s
+   |
+   +-- /api/track
+   |
+   +-- Exit
 
-    Dashboard:
-    152.55.178.xxx
+Page analytics can record:
+
+- Page path
+- Page title
+- Session ID
+- Visit time
+- Page duration
+- Referrer
+
+---
+
+# 📄 Page Analytics
+
+Page-view endpoint:
+
+POST /api/analytics/pageview
+
+Provides:
+
+- Total page views
+- Popular pages
+- Average page duration
+- Session-based page activity
+- Page ranking
+
+Example request:
+
+{
+  "path": "/",
+  "title": "Rakib IP Intelligence",
+  "duration": 4200
+}
+
+---
+
+# 📡 Request Analytics
+
+The server records technical request telemetry.
+
+Tracked information can include:
+
+- HTTP method
+- Endpoint
+- Response status
+- Response time
+- Session ID
+- Referrer
+- User-Agent
+- Request timestamp
+
+Endpoint:
+
+GET /api/analytics/requests
+
+Runtime analytics include:
+
+- Total requests
+- Request errors
+- Error rate
+- Average response time
+- HTTP status distribution
+- Top endpoints
+
+Static assets are excluded from persistent request analytics to reduce unnecessary database noise.
+
+---
+
+# 🛡️ Security Telemetry
+
+The server provides lightweight technical security monitoring.
+
+Possible events include:
+
+- 404 Not Found
+- 401 Unauthorized
+- 403 Forbidden
+- 429 Rate Limited
+- Suspicious Path
+- Unusual HTTP Method
+
+Common suspicious-path probes can include:
+
+- .env
+- .git
+- wp-admin
+- wp-login
+- phpmyadmin
+- xmlrpc.php
+- config.php
+
+> These signals are technical telemetry only. A security event does not automatically mean that a visitor is malicious.
+
+Security endpoint:
+
+GET /api/analytics/security
+
+---
+
+# 🖥️ Server Intelligence
+
+The dashboard includes runtime/server telemetry.
+
+Metrics include:
+
+- Server uptime
+- Node.js version
+- Platform
+- Architecture
+- Process ID
+- Hostname
+- CPU count
+- CPU load
+- RAM usage
+- Heap usage
+- System memory
+- Total requests
+- Error count
+- Error rate
+- Average response time
+- Active sessions
+- Last request time
+
+Endpoint:
+
+GET /api/server-health
+
+Example:
+
+SERVER INTELLIGENCE
+
+UPTIME       2d 14h 22m
+RAM          148 MB
+CPU LOAD     0.42
+REQUESTS     18,492
+ERROR RATE   0.18%
+SESSIONS     27
+
+---
+
+# 📊 Analytics Overview
+
+Main analytics endpoint:
+
+GET /api/analytics/overview
+
+Provides:
+
+Runtime:
+- Total requests
+- Errors
+- Average response time
+- Active sessions
+
+Last 24 Hours:
+- Requests
+- Page views
+- Sessions
+- Security events
+- Returning visitors
+- Unique visitors
+
+Request Intelligence:
+- Top endpoints
+- HTTP status distribution
+
+---
+
+# 🔎 Session Analytics
+
+Session list:
+
+GET /api/analytics/sessions
+
+Optional:
+
+GET /api/analytics/sessions?limit=100
+
+Individual session:
+
+GET /api/analytics/session/:sessionId
+
+A session detail can contain:
+
+Session
+ Session information
+ Page views
+ Requests
+ Visitor records
+
+---
+
+# 📈 Page Analytics
+
+Endpoint:
+
+GET /api/analytics/pages
+
+Returns page popularity and average page duration.
+
+---
+
+# 🔐 Protected Dashboard
+
+Administrative analytics endpoints require administrator authentication.
+
+Protected areas include:
+
+/api/history
+/api/stats
+/api/live
+/api/server-health
+/api/analytics/*
+
+The administrator credential is configured through an environment variable.
+
+Example:
+
+LIVE_PASSWORD=YOUR_PRIVATE_PASSWORD
+
+Never place the password inside:
+
+public/app.js
+public/index.html
+README.md
+
+---
+
+# 🔒 Privacy Design
+
+The system is designed with privacy-conscious storage.
+
+The database uses:
+
+Encrypted IP
+     +
+IP Hash
+     +
+Masked IP
+
+Example:
+
+Original:
+152.55.178.101
+
+Dashboard:
+152.55.178.xxx
+
+The encrypted IP can only be decrypted by the server using the configured encryption key.
 
 The system does not intentionally store:
 
-- Raw IP address
-- GPS location
+- GPS coordinates
 - Exact street address
-
-Location information is based on approximate IP geolocation.
-
----
-
-## 📊 Dashboard
-
-The dashboard includes:
-
-    +---------------------------------------------+
-    |          RAKIB IP INTELLIGENCE              |
-    +---------------------------------------------+
-    | TOTAL | TODAY | COUNTRIES | LIVE CHANNEL   |
-    +---------------------------------------------+
-    |                                             |
-    |                 VISITOR MAP                 |
-    |                                             |
-    +-------------------------+-------------------+
-    | CURRENT VISITOR         | LAST SIGNAL       |
-    +-------------------------+-------------------+
-    |              EVENT STREAM                  |
-    +---------------------------------------------+
-    | COUNTRIES | DEVICES | ISP SIGNALS          |
-    +---------------------------------------------+
+- IMEI
+- SIM information
+- Contacts
+- Personal files
+- Camera content
+- Microphone content
 
 ---
 
-## 📈 Analytics
+# 🔑 Encryption
 
-The dashboard provides:
+Required environment variable:
 
-- Total visitors
-- Today's visitors
-- Countries
-- Devices
-- Browsers
-- ISPs
-- Visitor history
-- Live visitor events
-- Geographic map data
+IP_ENCRYPTION_KEY=64_HEX_CHARACTERS
+
+Example format:
+
+0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+
+> Do not change the encryption key after production data has been stored unless you have a proper migration/decryption plan.
 
 ---
 
-## 🚦 Rate Limiting
+# 📊 Dashboard
 
-The tracker includes basic request protection.
+The dashboard contains:
 
-Default:
+RAKIB IP INTELLIGENCE
 
-    20 tracking requests / IP / minute
+TOTAL | LIVE | COUNTRIES | DEVICES | RISK
 
-This helps reduce accidental or abusive request flooding.
+LIVE WORLD MAP
+
+TRAFFIC CHART | LIVE ACTIVITY
+
+SECURITY MONITOR | VISITOR INTELLIGENCE
+
+COUNTRIES | DEVICES | BROWSERS | NETWORK SIGNALS
+
+SERVER INTELLIGENCE
+
+RAM | CPU | REQUESTS | SESSIONS | ERRORS | UPTIME
 
 ---
 
-## 🧠 Technology Stack
+# 🎨 Cyber Intelligence UI
+
+The interface includes:
+
+- Dark cyber theme
+- Glassmorphism panels
+- Neon highlights
+- Live status indicators
+- Animated activity feed
+- Interactive world map
+- Traffic chart
+- Security monitor
+- Visitor profile
+- Analytics rankings
+- Server telemetry
+- Responsive mobile layout
+- Desktop optimized layout
+- Theme switching
+- JSON/CSV export
+
+---
+
+# 📤 Data Export
+
+The dashboard supports analytics export.
+
+Available formats:
+
+- JSON
+- CSV
+
+Useful for:
+
+- Development
+- Analytics
+- Debugging
+- Reporting
+
+---
+
+# 🗄️ MongoDB Storage
+
+MongoDB provides persistent storage.
+
+The application automatically creates the required collections and indexes.
+
+Collections:
+
+ip_tracker_visitors
+ip_tracker_sessions
+ip_tracker_pageviews
+ip_tracker_requests
+ip_tracker_security
+
+Visitor collection:
+
+ip_tracker_visitors
+
+Stores visitor intelligence and historical visitor records.
+
+Session collection:
+
+ip_tracker_sessions
+
+Stores visitor session analytics.
+
+Page View collection:
+
+ip_tracker_pageviews
+
+Stores page-view analytics.
+
+Request collection:
+
+ip_tracker_requests
+
+Stores technical request telemetry.
+
+Security collection:
+
+ip_tracker_security
+
+Stores technical security events.
+
+---
+
+# 🧱 Project Structure
+
+rakib-ip-tracker/
+|
++-- public/
+|   +-- index.html
+|   +-- style.css
+|   +-- app.js
+|
++-- server.js
++-- package.json
++-- package-lock.json
++-- render.yaml
++-- README.md
++-- LICENSE
++-- .gitignore
++-- .env
+
+---
+
+# 🧠 Technology Stack
 
 | Technology | Purpose |
 |------------|---------|
@@ -227,186 +592,128 @@ This helps reduce accidental or abusive request flooding.
 
 ---
 
-## 📁 Project Structure
-
-    rakib-ip-tracker/
-    |
-    +-- public/
-    |   +-- index.html
-    |   +-- style.css
-    |   +-- app.js
-    |
-    +-- server.js
-    +-- package.json
-    +-- package-lock.json
-    +-- .env
-    +-- .gitignore
-    +-- README.md
-
----
-
-## ⚙️ Installation
+# ⚙️ Installation
 
 Clone the repository:
 
-    git clone YOUR_REPOSITORY_URL
-    cd rakib-ip-tracker
+git clone YOUR_REPOSITORY_URL
+cd rakib-ip-tracker
 
 Install dependencies:
 
-    npm install
+npm install
 
 ---
 
-## 🔑 Environment Variables
+# 🔑 Environment Variables
 
-Create a .env file.
+Create:
+
+.env
 
 Required variables:
 
-    MONGODB_URI=YOUR_MONGODB_CONNECTION_STRING
-    MONGODB_DB=goatbot
-    LIVE_PASSWORD=YOUR_PRIVATE_PASSWORD
-    PORT=3000
+MONGODB_URI=YOUR_MONGODB_CONNECTION_STRING
+MONGODB_DB=goatbot
+LIVE_PASSWORD=YOUR_PRIVATE_PASSWORD
+IP_ENCRYPTION_KEY=YOUR_64_HEX_CHARACTER_KEY
+LIVE_SESSION_SECRET=YOUR_RANDOM_SECRET
+PORT=3000
 
-Never commit .env to GitHub.
+Never commit .env.
 
-Make sure .gitignore contains:
+Recommended .gitignore:
 
-    .env
-    node_modules/
+.env
+node_modules/
+*.log
 
 ---
 
-## ▶️ Run Locally
+# ▶️ Run Locally
 
-Start the server:
+Start:
 
-    npm start
+npm start
 
-Development mode:
+The server listens on:
 
-    npm run dev
+0.0.0.0:3000
 
 Open:
 
-    http://localhost:3000
+http://localhost:3000
 
 ---
 
-## ❤️ Health Check
+# ❤️ Health Check
 
-Health endpoint:
+Endpoint:
 
-    /health
+GET /health
 
 Test:
 
-    curl http://localhost:3000/health
+curl http://localhost:3000/health
 
 Example response:
 
-    {
-      "success": true,
-      "service": "Rakib IP Intelligence",
-      "version": "3.0.0",
-      "mongo": "online"
-    }
+{
+  "success": true,
+  "service": "Rakib IP Intelligence",
+  "version": "3.0.0",
+  "mongo": "online"
+}
 
 ---
 
-# 🔌 API
+# 🔌 API Reference
 
-## Track Visitor
+GET    /api/track
+POST   /api/track
 
-    GET /api/track
+GET    /api/history-preview
+GET    /api/history
+GET    /api/stats
 
-This endpoint records the browser visitor and stores the privacy-safe visitor record in MongoDB.
+GET    /api/live
 
----
+GET    /api/server-health
 
-## Visitor History
+GET    /api/analytics/overview
+GET    /api/analytics/requests
+GET    /api/analytics/sessions
+GET    /api/analytics/session/:sessionId
+GET    /api/analytics/pages
+POST   /api/analytics/pageview
+GET    /api/analytics/security
 
-    GET /api/history
-
-Optional:
-
-    /api/history?limit=30
-
-Returns recent visitor records.
-
----
-
-## Statistics
-
-    GET /api/stats
-
-Returns:
-
-- Total visitors
-- Today's visitors
-- Countries
-- Devices
-- Browsers
-- ISPs
+Protected endpoints require administrator authentication.
 
 ---
 
-## Live Stream
+# ☁️ Render Deployment
 
-    GET /api/live
-
-Uses Server-Sent Events for real-time visitor events.
-
-Example:
-
-    event: visitor
-    data: {...}
-
----
-
-## Live Authentication
-
-    POST /api/live/auth
-
-Authentication is handled server-side.
-
-The required credential must be configured through the LIVE_PASSWORD environment variable.
-
----
-
-## Protected Live History
-
-    GET /api/live/history
-
-Requires an authorized temporary access token.
-
-Example header:
-
-    Authorization: Bearer YOUR_TOKEN
-
----
-
-# 🚀 Render Deployment
-
-Create a new Web Service on Render.
+Create a new Render Web Service.
 
 Recommended settings:
 
-    Runtime:
-    Node
+Runtime:
+Node
 
-    Build Command:
-    npm install
+Build Command:
+npm install
 
-    Start Command:
-    npm start
+Start Command:
+npm start
 
-Add these environment variables in Render:
+Add environment variables:
 
-    MONGODB_URI
-    MONGODB_DB
-    LIVE_PASSWORD
+MONGODB_URI
+MONGODB_DB
+LIVE_PASSWORD
+IP_ENCRYPTION_KEY
+LIVE_SESSION_SECRET
 
 Do not upload .env to GitHub.
 
@@ -416,27 +723,162 @@ Do not upload .env to GitHub.
 
 Create a MongoDB Atlas cluster and database.
 
-Recommended database:
+Example database:
 
-    goatbot
+goatbot
 
-Collection:
-
-    ip_visitors
-
-The application automatically creates the collection and required indexes when it starts.
+The application automatically creates the required collections and indexes.
 
 ---
 
-# 🔒 Security
+# ⚠️ Important Architecture
+
+A Messenger bot cannot directly obtain a user's public IP simply because someone sends:
+
+ip
+
+to the bot.
+
+Messenger/Meta does not provide the sender's network IP to the bot.
+
+Correct architecture:
+
+USER
+ |
+ | Opens Tracker URL
+ v
+BROWSER
+ |
+ v
+RAKIB TRACKER
+ |
+ +---------+---------+
+ |         |         |
+ v         v         v
+IP      DEVICE      GEO
+ |         |         |
+ +---------+---------+
+           |
+           v
+        MongoDB
+           |
+     +-----+-----+
+     |           |
+     v           v
+Dashboard     Live SSE
+
+The bot should provide the tracker URL instead of directly calling /api/track.
+
+This ensures the tracked request represents the visitor browser rather than the bot's own hosting server.
+
+---
+
+# 🚦 Rate Limiting
+
+The tracker includes request protection and tracking safeguards.
+
+Rate limiting is intended to reduce:
+
+- Accidental request flooding
+- Repeated tracking calls
+- Excessive API requests
+- Basic automated abuse
+
+---
+
+# 🧪 Development
+
+Start:
+
+npm start
+
+Health:
+
+curl http://localhost:3000/health
+
+Statistics:
+
+curl http://localhost:3000/api/stats
+
+Protected endpoints require administrator authentication.
+
+---
+
+# 📦 Production
+
+Start:
+
+npm start
+
+Server:
+
+0.0.0.0:3000
+
+Port configuration:
+
+PORT=3000
+
+---
+
+# 🧹 Git Workflow
+
+Check:
+
+git status
+
+Stage:
+
+git add .
+
+Commit:
+
+git commit -m "upgrade visitor and server analytics"
+
+Push:
+
+git push origin main
+
+---
+
+# 📡 Data Flow
+
+VISITOR
+   |
+   v
+/api/track
+   |
+   +--------+--------+--------+
+   |        |        |        |
+   v        v        v        v
+  IP      DEVICE    GEO    SESSION
+   |        |        |        |
+   +--------+--------+--------+
+            |
+            v
+         MONGODB
+            |
+      +-----+-----+-----+
+      |     |     |     |
+      v     v     v     v
+   PAGE  REQUEST SECURITY LIVE
+   VIEW  LOG     LOG      SSE
+      |     |     |        |
+      +-----+-----+--------+
+            |
+            v
+        DASHBOARD
+
+---
+
+# 🔒 Security Recommendations
 
 ## MongoDB Credentials
 
 Never expose your MongoDB connection string publicly.
 
-If a MongoDB password has been exposed:
+If MongoDB credentials are exposed:
 
-1. Change the MongoDB user's password.
+1. Change the MongoDB user password.
 2. Generate a new connection string.
 3. Update MONGODB_URI.
 4. Update the Render environment variable.
@@ -446,189 +888,51 @@ If a MongoDB password has been exposed:
 
 Keep private credentials inside:
 
-    .env
+.env
 
-Never place credentials directly inside:
+Never place credentials inside:
 
-    server.js
-
-or:
-
-    public/app.js
-    public/index.html
+server.js
+public/app.js
+public/index.html
+README.md
 
 ---
 
-# ⚠️ Important Architecture
-
-A Messenger bot cannot directly obtain a user's public IP simply because someone sends:
-
-    ip
-
-to the bot.
-
-Messenger and Meta do not provide the sender's network IP to the bot.
-
-The correct architecture is:
-
-                USER
-                  |
-                  | Opens Tracker
-                  v
-             +----------+
-             | BROWSER  |
-             +----+-----+
-                  |
-                  v
-          +---------------+
-          | RAKIB TRACKER |
-          +-------+-------+
-                  |
-        +---------+---------+
-        |         |         |
-        v         v         v
-       IP       DEVICE     GEO
-        |         |         |
-        +---------+---------+
-                  |
-                  v
-             +---------+
-             | MongoDB |
-             +----+----+
-                  |
-          +-------+-------+
-          |               |
-          v               v
-      Dashboard        Live SSE
-
-The bot should provide the tracker URL instead of calling /api/track itself.
-
-This prevents the bot's own hosting IP from being recorded as a visitor.
-
----
-
-# 🎨 Cyber Glass UI
-
-The dashboard uses a custom futuristic interface featuring:
-
-- Dark cyber theme
-- Glass panels
-- Neon borders
-- Live indicators
-- Interactive map
-- Real-time event stream
-- Protected Live Action
-- Analytics cards
-- Visitor intelligence
-- Responsive mobile layout
-- Desktop optimized layout
-
----
-
-# 📡 Data Flow
-
-                  +-------------+
-                  |   VISITOR   |
-                  +------+------+
-                         |
-                         v
-                +----------------+
-                | EXPRESS SERVER |
-                +-------+--------+
-                        |
-             +----------+----------+
-             |                     |
-             v                     v
-      +-------------+       +-------------+
-      |  IP GEO API |       |  UA PARSER  |
-      +------+------+       +------+------+
-             |                     |
-             +----------+----------+
-                        |
-                        v
-                 +------------+
-                 |  MONGODB   |
-                 +------+-----+
-                        |
-              +---------+---------+
-              |                   |
-              v                   v
-       +-------------+     +-------------+
-       | DASHBOARD   |     |   LIVE SSE  |
-       +-------------+     +-------------+
-
----
-
-# 🧪 Development
-
-Start development server:
-
-    npm run dev
-
-Check health:
-
-    curl http://localhost:3000/health
-
-Check history:
-
-    curl http://localhost:3000/api/history
-
-Check statistics:
-
-    curl http://localhost:3000/api/stats
-
----
-
-# 📦 Production
-
-Start:
-
-    npm start
-
-The application listens on:
-
-    0.0.0.0:3000
-
-The PORT can be changed through environment variables.
-
----
-
-# 🧹 Git
-
-After making changes:
-
-    git status
-    git add .
-    git commit -m "update tracker"
-    git push origin main
-
----
-
-# 👑 RAKIB IP INTELLIGENCE
-
-    +------------------------------------------+
-    |                                          |
-    |       RAKIB IP INTELLIGENCE              |
-    |                                          |
-    |    NETWORK • DEVICE • GEO • LIVE         |
-    |                                          |
-    |          MONGODB POWERED                |
-    |                                          |
-    +------------------------------------------+
-
----
-
-## ❤️ Credits
+# ❤️ Credits
 
 Built with ❤️ by Rakib
 
 RAKIB // DIGITAL INTELLIGENCE SYSTEM
 
+NETWORK • DEVICE • GEO • SESSION
+REQUESTS • SECURITY • SERVER • LIVE
+MONGODB POWERED
+
 ---
 
-## 📜 License
+# 📜 License
 
 This project is intended for legitimate analytics, development and educational purposes.
 
-Use responsibly and respect applicable privacy laws, platform rules and user consent requirements.
+Use responsibly and respect:
+
+- Applicable privacy laws
+- User expectations
+- Platform rules
+- Website policies
+- Data protection requirements
+
+Do not use the system for unauthorized surveillance, credential collection, covert tracking or other abusive purposes.
+
+---
+
+# 👑 RAKIB IP INTELLIGENCE
+
+RAKIB IP INTELLIGENCE
+
+NETWORK • DEVICE • GEO • SESSION
+REQUESTS • SECURITY • SERVER • LIVE
+
+MONGODB POWERED
 

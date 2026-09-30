@@ -537,7 +537,540 @@
 
     </div>
 
-    <div class="history-tools">
+    <section
+      class="live-premium-dashboard"
+    >
+
+      <div class="section-heading">
+
+        <div>
+          <div class="eyebrow">
+            REAL-TIME INTELLIGENCE
+          </div>
+
+          <h2>
+            Live Visitor Network
+          </h2>
+        </div>
+
+        <div class="live-big-counter">
+          <span class="live-dot"></span>
+          <strong id="liveVisitorCount">0</strong>
+          <span>Live Events</span>
+        </div>
+
+      </div>
+
+      <div class="live-premium-grid">
+
+        <div class="live-map-card">
+
+          <div class="live-card-title">
+            <div>
+              <span class="eyebrow">
+                GLOBAL MAP
+              </span>
+
+              <h3>
+                🌍 Live Visitors
+              </h3>
+            </div>
+
+            <span class="live-pill">
+              LIVE
+            </span>
+          </div>
+
+          <div
+            id="liveWorldMap"
+            class="live-world-map"
+          ></div>
+
+        </div>
+
+        <div class="live-chart-card">
+
+          <div class="live-card-title">
+
+            <div>
+              <span class="eyebrow">
+                TRAFFIC
+              </span>
+
+              <h3>
+                📈 Last 30 Minutes
+              </h3>
+            </div>
+
+          </div>
+
+          <canvas
+            id="liveTrafficChart"
+            class="live-traffic-chart"
+          ></canvas>
+
+          <div class="live-chart-note">
+            Updates automatically when a new visitor arrives.
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- SMART COMMAND CENTER -->
+
+    <section class="smart-intelligence">
+
+      <div class="smart-header">
+
+        <div>
+          <div class="smart-eyebrow">
+            NEURAL VISITOR INTELLIGENCE
+          </div>
+
+          <h2>Command Center</h2>
+
+          <p>
+            Real-time visitor activity, security signals
+            and network intelligence.
+          </p>
+        </div>
+
+        <div class="smart-actions">
+
+          <button
+            id="smartThemeButton"
+            class="smart-action"
+            type="button"
+          >◐ Theme</button>
+
+          <button
+            id="smartExportCSV"
+            class="smart-action"
+            type="button"
+          >↓ CSV</button>
+
+          <button
+            id="smartExportJSON"
+            class="smart-action"
+            type="button"
+          >↓ JSON</button>
+
+        </div>
+
+      </div>
+
+
+      <div class="smart-kpi-grid">
+
+        <div class="smart-kpi">
+          <div class="smart-kpi-icon">◉</div>
+          <div>
+            <span>LIVE EVENTS</span>
+            <strong id="smartLiveEvents">0</strong>
+            <small>incoming now</small>
+          </div>
+        </div>
+
+        <div class="smart-kpi">
+          <div class="smart-kpi-icon">◎</div>
+          <div>
+            <span>UNIQUE COUNTRIES</span>
+            <strong id="smartCountries">0</strong>
+            <small>detected locations</small>
+          </div>
+        </div>
+
+        <div class="smart-kpi">
+          <div class="smart-kpi-icon">△</div>
+          <div>
+            <span>SECURITY SIGNALS</span>
+            <strong id="smartRiskCount">0</strong>
+            <small>VPN / Proxy / Tor / Hosting</small>
+          </div>
+        </div>
+
+        <div class="smart-kpi">
+          <div class="smart-kpi-icon">⌁</div>
+          <div>
+            <span>ACTIVE DEVICES</span>
+            <strong id="smartDevices">0</strong>
+            <small>device categories</small>
+          </div>
+        </div>
+
+      </div>
+
+
+      <div class="smart-main-grid">
+
+        <div class="smart-feed-card">
+
+          <div class="smart-card-head">
+
+            <div>
+              <span class="smart-label">
+                LIVE ACTIVITY
+              </span>
+
+              <h3>Incoming Visitors</h3>
+            </div>
+
+            <span class="smart-live-badge">
+              <i></i> LIVE
+            </span>
+
+          </div>
+
+          <div
+            id="smartActivityFeed"
+            class="smart-activity-feed"
+          >
+            <div class="smart-empty">
+              Waiting for incoming visitors...
+            </div>
+          </div>
+
+        </div>
+
+
+        <div class="smart-security-card">
+
+          <div class="smart-card-head">
+
+            <div>
+              <span class="smart-label">
+                SECURITY MONITOR
+              </span>
+
+              <h3>Network Signals</h3>
+            </div>
+
+          </div>
+
+          <div class="smart-security-list">
+
+            <div class="smart-security-row">
+              <span>VPN</span>
+              <strong id="smartVPN">0</strong>
+            </div>
+
+            <div class="smart-security-row">
+              <span>Proxy</span>
+              <strong id="smartProxy">0</strong>
+            </div>
+
+            <div class="smart-security-row">
+              <span>Tor</span>
+              <strong id="smartTor">0</strong>
+            </div>
+
+            <div class="smart-security-row">
+              <span>Hosting</span>
+              <strong id="smartHosting">0</strong>
+            </div>
+
+          </div>
+
+          <div
+            id="smartRiskBar"
+            class="smart-risk-bar"
+          >
+            <span></span>
+          </div>
+
+          <div
+            id="smartRiskText"
+            class="smart-risk-text"
+          >
+            No security signals detected.
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="smart-analytics-grid">
+
+        <div class="smart-analytics-card">
+
+          <div class="smart-card-head">
+            <div>
+              <span class="smart-label">GEOGRAPHY</span>
+              <h3>Country Activity</h3>
+            </div>
+          </div>
+
+          <div
+            id="smartCountryRanking"
+            class="smart-ranking"
+          ></div>
+
+        </div>
+
+
+        <div class="smart-analytics-card">
+
+          <div class="smart-card-head">
+            <div>
+              <span class="smart-label">DEVICES</span>
+              <h3>Device Distribution</h3>
+            </div>
+          </div>
+
+          <div
+            id="smartDeviceRanking"
+            class="smart-ranking"
+          ></div>
+
+        </div>
+
+
+        <div class="smart-analytics-card">
+
+          <div class="smart-card-head">
+            <div>
+              <span class="smart-label">BROWSERS</span>
+              <h3>Browser Distribution</h3>
+            </div>
+          </div>
+
+          <div
+            id="smartBrowserRanking"
+            class="smart-ranking"
+          ></div>
+
+        </div>
+
+      </div>
+
+
+      <div class="smart-widget-controls">
+
+        <div>
+          <span class="smart-label">
+            DASHBOARD LAYOUT
+          </span>
+
+          <h3>Widget Visibility</h3>
+        </div>
+
+        <div class="smart-widget-buttons">
+
+          <button
+            type="button"
+            data-smart-toggle="smart-main-grid"
+          >Activity</button>
+
+          <button
+            type="button"
+            data-smart-toggle="smart-analytics-grid"
+          >Analytics</button>
+
+          <button
+            type="button"
+            data-smart-toggle="live-premium-dashboard"
+          >Live Map</button>
+
+          <button
+            type="button"
+            data-smart-toggle="history-tools"
+          >Filters</button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- VISITOR PROFILE -->
+
+    <div
+      id="smartVisitorModal"
+      class="smart-profile-modal"
+    >
+
+      <div
+        class="smart-profile-backdrop"
+        data-smart-close-profile
+      ></div>
+
+      <div class="smart-profile-box">
+
+        <button
+          class="smart-profile-close"
+          type="button"
+          data-smart-close-profile
+        >×</button>
+
+        <div class="smart-profile-head">
+
+          <div class="smart-profile-avatar">
+            ◉
+          </div>
+
+          <div>
+
+            <span class="smart-label">
+              VISITOR INTELLIGENCE
+            </span>
+
+            <h2 id="smartProfileTitle">
+              Visitor
+            </h2>
+
+            <p id="smartProfileSubtitle">
+              Loading...
+            </p>
+
+          </div>
+
+        </div>
+
+        <div
+          id="smartProfileContent"
+          class="smart-profile-content"
+        ></div>
+
+      </div>
+
+    </div>
+
+
+<!-- =======================================================
+     SERVER INTELLIGENCE
+======================================================== -->
+
+<section class="server-intelligence" id="serverIntelligence">
+
+  <div class="server-intelligence-header">
+    <div>
+      <div class="server-kicker">SYSTEM TELEMETRY</div>
+      <h2>Server Intelligence</h2>
+      <p>Runtime, traffic, sessions & security telemetry</p>
+    </div>
+
+    <div class="server-health-state">
+      <span class="server-health-dot" id="serverHealthDot"></span>
+      <span id="serverHealthText">CHECKING</span>
+    </div>
+  </div>
+
+  <div class="server-kpi-grid">
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">UPTIME</span>
+      <strong id="serverUptime">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">RAM</span>
+      <strong id="serverRAM">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">CPU LOAD</span>
+      <strong id="serverCPU">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">REQUESTS</span>
+      <strong id="serverRequests">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">ERROR RATE</span>
+      <strong id="serverErrors">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">ACTIVE SESSIONS</span>
+      <strong id="serverSessions">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">UNIQUE 24H</span>
+      <strong id="serverUnique">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">RETURNING</span>
+      <strong id="serverReturning">—</strong>
+    </div>
+
+  </div>
+
+  <div class="server-analytics-grid">
+
+    <div class="server-panel">
+      <div class="server-panel-title">
+        <span>TOP ENDPOINTS</span>
+        <small>RUNTIME</small>
+      </div>
+
+      <div id="serverEndpoints" class="server-ranking-list">
+        <div class="server-empty">Loading...</div>
+      </div>
+    </div>
+
+    <div class="server-panel">
+      <div class="server-panel-title">
+        <span>HTTP STATUS</span>
+        <small>LIVE</small>
+      </div>
+
+      <div id="serverStatuses" class="server-ranking-list">
+        <div class="server-empty">Loading...</div>
+      </div>
+    </div>
+
+    <div class="server-panel">
+      <div class="server-panel-title">
+        <span>TRAFFIC</span>
+        <small>LAST 24H</small>
+      </div>
+
+      <div class="server-mini-stats">
+        <div>
+          <b id="server24Requests">0</b>
+          <span>Requests</span>
+        </div>
+
+        <div>
+          <b id="server24Pages">0</b>
+          <span>Page Views</span>
+        </div>
+
+        <div>
+          <b id="server24Sessions">0</b>
+          <span>Sessions</span>
+        </div>
+
+        <div>
+          <b id="server24Security">0</b>
+          <span>Security</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="server-footer">
+    <span>Node <b id="serverNode">—</b></span>
+    <span>PID <b id="serverPID">—</b></span>
+    <span>Architecture <b id="serverArch">—</b></span>
+    <span>Last request <b id="serverLastRequest">—</b></span>
+  </div>
+
+</section>
+
+<div class="history-tools">
 
       <input
         id="historySearch"
@@ -638,6 +1171,10 @@
   src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
 ></script>
 
+
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+></script>
 <script src="/app.js"></script>
 
 
@@ -664,6 +1201,57 @@
     <div
       id="visitorProfileBody"
     ></div>
+
+  </div>
+
+</div>
+
+
+<div
+  id="qrShareModal"
+  class="qr-share-modal"
+>
+
+  <div
+    class="qr-share-backdrop"
+    onclick="closeQRShare()"
+  ></div>
+
+  <div class="qr-share-box">
+
+    <button
+      type="button"
+      class="qr-close"
+      onclick="closeQRShare()"
+    >
+      ×
+    </button>
+
+    <div class="eyebrow">
+      LOCATION SHARE
+    </div>
+
+    <h2>
+      📱 Scan to View
+    </h2>
+
+    <div
+      id="qrShareCode"
+      class="qr-share-code"
+    ></div>
+
+    <div
+      id="qrShareUrl"
+      class="qr-share-url"
+    ></div>
+
+    <button
+      type="button"
+      class="qr-copy-button"
+      onclick="copyTextToClipboard(document.getElementById('qrShareUrl').textContent)"
+    >
+      📋 Copy Link
+    </button>
 
   </div>
 
