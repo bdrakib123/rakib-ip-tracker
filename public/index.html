@@ -1070,6 +1070,96 @@
 
 </section>
 
+
+<!-- =======================================================
+     DATA CONTROL CENTER
+======================================================== -->
+
+<section class="data-control-center" id="dataControlCenter">
+
+  <div class="data-control-header">
+    <div>
+      <div class="data-control-kicker">ADMIN CONTROL</div>
+      <h2>Data Control Center</h2>
+      <p>Manage stored visitor and analytics data</p>
+    </div>
+
+    <span class="data-control-lock">ADMIN ONLY</span>
+  </div>
+
+  <div class="data-control-grid">
+
+    <button
+      class="data-clear-btn"
+      data-clear-type="24h"
+      data-clear-label="Last 24 Hours"
+    >
+      <span>🧹</span>
+      <b>Last 24 Hours</b>
+      <small>Visitor history</small>
+    </button>
+
+    <button
+      class="data-clear-btn"
+      data-clear-type="7d"
+      data-clear-label="Last 7 Days"
+    >
+      <span>🗓️</span>
+      <b>Last 7 Days</b>
+      <small>Visitor history</small>
+    </button>
+
+    <button
+      class="data-clear-btn"
+      data-clear-type="analytics"
+      data-clear-label="Analytics Logs"
+    >
+      <span>📊</span>
+      <b>Analytics Logs</b>
+      <small>Requests / pages / security</small>
+    </button>
+
+    <button
+      class="data-clear-btn"
+      data-clear-type="sessions"
+      data-clear-label="Sessions"
+    >
+      <span>👥</span>
+      <b>Sessions</b>
+      <small>Stored sessions</small>
+    </button>
+
+    <button
+      class="data-clear-btn danger"
+      data-clear-type="history"
+      data-clear-label="All Visitor History"
+    >
+      <span>🗑️</span>
+      <b>All Visitor History</b>
+      <small>Delete visitor records</small>
+    </button>
+
+    <button
+      class="data-clear-btn danger"
+      data-clear-type="everything"
+      data-clear-label="Everything"
+    >
+      <span>⚠️</span>
+      <b>Clear Everything</b>
+      <small>All stored tracking data</small>
+    </button>
+
+  </div>
+
+  <div
+    class="data-clear-status"
+    id="dataClearStatus"
+  >
+    Ready
+  </div>
+
+</section>
+
 <div class="history-tools">
 
       <input

@@ -1939,8 +1939,153 @@ app.get("/api/analytics/security", requireAdmin, async (req, res) => {
 });
 
 /* =========================================================
+   ADMIN DATA CLEAR
+========================================================= */
+
+app.post("/api/admin/clear-data", requireAdmin, async (req, res) => {
+  try {
+    const type = String(req.body?.type || "").trim();
+
+    const now = Date.now();
+
+    let result = {
+      success: true,
+      type,
+      deleted: {}
+    };
+
+    if (type === "history") {
+      const deleted =
+        await visitorsCollection.deleteMany({});
+
+      result.deleted.visitors =
+        deleted.deletedCount;
+    }
+
+    else if (type === "24h") {
+      const since = new Date(
+        now - 24 * 60 * 60 * 1000
+      );
+
+      const deleted =
+        await visitorsCollection.deleteMany({
+          createdAt: { $gte: since }
+        });
+
+      result.deleted.visitors =
+        deleted.deletedCount;
+    }
+
+    else if (type === "7d") {
+      const since = new Date(
+        now - 7 * 24 * 60 * 60 * 1000
+      );
+
+      const deleted =
+        await visitorsCollection.deleteMany({
+          createdAt: { $gte: since }
+        });
+
+      result.deleted.visitors =
+        deleted.deletedCount;
+    }
+
+    else if (type === "analytics") {
+      const [
+        requests,
+        pages,
+        security
+      ] = await Promise.all([
+        requestsCollection.deleteMany({}),
+        pageViewsCollection.deleteMany({}),
+        securityCollection.deleteMany({})
+      ]);
+
+      result.deleted.requests =
+        requests.deletedCount;
+
+      result.deleted.pageViews =
+        pages.deletedCount;
+
+      result.deleted.security =
+        security.deletedCount;
+    }
+
+    else if (type === "sessions") {
+      const deleted =
+        await sessionsCollection.deleteMany({});
+
+      activeSessions.clear();
+
+      result.deleted.sessions =
+        deleted.deletedCount;
+    }
+
+    else if (type === "everything") {
+      const [
+        visitors,
+        sessions,
+        pages,
+        requests,
+        security
+      ] = await Promise.all([
+        visitorsCollection.deleteMany({}),
+        sessionsCollection.deleteMany({}),
+        pageViewsCollection.deleteMany({}),
+        requestsCollection.deleteMany({}),
+        securityCollection.deleteMany({})
+      ]);
+
+      activeSessions.clear();
+
+      result.deleted.visitors =
+        visitors.deletedCount;
+
+      result.deleted.sessions =
+        sessions.deletedCount;
+
+      result.deleted.pageViews =
+        pages.deletedCount;
+
+      result.deleted.requests =
+        requests.deletedCount;
+
+      result.deleted.security =
+        security.deletedCount;
+    }
+
+    else {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid clear type"
+      });
+    }
+
+    res.setHeader(
+      "Cache-Control",
+      "no-store"
+    );
+
+    res.json(result);
+
+  } catch (error) {
+    console.error(
+      "/api/admin/clear-data:",
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to clear data"
+    });
+  }
+});
+
+/* =========================================================
    SPA FALLBACK
 ========================================================= */
+
+
 
 
 

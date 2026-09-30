@@ -4698,3 +4698,179 @@ document.addEventListener(
   }
 
 })();
+
+
+/* =========================================================
+   DATA CONTROL CENTER
+========================================================= */
+
+(function initDataControlCenter() {
+
+  function setStatus(message, error = false) {
+
+    const el =
+      document.getElementById(
+        "dataClearStatus"
+      );
+
+    if (!el) return;
+
+    el.textContent = message;
+
+    el.style.color =
+      error ? "#ff7896" : "#75f5c7";
+  }
+
+  async function clearData(type, label) {
+
+    const confirmed =
+      window.confirm(
+        `Are you sure you want to clear ${label}?\n\nThis action cannot be undone.`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const buttons =
+      document.querySelectorAll(
+        ".data-clear-btn"
+      );
+
+    buttons.forEach(button => {
+      button.disabled = true;
+    });
+
+    setStatus(
+      `Clearing ${label}...`
+    );
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/admin/clear-data",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            credentials: "same-origin",
+
+            body: JSON.stringify({
+              type
+            })
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error ||
+          "Clear operation failed"
+        );
+      }
+
+      const deleted =
+        Object.entries(
+          data.deleted || {}
+        )
+          .map(
+            ([key, value]) =>
+              `${key}: ${value}`
+          )
+          .join(" • ");
+
+      setStatus(
+        `✓ ${label} cleared` +
+        (deleted ? ` — ${deleted}` : "")
+      );
+
+      /*
+       * Refresh existing dashboard data.
+       */
+      try {
+        if (typeof loadHistory === "function") {
+          await loadHistory();
+        }
+      } catch {}
+
+      try {
+        if (typeof loadStats === "function") {
+          await loadStats();
+        }
+      } catch {}
+
+      try {
+        if (
+          typeof window.refreshServerIntelligence ===
+          "function"
+        ) {
+          await window.refreshServerIntelligence();
+        }
+      } catch {}
+
+    } catch (error) {
+
+      console.error(
+        "Clear data:",
+        error
+      );
+
+      setStatus(
+        `✕ ${error.message}`,
+        true
+      );
+
+    } finally {
+
+      buttons.forEach(button => {
+        button.disabled = false;
+      });
+    }
+  }
+
+  function init() {
+
+    const buttons =
+      document.querySelectorAll(
+        "[data-clear-type]"
+      );
+
+    buttons.forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          clearData(
+            button.dataset.clearType,
+            button.dataset.clearLabel ||
+              button.textContent.trim()
+          );
+
+        }
+      );
+
+    });
+  }
+
+  if (
+    document.readyState ===
+    "loading"
+  ) {
+    document.addEventListener(
+      "DOMContentLoaded",
+      init,
+      { once: true }
+    );
+  } else {
+    init();
+  }
+
+})();

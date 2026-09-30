@@ -11,3 +11,6 @@ patch_*.py
 *.analytics2_backup_*
 *.analytics3_backup_*
 *.smart_backup_*
+
+# Local clear-system backups
+*.clear_backup_*
