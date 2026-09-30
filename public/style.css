@@ -1285,3 +1285,1139 @@ footer {
   }
 
 }
+
+
+/* =========================================================
+   EXTRA INTELLIGENCE UI
+========================================================= */
+
+.security-section {
+  margin-top: 14px;
+  padding: 28px;
+  border-radius: 23px;
+}
+
+.security-section h2 {
+  margin: 7px 0 20px;
+  font-family: Orbitron;
+  font-size: 21px;
+}
+
+.security-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.security-card {
+  padding: 15px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.025);
+  border: 1px solid rgba(255,255,255,.05);
+}
+
+.security-card span {
+  display: block;
+  color: #5f6c84;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.security-card strong {
+  display: block;
+  margin-top: 7px;
+  color: #3cffad;
+  font-size: 10px;
+}
+
+.security-card strong.risk-detected {
+  color: #ff667f;
+}
+
+.signal-label {
+  margin-top: 24px;
+}
+
+.signal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.signal-grid div {
+  padding: 13px;
+  border-radius: 12px;
+  background: rgba(0,0,0,.14);
+  border: 1px solid rgba(255,255,255,.04);
+}
+
+.signal-grid span {
+  display: block;
+  color: #59677f;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.signal-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: #dce6f8;
+  font-size: 10px;
+  word-break: break-word;
+}
+
+.history-tools {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.history-tools input,
+.history-tools select {
+  width: 100%;
+  padding: 12px 13px;
+  border-radius: 11px;
+  outline: none;
+  color: #dce6f8;
+  background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255,255,255,.07);
+  font-size: 10px;
+}
+
+.history-tools select option {
+  background: #0a1020;
+}
+
+.location-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.small-action {
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 1px solid rgba(54,230,255,.13);
+  background: rgba(54,230,255,.045);
+  color: #8eeeff;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 700;
+  transition: .2s;
+}
+
+.small-action:hover {
+  transform: translateY(-1px);
+  background: rgba(54,230,255,.09);
+}
+
+.app-toast {
+  position: fixed;
+  z-index: 10000;
+  left: 50%;
+  bottom: 25px;
+  transform: translate(-50%, 20px);
+  opacity: 0;
+  pointer-events: none;
+  padding: 11px 16px;
+  border-radius: 12px;
+  color: #dffbff;
+  background: rgba(10,18,34,.94);
+  border: 1px solid rgba(54,230,255,.2);
+  box-shadow: 0 15px 40px rgba(0,0,0,.35);
+  font-size: 10px;
+  transition: .25s;
+}
+
+.app-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (max-width: 850px) {
+  .security-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .signal-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .history-tools {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .security-grid,
+  .signal-grid,
+  .history-tools {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================================================
+ * PREMIUM DASHBOARD
+ * ========================================================= */
+
+.premium-dashboard-section {
+  margin-top: 28px;
+}
+
+.analytics-stat-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(145px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.analytics-stat {
+  padding: 20px;
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.07),
+      rgba(255,255,255,.025)
+    );
+  border:
+    1px solid rgba(255,255,255,.09);
+  box-shadow:
+    0 12px 35px rgba(0,0,0,.18);
+}
+
+.analytics-stat span {
+  display: block;
+  font-size: 12px;
+  opacity: .55;
+  margin-bottom: 8px;
+}
+
+.analytics-stat strong {
+  display: block;
+  font-size: 30px;
+}
+
+.analytics-columns {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.analytics-panel {
+  padding: 20px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.045);
+  border:
+    1px solid rgba(255,255,255,.08);
+}
+
+.analytics-panel h3 {
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+
+.analytics-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom:
+    1px solid rgba(255,255,255,.06);
+}
+
+.analytics-row:last-child {
+  border-bottom: 0;
+}
+
+.analytics-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-row strong {
+  opacity: .8;
+}
+
+.empty-state {
+  padding: 20px;
+  text-align: center;
+  opacity: .5;
+}
+
+.premium-risk-card {
+  min-width: 170px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.09);
+}
+
+.premium-risk-title {
+  font-size: 12px;
+  opacity: .6;
+}
+
+.premium-risk-score {
+  font-size: 34px;
+  font-weight: 800;
+  margin-top: 5px;
+}
+
+.premium-risk-level {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.risk-low {
+  background: rgba(60,220,130,.12);
+}
+
+.risk-medium {
+  background: rgba(255,190,60,.12);
+}
+
+.risk-high {
+  background: rgba(255,70,90,.14);
+}
+
+.premium-risk-reasons {
+  margin-top: 9px;
+  font-size: 11px;
+  opacity: .55;
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.profile-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  opacity: .45;
+}
+
+.profile-header h2 {
+  margin: 5px 0 0;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.profile-section {
+  padding: 17px;
+  border-radius: 17px;
+  background: rgba(255,255,255,.045);
+  border:
+    1px solid rgba(255,255,255,.07);
+}
+
+.profile-section h3 {
+  margin-top: 0;
+}
+
+.profile-section p {
+  margin: 8px 0;
+  font-size: 13px;
+  opacity: .8;
+}
+
+.visitor-profile-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.visitor-profile-modal.show {
+  display: flex;
+}
+
+.visitor-profile-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  backdrop-filter: blur(8px);
+}
+
+.visitor-profile-dialog {
+  position: relative;
+  width: min(1050px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 25px;
+  border-radius: 25px;
+  background: #10131b;
+  border: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 30px 100px rgba(0,0,0,.6);
+}
+
+.visitor-profile-close {
+  position: absolute;
+  right: 18px;
+  top: 14px;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 24px;
+  color: inherit;
+  background: rgba(255,255,255,.08);
+}
+
+.share-manager-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.share-manager-row {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1fr)
+    auto
+    auto;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  border-radius: 17px;
+  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.07);
+}
+
+.share-manager-main {
+  display: grid;
+  gap: 4px;
+}
+
+.share-manager-main small {
+  opacity: .5;
+  font-size: 11px;
+}
+
+.share-manager-status {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.share-active {
+  background: rgba(60,220,130,.12);
+}
+
+.share-expired {
+  background: rgba(255,80,90,.12);
+}
+
+.share-manager-actions {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.share-manager-actions button,
+.premium-refresh-btn {
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  border-radius: 10px;
+  padding: 8px 11px;
+  cursor: pointer;
+}
+
+.share-manager-actions button:hover,
+.premium-refresh-btn:hover {
+  background: rgba(255,255,255,.12);
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 2px;
+  opacity: .4;
+}
+
+@media (max-width: 700px) {
+
+  .share-manager-row {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-header {
+    flex-direction: column;
+  }
+
+  .visitor-profile-dialog {
+    padding: 18px;
+  }
+
+}
+
+
+/* =========================================================
+ * RAKIB IP INTELLIGENCE — BIG PREMIUM UI
+ * ========================================================= */
+
+:root {
+  --ui-radius: 26px;
+  --ui-radius-sm: 18px;
+  --ui-border: rgba(255,255,255,.10);
+  --ui-soft: rgba(255,255,255,.055);
+  --ui-softer: rgba(255,255,255,.035);
+}
+
+/* ---------------------------------------------------------
+ * GLOBAL TYPOGRAPHY
+ * --------------------------------------------------------- */
+
+body {
+  font-size: 16px;
+  letter-spacing: .1px;
+}
+
+h1 {
+  font-size: clamp(42px, 7vw, 82px) !important;
+  line-height: .98 !important;
+  letter-spacing: -2.5px !important;
+  font-weight: 900 !important;
+}
+
+h2 {
+  font-size: clamp(30px, 4vw, 48px) !important;
+  line-height: 1.05 !important;
+  letter-spacing: -1.4px !important;
+  font-weight: 850 !important;
+}
+
+h3 {
+  font-size: 21px !important;
+  line-height: 1.15;
+  font-weight: 800 !important;
+}
+
+p {
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+/* ---------------------------------------------------------
+ * SECTION SPACING
+ * --------------------------------------------------------- */
+
+section {
+  margin-bottom: 34px;
+}
+
+.premium-dashboard-section {
+  margin-top: 42px !important;
+  margin-bottom: 42px !important;
+}
+
+/* ---------------------------------------------------------
+ * SECTION HEADING
+ * --------------------------------------------------------- */
+
+.section-heading {
+  margin-bottom: 22px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.section-heading h2 {
+  margin: 5px 0 0 !important;
+}
+
+.eyebrow {
+  font-size: 11px !important;
+  letter-spacing: 3px !important;
+  font-weight: 800;
+  opacity: .42;
+}
+
+/* ---------------------------------------------------------
+ * HERO
+ * --------------------------------------------------------- */
+
+.hero {
+  min-height: 560px;
+}
+
+.hero h1 {
+  max-width: 950px;
+}
+
+.hero p {
+  max-width: 720px;
+  font-size: 18px;
+  opacity: .68;
+}
+
+/* ---------------------------------------------------------
+ * GLASS CARDS
+ * --------------------------------------------------------- */
+
+.card,
+.analytics-stat,
+.analytics-panel,
+.profile-section,
+.premium-risk-card,
+.share-manager-row,
+.shared-card {
+  border-radius: var(--ui-radius) !important;
+  border: 1px solid var(--ui-border) !important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.075),
+      rgba(255,255,255,.025)
+    ) !important;
+
+  box-shadow:
+    0 20px 60px rgba(0,0,0,.22),
+    inset 0 1px 0 rgba(255,255,255,.035) !important;
+
+  backdrop-filter: blur(22px);
+}
+
+/* ---------------------------------------------------------
+ * CURRENT IP
+ * --------------------------------------------------------- */
+
+.ip-display,
+.current-ip,
+.ip-hero,
+.hero-ip {
+  min-height: 150px;
+}
+
+.ip-display strong,
+.current-ip strong,
+.ip-hero strong,
+.hero-ip strong {
+  font-size: clamp(32px, 5vw, 64px) !important;
+  font-weight: 900 !important;
+  letter-spacing: -2px;
+}
+
+/* ---------------------------------------------------------
+ * STAT CARDS
+ * --------------------------------------------------------- */
+
+.analytics-stat-grid {
+  gap: 18px !important;
+}
+
+.analytics-stat {
+  min-height: 145px;
+  padding: 25px !important;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  transition:
+    transform .2s ease,
+    border-color .2s ease,
+    background .2s ease;
+}
+
+.analytics-stat:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255,255,255,.18) !important;
+  background:
+    rgba(255,255,255,.085) !important;
+}
+
+.analytics-stat span {
+  font-size: 13px !important;
+  letter-spacing: .4px;
+  margin-bottom: 10px !important;
+  opacity: .55;
+}
+
+.analytics-stat strong {
+  font-size: clamp(34px, 4vw, 48px) !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  letter-spacing: -1.5px;
+}
+
+/* ---------------------------------------------------------
+ * ANALYTICS PANELS
+ * --------------------------------------------------------- */
+
+.analytics-columns {
+  gap: 20px !important;
+}
+
+.analytics-panel {
+  padding: 25px !important;
+  min-height: 250px;
+}
+
+.analytics-panel h3 {
+  font-size: 22px !important;
+  margin-bottom: 20px !important;
+}
+
+.analytics-row {
+  padding: 14px 0 !important;
+  font-size: 15px;
+}
+
+.analytics-row span {
+  font-size: 15px;
+}
+
+.analytics-row strong {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* ---------------------------------------------------------
+ * SECURITY RISK
+ * --------------------------------------------------------- */
+
+.premium-risk-card {
+  min-width: 210px;
+  padding: 22px !important;
+}
+
+.premium-risk-title {
+  font-size: 13px !important;
+  font-weight: 700;
+  letter-spacing: .5px;
+}
+
+.premium-risk-score {
+  font-size: 48px !important;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -2px;
+}
+
+.premium-risk-level {
+  font-size: 12px !important;
+  padding: 7px 13px !important;
+  margin-top: 10px;
+}
+
+.premium-risk-reasons {
+  font-size: 13px !important;
+  margin-top: 12px;
+}
+
+/* ---------------------------------------------------------
+ * VISITOR PROFILE
+ * --------------------------------------------------------- */
+
+.visitor-profile-dialog {
+  border-radius: 30px !important;
+  padding: 32px !important;
+}
+
+.profile-header {
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.profile-label {
+  font-size: 11px !important;
+  letter-spacing: 3px !important;
+  font-weight: 800;
+}
+
+.profile-header h2 {
+  font-size: clamp(30px, 5vw, 48px) !important;
+}
+
+.profile-grid {
+  gap: 18px !important;
+  margin-top: 22px;
+}
+
+.profile-section {
+  padding: 22px !important;
+  min-height: 190px;
+}
+
+.profile-section h3 {
+  font-size: 21px !important;
+  margin-bottom: 18px;
+}
+
+.profile-section p {
+  font-size: 15px !important;
+  line-height: 1.7;
+}
+
+/* ---------------------------------------------------------
+ * SHARE MANAGER
+ * --------------------------------------------------------- */
+
+.share-manager-list {
+  gap: 14px !important;
+}
+
+.share-manager-row {
+  padding: 20px !important;
+  min-height: 90px;
+
+  transition:
+    transform .2s ease,
+    background .2s ease;
+}
+
+.share-manager-row:hover {
+  transform: translateY(-3px);
+  background:
+    rgba(255,255,255,.075) !important;
+}
+
+.share-manager-main strong {
+  font-size: 18px !important;
+}
+
+.share-manager-main small {
+  font-size: 13px !important;
+}
+
+.share-manager-status {
+  font-size: 11px !important;
+  padding: 8px 13px !important;
+}
+
+.share-manager-actions button,
+.premium-refresh-btn {
+  padding: 11px 15px !important;
+  border-radius: 12px !important;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------
+ * LOCATION MAP
+ * --------------------------------------------------------- */
+
+.history-map,
+#sharedMap,
+.map-container {
+  border-radius: 24px !important;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow:
+    0 20px 60px rgba(0,0,0,.25);
+}
+
+.location-actions {
+  gap: 9px !important;
+  margin-top: 14px;
+}
+
+.location-actions button {
+  min-height: 42px;
+  padding: 10px 15px !important;
+  border-radius: 12px !important;
+  font-size: 13px !important;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------
+ * HISTORY
+ * --------------------------------------------------------- */
+
+.history-record {
+  border-radius: 24px !important;
+  padding: 25px !important;
+  margin-bottom: 18px !important;
+}
+
+.history-record h3 {
+  font-size: 24px !important;
+}
+
+.history-record p {
+  font-size: 15px !important;
+}
+
+/* ---------------------------------------------------------
+ * BUTTONS
+ * --------------------------------------------------------- */
+
+button,
+a {
+  transition:
+    transform .18s ease,
+    opacity .18s ease,
+    background .18s ease,
+    border-color .18s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* ---------------------------------------------------------
+ * SEARCH / FILTER
+ * --------------------------------------------------------- */
+
+.history-tools input,
+.history-tools select,
+input,
+select {
+  min-height: 48px;
+  border-radius: 14px !important;
+  font-size: 15px !important;
+}
+
+/* ---------------------------------------------------------
+ * SHARED LOCATION PAGE
+ * --------------------------------------------------------- */
+
+.shared-page {
+  padding-top: 55px !important;
+}
+
+.shared-header h1 {
+  font-size: clamp(42px, 8vw, 76px) !important;
+}
+
+.shared-header p {
+  font-size: 15px !important;
+  letter-spacing: 2px;
+}
+
+.shared-card {
+  padding: 24px !important;
+}
+
+.shared-info-card {
+  padding: 20px !important;
+  border-radius: 18px !important;
+}
+
+.shared-info-card span {
+  font-size: 12px !important;
+}
+
+.shared-info-card strong {
+  font-size: 17px !important;
+}
+
+.shared-actions button,
+.shared-actions a {
+  min-height: 48px;
+  padding: 13px 18px !important;
+  border-radius: 14px !important;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+/* ---------------------------------------------------------
+ * MOBILE
+ * --------------------------------------------------------- */
+
+@media (max-width: 700px) {
+
+  body {
+    font-size: 15px;
+  }
+
+  h1 {
+    font-size: clamp(38px, 12vw, 58px) !important;
+    letter-spacing: -1.8px !important;
+  }
+
+  h2 {
+    font-size: 31px !important;
+    letter-spacing: -1px !important;
+  }
+
+  h3 {
+    font-size: 19px !important;
+  }
+
+  .hero {
+    min-height: 470px;
+  }
+
+  .hero p {
+    font-size: 16px;
+  }
+
+  .analytics-stat {
+    min-height: 125px;
+    padding: 21px !important;
+  }
+
+  .analytics-stat strong {
+    font-size: 36px !important;
+  }
+
+  .analytics-panel {
+    padding: 21px !important;
+  }
+
+  .profile-header h2 {
+    font-size: 32px !important;
+  }
+
+  .profile-section {
+    min-height: auto;
+  }
+
+  .visitor-profile-dialog {
+    border-radius: 24px !important;
+    padding: 21px !important;
+  }
+
+  .share-manager-row {
+    padding: 18px !important;
+  }
+
+  .share-manager-actions {
+    width: 100%;
+  }
+
+  .share-manager-actions button {
+    flex: 1;
+  }
+
+  .history-record {
+    padding: 20px !important;
+  }
+
+  .history-record h3 {
+    font-size: 21px !important;
+  }
+
+  .shared-page {
+    width: min(
+      100% - 20px,
+      1100px
+    );
+    padding-top: 28px !important;
+  }
+
+  .shared-card {
+    padding: 14px !important;
+  }
+
+  #sharedMap {
+    min-height: 330px;
+    height: 58vh;
+    border-radius: 18px !important;
+  }
+
+  .shared-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .shared-actions button,
+  .shared-actions a {
+    text-align: center;
+    width: 100%;
+  }
+
+}
+
+/* ---------------------------------------------------------
+ * LARGE SCREEN
+ * --------------------------------------------------------- */
+
+@media (min-width: 1200px) {
+
+  .analytics-stat-grid {
+    grid-template-columns:
+      repeat(8, 1fr);
+  }
+
+  .analytics-stat {
+    min-height: 165px;
+  }
+
+  .analytics-stat strong {
+    font-size: 42px !important;
+  }
+
+}
+
+/* ---------------------------------------------------------
+ * SUBTLE GLOW
+ * --------------------------------------------------------- */
+
+.premium-dashboard-section::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin-bottom: 25px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255,255,255,.12),
+      transparent
+    );
+}
+
+/* ---------------------------------------------------------
+ * SCROLLBAR
+ * --------------------------------------------------------- */
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255,.025);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.16);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,.25);
+}

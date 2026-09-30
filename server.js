@@ -94,6 +94,53 @@ function normalizeIP(ip) {
   return ip;
 }
 
+
+/* =========================================================
+ * SECURITY RISK SIGNAL
+ * ========================================================= */
+
+function calculateRiskScore(visitor) {
+  const security = visitor?.geo?.security || {};
+  let score = 0;
+  const reasons = [];
+
+  if (security.vpn) {
+    score += 20;
+    reasons.push("VPN");
+  }
+
+  if (security.proxy) {
+    score += 25;
+    reasons.push("Proxy");
+  }
+
+  if (security.tor) {
+    score += 35;
+    reasons.push("Tor");
+  }
+
+  if (security.hosting) {
+    score += 20;
+    reasons.push("Hosting");
+  }
+
+  score = Math.min(100, score);
+
+  let level = "LOW";
+
+  if (score >= 70) {
+    level = "HIGH";
+  } else if (score >= 35) {
+    level = "MEDIUM";
+  }
+
+  return {
+    score,
+    level,
+    reasons
+  };
+}
+
 function maskIP(ip) {
   ip = normalizeIP(ip);
 
@@ -327,7 +374,15 @@ async function getGeoData(ip) {
       longitude:
         typeof data.longitude === "number"
           ? data.longitude
-          : null
+          : null,
+
+      security: {
+        vpn: !!data.security?.vpn,
+        proxy: !!data.security?.proxy,
+        tor: !!data.security?.tor,
+        hosting: !!data.security?.hosting,
+        source: "ipwho.is"
+      }
     };
   } catch (error) {
     return {
@@ -341,7 +396,14 @@ async function getGeoData(ip) {
       organization: "Unknown",
       asn: "Unknown",
       latitude: null,
-      longitude: null
+      longitude: null,
+      security: {
+        vpn: false,
+        proxy: false,
+        tor: false,
+        hosting: false,
+        source: "unavailable"
+      }
     };
   }
 }
@@ -420,7 +482,7 @@ async function connectMongo() {
    RECORD VISITOR
 ========================================================= */
 
-async function createVisitor(req) {
+async function createVisitor(req, clientData = {}) {
   const ip = getClientIP(req);
   const userAgent = req.headers["user-agent"] || "Unknown";
 
@@ -442,6 +504,30 @@ async function createVisitor(req) {
 
     referrer: req.headers.referer || "",
     language: req.headers["accept-language"] || "",
+
+    client: {
+      screen: clientData.screen || {},
+      viewport: clientData.viewport || {},
+      pixelRatio: clientData.pixelRatio ?? null,
+      colorDepth: clientData.colorDepth ?? null,
+      touchPoints: clientData.touchPoints ?? null,
+      touchSupport: !!clientData.touchSupport,
+      hardwareConcurrency: clientData.hardwareConcurrency ?? null,
+      deviceMemory: clientData.deviceMemory ?? null,
+      language: clientData.language || "",
+      languages: Array.isArray(clientData.languages)
+        ? clientData.languages.slice(0, 20)
+        : [],
+      timezone: clientData.timezone || "",
+      timezoneOffset: clientData.timezoneOffset ?? null,
+      cookiesEnabled: !!clientData.cookiesEnabled,
+      doNotTrack: clientData.doNotTrack || "",
+      online: clientData.online !== false,
+      connection: clientData.connection || {},
+      webgl: clientData.webgl || {},
+      canvasHash: clientData.canvasHash || "",
+      platform: clientData.platform || ""
+    },
 
     createdAt: new Date()
   };
@@ -500,11 +586,15 @@ function currentVisitorResponse(visitor) {
     ip: fullIP || visitor.ipMasked,
 
     geo: visitor.geo,
+    security: visitor.geo?.security || {},
+      risk: calculateRiskScore(visitor),
 
     device: visitor.device,
     os: visitor.os,
     browser: visitor.browser,
     engine: visitor.engine,
+
+    client: visitor.client || {},
 
     userAgent: visitor.userAgent,
 
@@ -541,11 +631,14 @@ function adminVisitorResponse(visitor) {
     maskedIP: visitor.ipMasked,
 
     geo: visitor.geo,
+    security: visitor.geo?.security || {},
 
     device: visitor.device,
     os: visitor.os,
     browser: visitor.browser,
     engine: visitor.engine,
+
+    client: visitor.client || {},
 
     userAgent: visitor.userAgent,
 
@@ -576,6 +669,37 @@ app.get("/api/track", async (req, res) => {
     broadcastLive(visitor);
   } catch (error) {
     console.error("/api/track:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to track visitor"
+    });
+  }
+});
+
+/* =========================================================
+   API - ENRICHED TRACK
+========================================================= */
+
+app.post("/api/track", async (req, res) => {
+  try {
+    const visitor = await createVisitor(
+      req,
+      req.body?.client || {}
+    );
+
+    const result = currentVisitorResponse(visitor);
+
+    res.setHeader("Cache-Control", "no-store");
+
+    res.json({
+      success: true,
+      visitor: result
+    });
+
+    broadcastLive(visitor);
+  } catch (error) {
+    console.error("POST /api/track:", error);
 
     res.status(500).json({
       success: false,
@@ -762,6 +886,21 @@ app.get("/api/stats", requireAdmin, async (req, res) => {
       Date.now() - 24 * 60 * 60 * 1000
     );
 
+    const securityCounts = {
+      vpn: await visitorsCollection.countDocuments({
+        "geo.security.vpn": true
+      }),
+      proxy: await visitorsCollection.countDocuments({
+        "geo.security.proxy": true
+      }),
+      tor: await visitorsCollection.countDocuments({
+        "geo.security.tor": true
+      }),
+      hosting: await visitorsCollection.countDocuments({
+        "geo.security.hosting": true
+      })
+    };
+
     const today = await visitorsCollection.countDocuments({
       createdAt: {
         $gte: last24h
@@ -774,6 +913,7 @@ app.get("/api/stats", requireAdmin, async (req, res) => {
       total,
       uniqueIPs: uniqueIPs[0]?.count || 0,
       last24h: today,
+      security: securityCounts,
 
       countries: countries.map(x => ({
         country: x._id || "Unknown",

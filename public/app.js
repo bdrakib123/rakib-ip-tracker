@@ -44,15 +44,193 @@ function escapeHTML(value) {
 }
 
 /* =========================================================
+   BROWSER / DEVICE SIGNALS
+========================================================= */
+
+function signalHash(value) {
+  let hash = 2166136261;
+
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash +=
+      (hash << 1) +
+      (hash << 4) +
+      (hash << 7) +
+      (hash << 8) +
+      (hash << 24);
+  }
+
+  return (hash >>> 0).toString(16);
+}
+
+function getWebGLInfo() {
+  try {
+    const canvas = document.createElement("canvas");
+
+    const gl =
+      canvas.getContext("webgl") ||
+      canvas.getContext("experimental-webgl");
+
+    if (!gl) return {};
+
+    const debug =
+      gl.getExtension("WEBGL_debug_renderer_info");
+
+    return {
+      vendor: debug
+        ? gl.getParameter(debug.UNMASKED_VENDOR_WEBGL)
+        : gl.getParameter(gl.VENDOR),
+
+      renderer: debug
+        ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)
+        : gl.getParameter(gl.RENDERER),
+
+      version: gl.getParameter(gl.VERSION)
+    };
+  } catch {
+    return {};
+  }
+}
+
+function getCanvasHash() {
+  try {
+    const canvas =
+      document.createElement("canvas");
+
+    canvas.width = 280;
+    canvas.height = 60;
+
+    const ctx =
+      canvas.getContext("2d");
+
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#36e6ff";
+    ctx.fillRect(10, 5, 100, 20);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(
+      "Rakib Intelligence",
+      12,
+      35
+    );
+
+    return signalHash(
+      canvas.toDataURL()
+    );
+  } catch {
+    return "";
+  }
+}
+
+function collectClientSignals() {
+  const nav = navigator;
+  const scr = window.screen || {};
+
+  const connection =
+    nav.connection ||
+    nav.mozConnection ||
+    nav.webkitConnection ||
+    {};
+
+  return {
+    screen: {
+      width: scr.width || null,
+      height: scr.height || null,
+      availWidth: scr.availWidth || null,
+      availHeight: scr.availHeight || null
+    },
+
+    viewport: {
+      width: window.innerWidth || null,
+      height: window.innerHeight || null
+    },
+
+    pixelRatio:
+      window.devicePixelRatio || null,
+
+    colorDepth:
+      scr.colorDepth || null,
+
+    touchPoints:
+      nav.maxTouchPoints ?? null,
+
+    touchSupport:
+      "ontouchstart" in window ||
+      (nav.maxTouchPoints || 0) > 0,
+
+    hardwareConcurrency:
+      nav.hardwareConcurrency ?? null,
+
+    deviceMemory:
+      nav.deviceMemory ?? null,
+
+    language:
+      nav.language || "",
+
+    languages:
+      Array.isArray(nav.languages)
+        ? nav.languages
+        : [],
+
+    timezone:
+      Intl.DateTimeFormat()
+        .resolvedOptions()
+        .timeZone || "",
+
+    timezoneOffset:
+      new Date().getTimezoneOffset(),
+
+    cookiesEnabled:
+      !!nav.cookieEnabled,
+
+    doNotTrack:
+      nav.doNotTrack || "",
+
+    online:
+      nav.onLine !== false,
+
+    platform:
+      nav.platform || "",
+
+    connection: {
+      effectiveType:
+        connection.effectiveType || "",
+      type:
+        connection.type || "",
+      downlink:
+        connection.downlink ?? null,
+      rtt:
+        connection.rtt ?? null,
+      saveData:
+        !!connection.saveData
+    },
+
+    webgl:
+      getWebGLInfo(),
+
+    canvasHash:
+      getCanvasHash()
+  };
+}
+
+/* =========================================================
    CURRENT VISITOR
 ========================================================= */
+
 
 async function loadCurrentVisitor() {
   try {
     const response = await fetch(
       "/api/track",
       {
-        cache: "no-store"
+        method: "POST",
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          client: collectClientSignals()
+        })
       }
     );
 
@@ -77,6 +255,8 @@ function renderCurrent(visitor) {
   const os = visitor.os || {};
   const browser = visitor.browser || {};
   const engine = visitor.engine || {};
+  const security = visitor.security || {};
+  const client = visitor.client || {};
 
   $("currentIP").textContent =
     safe(visitor.ip, "Unavailable");
@@ -120,6 +300,9 @@ function renderCurrent(visitor) {
   $("engine").textContent =
     `${safe(engine.name)} ${safe(engine.version, "")}`.trim();
 
+  renderSecurity(security);
+  renderClientSignals(client);
+
   $("country").textContent =
     safe(geo.country);
 
@@ -160,8 +343,104 @@ function renderCurrent(visitor) {
 }
 
 /* =========================================================
+   SECURITY / DEVICE SIGNAL UI
+========================================================= */
+
+function renderSecurity(security) {
+  const values = {
+    vpnStatus: security.vpn,
+    proxyStatus: security.proxy,
+    torStatus: security.tor,
+    hostingStatus: security.hosting
+  };
+
+  Object.entries(values).forEach(
+    ([id, detected]) => {
+      const el = $(id);
+
+      if (!el) return;
+
+      el.textContent =
+        detected
+          ? "DETECTED"
+          : "NOT DETECTED";
+
+      el.classList.toggle(
+        "risk-detected",
+        !!detected
+      );
+    }
+  );
+}
+
+function renderClientSignals(client) {
+  const set = (id, value) => {
+    const el = $(id);
+
+    if (el) {
+      el.textContent =
+        safe(value, "Unavailable");
+    }
+  };
+
+  set(
+    "screenInfo",
+    client.screen?.width
+      ? `${client.screen.width} × ${client.screen.height}`
+      : null
+  );
+
+  set(
+    "viewportInfo",
+    client.viewport?.width
+      ? `${client.viewport.width} × ${client.viewport.height}`
+      : null
+  );
+
+  set(
+    "pixelInfo",
+    client.pixelRatio
+      ? `${client.pixelRatio}x`
+      : null
+  );
+
+  set(
+    "touchInfo",
+    client.touchSupport
+      ? `YES • ${safe(client.touchPoints, 0)}`
+      : "NO"
+  );
+
+  set(
+    "cpuInfo",
+    client.hardwareConcurrency
+      ? `${client.hardwareConcurrency} threads`
+      : null
+  );
+
+  set(
+    "memoryInfo",
+    client.deviceMemory
+      ? `${client.deviceMemory} GB`
+      : null
+  );
+
+  set(
+    "networkInfo",
+    client.connection?.effectiveType ||
+      client.connection?.type
+  );
+
+  set(
+    "webglInfo",
+    client.webgl?.renderer
+  );
+}
+
+/* =========================================================
    MAP
 ========================================================= */
+
 
 function loadMap(lat, lon, label) {
 
@@ -507,8 +786,12 @@ async function loadAdminHistory() {
       return;
     }
 
+    adminRecords = result.data || [];
+
+    updateHistoryFilterOptions(adminRecords);
+
     container.innerHTML =
-      result.data
+      adminRecords
         .map(renderAdminRecord)
         .join("");
 
@@ -532,6 +815,8 @@ function renderAdminRecord(item) {
   const os = item.os || {};
   const browser = item.browser || {};
   const engine = item.engine || {};
+  const security = item.security || {};
+  const client = item.client || {};
 
   const hasCoords =
     typeof geo.latitude === "number" &&
@@ -566,6 +851,38 @@ function renderAdminRecord(item) {
 
       </div>
 
+      <div class="security-grid">
+
+        <div class="security-card">
+          <span>VPN</span>
+          <strong class="${security.vpn ? "risk-detected" : ""}">
+            ${security.vpn ? "DETECTED" : "NOT DETECTED"}
+          </strong>
+        </div>
+
+        <div class="security-card">
+          <span>PROXY</span>
+          <strong class="${security.proxy ? "risk-detected" : ""}">
+            ${security.proxy ? "DETECTED" : "NOT DETECTED"}
+          </strong>
+        </div>
+
+        <div class="security-card">
+          <span>TOR</span>
+          <strong class="${security.tor ? "risk-detected" : ""}">
+            ${security.tor ? "DETECTED" : "NOT DETECTED"}
+          </strong>
+        </div>
+
+        <div class="security-card">
+          <span>HOSTING</span>
+          <strong class="${security.hosting ? "risk-detected" : ""}">
+            ${security.hosting ? "DETECTED" : "NOT DETECTED"}
+          </strong>
+        </div>
+
+      </div>
+
       <div class="history-location">
 
         <div class="history-location-info">
@@ -595,6 +912,37 @@ function renderAdminRecord(item) {
                 : "Coordinates unavailable"
             }
           </div>
+
+          ${
+            hasCoords
+              ? `
+                <div class="location-actions">
+
+                  <button
+                    class="small-action"
+                    onclick="openVisitorMap(${geo.latitude}, ${geo.longitude})"
+                  >
+                    🗺️ Open Map
+                  </button>
+
+                  <button
+                    class="small-action"
+                    onclick="shareVisitorLocation(${geo.latitude}, ${geo.longitude}, '${safe(geo.city)}, ${safe(geo.country)}')"
+                  >
+                    📤 Share
+                  </button>
+
+                  <button
+                    class="small-action"
+                    onclick="copyVisitorLocation(${geo.latitude}, ${geo.longitude})"
+                  >
+                    📋 Copy
+                  </button>
+
+                </div>
+              `
+              : ""
+          }
 
         </div>
 
@@ -800,9 +1148,228 @@ function initializeHistoryMaps(root = document) {
 }
 
 
+function updateHistoryFilterOptions(records) {
+  const country = $("historyCountry");
+  const device = $("historyDevice");
+
+  if (!country || !device) return;
+
+  const countries = [
+    ...new Set(
+      records
+        .map(x => x.geo?.country)
+        .filter(Boolean)
+    )
+  ].sort();
+
+  const devices = [
+    ...new Set(
+      records
+        .map(x => x.device?.type)
+        .filter(Boolean)
+    )
+  ].sort();
+
+  country.innerHTML =
+    `<option value="">All countries</option>` +
+    countries
+      .map(x =>
+        `<option value="${escapeHTML(
+          x.toLowerCase()
+        )}">
+          ${escapeHTML(x)}
+        </option>`
+      )
+      .join("");
+
+  device.innerHTML =
+    `<option value="">All devices</option>` +
+    devices
+      .map(x =>
+        `<option value="${escapeHTML(
+          x.toLowerCase()
+        )}">
+          ${escapeHTML(x)}
+        </option>`
+      )
+      .join("");
+}
+
+/* =========================================================
+   LOCATION ACTIONS
+========================================================= */
+
+
+function openVisitorMap(lat, lon) {
+  const url =
+    `https://www.google.com/maps?q=${encodeURIComponent(
+      `${lat},${lon}`
+    )}`;
+
+  window.open(
+    url,
+    "_blank",
+    "noopener,noreferrer"
+  );
+}
+
+async function copyVisitorLocation(lat, lon) {
+  const value = `${lat}, ${lon}`;
+
+  try {
+    await navigator.clipboard.writeText(value);
+    showToast("Coordinates copied");
+  } catch {
+    window.prompt(
+      "Copy coordinates:",
+      value
+    );
+  }
+}
+
+async function shareVisitorLocation(lat, lon, label) {
+  const text =
+    `📍 Visitor Location\n` +
+    `${label}\n` +
+    `Coordinates: ${lat}, ${lon}\n` +
+    `https://www.google.com/maps?q=${lat},${lon}`;
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: "Visitor Location",
+        text
+      });
+    } else {
+      await navigator.clipboard.writeText(text);
+      showToast("Location details copied");
+    }
+  } catch {}
+}
+
+function showToast(message) {
+  let toast = $("appToast");
+
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "appToast";
+    toast.className = "app-toast";
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.classList.add("show");
+
+  clearTimeout(window.__toastTimer);
+
+  window.__toastTimer = setTimeout(
+    () => toast.classList.remove("show"),
+    1800
+  );
+}
+
+/* =========================================================
+   HISTORY FILTER
+========================================================= */
+
+let adminRecords = [];
+
+function applyHistoryFilters() {
+  const search =
+    ($("historySearch")?.value || "")
+      .toLowerCase()
+      .trim();
+
+  const country =
+    ($("historyCountry")?.value || "")
+      .toLowerCase();
+
+  const device =
+    ($("historyDevice")?.value || "")
+      .toLowerCase();
+
+  const vpn =
+    $("historyVPN")?.value || "";
+
+  const filtered =
+    adminRecords.filter(item => {
+
+      const geo = item.geo || {};
+      const dev = item.device || {};
+      const sec = item.security || {};
+
+      const text = [
+        item.ip,
+        geo.city,
+        geo.country,
+        geo.region,
+        geo.isp,
+        geo.asn,
+        geo.organization,
+        dev.type,
+        dev.vendor,
+        dev.model,
+        item.userAgent
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      if (
+        search &&
+        !text.includes(search)
+      ) {
+        return false;
+      }
+
+      if (
+        country &&
+        String(geo.country || "")
+          .toLowerCase() !== country
+      ) {
+        return false;
+      }
+
+      if (
+        device &&
+        String(dev.type || "")
+          .toLowerCase() !== device
+      ) {
+        return false;
+      }
+
+      if (
+        vpn === "yes" &&
+        !sec.vpn
+      ) {
+        return false;
+      }
+
+      if (
+        vpn === "no" &&
+        sec.vpn
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+  $("adminHistory").innerHTML =
+    filtered.length
+      ? filtered.map(renderAdminRecord).join("")
+      : `<div class="admin-row">
+           No matching records.
+         </div>`;
+
+  initializeHistoryMaps(
+    $("adminHistory")
+  );
+}
+
 /* =========================================================
    LIVE STREAM
 ========================================================= */
+
 
 function startLiveStream() {
 
@@ -845,6 +1412,8 @@ function startLiveStream() {
 
         const item =
           data.visitor;
+
+        adminRecords.unshift(item);
 
         const html =
           renderAdminRecord(item);
@@ -974,3 +1543,700 @@ $("loginModal")
 loadCurrentVisitor();
 loadPreview();
 checkAuth();
+
+
+/* =========================================================
+ * LOCATION SHARE
+ * ========================================================= */
+
+async function generateLocationShareLink(visitorId) {
+  try {
+
+    const response = await fetch(
+      `/api/location-share/${encodeURIComponent(visitorId)}`,
+      {
+        method: "POST",
+        credentials: "include"
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(
+        data.error || "Unable to create share link"
+      );
+    }
+
+    return data.url;
+
+  } catch (error) {
+
+    console.error(
+      "LOCATION SHARE ERROR:",
+      error
+    );
+
+    showToast(
+      error.message ||
+      "Unable to create share link"
+    );
+
+    return null;
+  }
+}
+
+async function shareVisitorLocationLink(visitorId) {
+
+  const url =
+    await generateLocationShareLink(visitorId);
+
+  if (!url) return;
+
+  try {
+
+    if (navigator.share) {
+
+      await navigator.share({
+        title: "📍 Shared Location",
+        text: "Here is the shared location.",
+        url
+      });
+
+    } else {
+
+      await navigator.clipboard.writeText(url);
+
+      showToast(
+        "📋 Location share link copied!"
+      );
+
+    }
+
+  } catch (error) {
+
+    if (error.name !== "AbortError") {
+      console.error(error);
+
+      try {
+        await navigator.clipboard.writeText(url);
+
+        showToast(
+          "📋 Location share link copied!"
+        );
+
+      } catch (e) {
+        prompt(
+          "Copy this location link:",
+          url
+        );
+      }
+    }
+
+  }
+}
+
+async function copyVisitorLocationLink(visitorId) {
+
+  const url =
+    await generateLocationShareLink(visitorId);
+
+  if (!url) return;
+
+  try {
+
+    await navigator.clipboard.writeText(url);
+
+    showToast(
+      "🔗 Location link copied!"
+    );
+
+  } catch (error) {
+
+    prompt(
+      "Copy this location link:",
+      url
+    );
+
+  }
+}
+
+
+/* =========================================================
+ * PREMIUM DASHBOARD
+ * ========================================================= */
+
+function renderRiskPanel(risk) {
+  if (!risk) return "";
+
+  const score =
+    Number(risk.score || 0);
+
+  const level =
+    risk.level || "LOW";
+
+  const reasons =
+    Array.isArray(risk.reasons)
+      ? risk.reasons.join(", ")
+      : "None";
+
+  return `
+    <div class="premium-risk-card">
+      <div class="premium-risk-title">
+        🛡️ Security Risk
+      </div>
+
+      <div class="premium-risk-score">
+        ${score}/100
+      </div>
+
+      <div class="premium-risk-level risk-${level.toLowerCase()}">
+        ${level}
+      </div>
+
+      <div class="premium-risk-reasons">
+        ${reasons}
+      </div>
+    </div>
+  `;
+}
+
+
+/* =========================================================
+ * VISITOR PROFILE MODAL
+ * ========================================================= */
+
+function showVisitorProfile(item) {
+
+  const geo = item.geo || {};
+  const security =
+    geo.security || {};
+
+  const client =
+    item.client || {};
+
+  const risk =
+    item.risk || {};
+
+  const modal =
+    document.getElementById(
+      "visitorProfileModal"
+    );
+
+  if (!modal) return;
+
+  const body =
+    document.getElementById(
+      "visitorProfileBody"
+    );
+
+  body.innerHTML = `
+
+    <div class="profile-header">
+      <div>
+        <span class="profile-label">
+          VISITOR
+        </span>
+
+        <h2>
+          ${geo.city || "Unknown"},
+          ${geo.country || "Unknown"}
+        </h2>
+      </div>
+
+      ${renderRiskPanel(risk)}
+    </div>
+
+    <div class="profile-grid">
+
+      <div class="profile-section">
+        <h3>🌐 Network</h3>
+
+        <p><b>IP:</b> ${item.ip || "Hidden"}</p>
+        <p><b>ISP:</b> ${geo.isp || "Unknown"}</p>
+        <p><b>Organization:</b> ${geo.organization || "Unknown"}</p>
+        <p><b>ASN:</b> ${geo.asn || "Unknown"}</p>
+      </div>
+
+      <div class="profile-section">
+        <h3>🛡️ Security</h3>
+
+        <p>VPN: ${security.vpn ? "YES" : "NO"}</p>
+        <p>Proxy: ${security.proxy ? "YES" : "NO"}</p>
+        <p>Tor: ${security.tor ? "YES" : "NO"}</p>
+        <p>Hosting: ${security.hosting ? "YES" : "NO"}</p>
+      </div>
+
+      <div class="profile-section">
+        <h3>📍 Location</h3>
+
+        <p>${geo.country || "Unknown"}</p>
+        <p>${geo.region || "Unknown"}</p>
+        <p>${geo.city || "Unknown"}</p>
+        <p>
+          ${geo.lat ?? "-"},
+          ${geo.lon ?? "-"}
+        </p>
+      </div>
+
+      <div class="profile-section">
+        <h3>💻 Device</h3>
+
+        <p>Type: ${item.device?.type || "Unknown"}</p>
+        <p>OS: ${item.os?.name || "Unknown"} ${item.os?.version || ""}</p>
+        <p>Browser: ${item.browser?.name || "Unknown"}</p>
+        <p>Engine: ${item.engine?.name || "Unknown"}</p>
+      </div>
+
+      <div class="profile-section">
+        <h3>📐 Client Signals</h3>
+
+        <p>
+          Screen:
+          ${client.screen?.width || "-"} ×
+          ${client.screen?.height || "-"}
+        </p>
+
+        <p>
+          Viewport:
+          ${client.viewport?.width || "-"} ×
+          ${client.viewport?.height || "-"}
+        </p>
+
+        <p>
+          DPR:
+          ${client.pixelRatio || "-"}
+        </p>
+
+        <p>
+          Touch:
+          ${client.touchSupport ? "YES" : "NO"}
+        </p>
+
+        <p>
+          CPU:
+          ${client.hardwareConcurrency || "-"}
+        </p>
+      </div>
+
+      <div class="profile-section">
+        <h3>🕐 Activity</h3>
+
+        <p>
+          Created:
+          ${item.createdAt
+            ? new Date(item.createdAt).toLocaleString()
+            : "-"}
+        </p>
+
+        <p>
+          Timezone:
+          ${client.timezone || geo.timezone || "-"}
+        </p>
+
+        <p>
+          Language:
+          ${client.language || "-"}
+        </p>
+      </div>
+
+    </div>
+  `;
+
+  modal.classList.add("show");
+}
+
+function closeVisitorProfile() {
+
+  const modal =
+    document.getElementById(
+      "visitorProfileModal"
+    );
+
+  if (modal) {
+    modal.classList.remove("show");
+  }
+}
+
+
+/* =========================================================
+ * ANALYTICS
+ * ========================================================= */
+
+async function loadPremiumAnalytics() {
+
+  try {
+
+    const response =
+      await fetch(
+        "/api/analytics",
+        {
+          credentials: "include"
+        }
+      );
+
+    if (!response.ok) {
+      return;
+    }
+
+    const data =
+      await response.json();
+
+    if (!data.ok) return;
+
+    const setText = (id, value) => {
+
+      const el =
+        document.getElementById(id);
+
+      if (el) {
+        el.textContent =
+          value ?? 0;
+      }
+
+    };
+
+    setText(
+      "analyticsVisitors",
+      data.totals?.visitors
+    );
+
+    setText(
+      "analyticsUnique",
+      data.totals?.uniqueIPs
+    );
+
+    setText(
+      "analyticsToday",
+      data.totals?.today
+    );
+
+    setText(
+      "analyticsWeek",
+      data.totals?.week
+    );
+
+    setText(
+      "analyticsVPN",
+      data.security?.vpn
+    );
+
+    setText(
+      "analyticsProxy",
+      data.security?.proxy
+    );
+
+    setText(
+      "analyticsTor",
+      data.security?.tor
+    );
+
+    setText(
+      "analyticsHosting",
+      data.security?.hosting
+    );
+
+    renderAnalyticsList(
+      "analyticsCountries",
+      data.countries
+    );
+
+    renderAnalyticsList(
+      "analyticsBrowsers",
+      data.browsers
+    );
+
+    renderAnalyticsList(
+      "analyticsDevices",
+      data.devices
+    );
+
+    renderAnalyticsList(
+      "analyticsOS",
+      data.operatingSystems
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Analytics error:",
+      error
+    );
+  }
+}
+
+function renderAnalyticsList(
+  id,
+  items
+) {
+
+  const el =
+    document.getElementById(id);
+
+  if (!el) return;
+
+  el.innerHTML = "";
+
+  if (!Array.isArray(items) || !items.length) {
+    el.innerHTML =
+      `<div class="empty-state">No data</div>`;
+    return;
+  }
+
+  items.slice(0, 8).forEach(item => {
+
+    const row =
+      document.createElement("div");
+
+    row.className =
+      "analytics-row";
+
+    row.innerHTML = `
+      <span>
+        ${escapeHtml(
+          String(item.name)
+        )}
+      </span>
+
+      <strong>
+        ${item.count}
+      </strong>
+    `;
+
+    el.appendChild(row);
+  });
+}
+
+
+/* =========================================================
+ * SHARE MANAGER
+ * ========================================================= */
+
+async function loadShareManager() {
+
+  const container =
+    document.getElementById(
+      "shareManagerList"
+    );
+
+  if (!container) return;
+
+  try {
+
+    const response =
+      await fetch(
+        "/api/location-shares",
+        {
+          credentials: "include"
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(
+        data.error ||
+        "Unable to load shares"
+      );
+    }
+
+    container.innerHTML = "";
+
+    if (!data.shares.length) {
+
+      container.innerHTML =
+        `<div class="empty-state">
+          No shared locations
+        </div>`;
+
+      return;
+    }
+
+    data.shares.forEach(share => {
+
+      const row =
+        document.createElement("div");
+
+      row.className =
+        "share-manager-row";
+
+      const status =
+        share.expired
+          ? "EXPIRED"
+          : "ACTIVE";
+
+      row.innerHTML = `
+
+        <div class="share-manager-main">
+
+          <strong>
+            📍
+            ${escapeHtml(
+              share.city ||
+              share.country ||
+              "Unknown"
+            )}
+          </strong>
+
+          <small>
+            ${escapeHtml(
+              share.country || ""
+            )}
+          </small>
+
+          <small>
+            ${new Date(
+              share.createdAt
+            ).toLocaleString()}
+          </small>
+
+        </div>
+
+        <div class="share-manager-status ${
+          share.expired
+            ? "share-expired"
+            : "share-active"
+        }">
+          ${status}
+        </div>
+
+        <div class="share-manager-actions">
+
+          <button
+            type="button"
+            onclick="copyTextToClipboard('${share.url.replace(/'/g, "\\'")}')"
+          >
+            📋 Copy
+          </button>
+
+          <button
+            type="button"
+            onclick="window.open('${share.url.replace(/'/g, "\\'")}', '_blank')"
+          >
+            🔗 Open
+          </button>
+
+          <button
+            type="button"
+            onclick="revokeLocationShare('${share.token}')"
+          >
+            🗑️ Revoke
+          </button>
+
+        </div>
+      `;
+
+      container.appendChild(row);
+    });
+
+  } catch (error) {
+
+    console.error(
+      "Share manager error:",
+      error
+    );
+
+    container.innerHTML =
+      `<div class="empty-state">
+        Unable to load shares
+      </div>`;
+  }
+}
+
+async function revokeLocationShare(token) {
+
+  if (
+    !confirm(
+      "Revoke this shared location link?"
+    )
+  ) {
+    return;
+  }
+
+  try {
+
+    const response =
+      await fetch(
+        `/api/location-share/${encodeURIComponent(token)}`,
+        {
+          method: "DELETE",
+          credentials: "include"
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(
+        data.error ||
+        "Unable to revoke"
+      );
+    }
+
+    showToast(
+      "🗑️ Share link revoked"
+    );
+
+    loadShareManager();
+
+  } catch (error) {
+
+    showToast(
+      error.message ||
+      "Unable to revoke"
+    );
+  }
+}
+
+async function copyTextToClipboard(text) {
+
+  try {
+
+    await navigator.clipboard.writeText(text);
+
+    showToast(
+      "📋 Copied!"
+    );
+
+  } catch {
+
+    prompt(
+      "Copy this:",
+      text
+    );
+  }
+}
+
+
+/* =========================================================
+ * LOAD ALL PREMIUM DATA
+ * ========================================================= */
+
+async function loadPremiumDashboard() {
+
+  await Promise.allSettled([
+    loadPremiumAnalytics(),
+    loadShareManager()
+  ]);
+
+}
+
+
+/* Automatically refresh premium dashboard
+ * whenever the admin page is visible.
+ */
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    setTimeout(
+      () => {
+        loadPremiumDashboard();
+      },
+      1200
+    );
+
+  }
+);

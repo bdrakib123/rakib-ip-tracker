@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Shared Location • RAKIB IP INTELLIGENCE</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+
+  <style>
+    body {
+      min-height: 100vh;
+    }
+
+    .shared-page {
+      width: min(1100px, calc(100% - 30px));
+      margin: 0 auto;
+      padding: 35px 0 60px;
+    }
+
+    .shared-header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .shared-header h1 {
+      margin: 0;
+      font-size: clamp(28px, 6vw, 52px);
+    }
+
+    .shared-header p {
+      margin-top: 10px;
+      opacity: .7;
+    }
+
+    .shared-card {
+      background: rgba(255,255,255,.055);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 24px;
+      padding: 20px;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 20px 70px rgba(0,0,0,.35);
+    }
+
+    #sharedMap {
+      width: 100%;
+      height: min(65vh, 620px);
+      min-height: 360px;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    .shared-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .shared-info-card {
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.045);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .shared-info-card span {
+      display: block;
+      font-size: 12px;
+      opacity: .55;
+      margin-bottom: 6px;
+    }
+
+    .shared-info-card strong {
+      display: block;
+      word-break: break-word;
+    }
+
+    .shared-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .shared-actions button,
+    .shared-actions a {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 17px;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.1);
+    }
+
+    .shared-actions button:hover,
+    .shared-actions a:hover {
+      background: rgba(255,255,255,.14);
+    }
+
+    .shared-error {
+      display: none;
+      text-align: center;
+      padding: 70px 20px;
+    }
+
+    .shared-error h2 {
+      margin-bottom: 10px;
+    }
+
+    .shared-error p {
+      opacity: .65;
+    }
+
+    .shared-note {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 12px;
+      opacity: .45;
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="shared-page">
+
+    <header class="shared-header">
+      <h1>📍 Shared Location</h1>
+      <p>RAKIB IP INTELLIGENCE</p>
+    </header>
+
+    <section
+      id="sharedContent"
+      class="shared-card"
+    >
+
+      <div id="sharedMap"></div>
+
+      <div
+        id="sharedInfo"
+        class="shared-info"
+      ></div>
+
+      <div class="shared-actions">
+
+        <button
+          id="copySharedBtn"
+          type="button"
+        >
+          📋 Copy Map Link
+        </button>
+
+        <button
+          id="shareSharedBtn"
+          type="button"
+        >
+          📤 Share
+        </button>
+
+        <a
+          id="googleMapsBtn"
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          🗺️ Open Google Maps
+        </a>
+
+      </div>
+
+      <div class="shared-note">
+        Location shown here is approximate and based on IP geolocation.
+      </div>
+
+    </section>
+
+    <section
+      id="sharedError"
+      class="shared-card shared-error"
+    >
+      <h2>❌ Location unavailable</h2>
+      <p id="sharedErrorText">
+        This shared location is invalid or no longer available.
+      </p>
+    </section>
+
+  </main>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  ></script>
+
+  <script>
+    (async function () {
+
+      const token =
+        location.pathname
+          .split("/")
+          .filter(Boolean)
+          .pop();
+
+      const content =
+        document.getElementById("sharedContent");
+
+      const errorBox =
+        document.getElementById("sharedError");
+
+      const errorText =
+        document.getElementById("sharedErrorText");
+
+      try {
+
+        const response =
+          await fetch(
+            "/api/location-share/" +
+            encodeURIComponent(token)
+          );
+
+        const data =
+          await response.json();
+
+        if (!response.ok || !data.ok) {
+          throw new Error(
+            data.error ||
+            "Location unavailable"
+          );
+        }
+
+        const loc = data.location;
+
+        const map =
+          L.map("sharedMap", {
+            zoomControl: true
+          }).setView(
+            [
+              loc.latitude,
+              loc.longitude
+            ],
+            13
+          );
+
+        L.tileLayer(
+          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          {
+            maxZoom: 19,
+            attribution:
+              '&copy; OpenStreetMap contributors'
+          }
+        ).addTo(map);
+
+        const marker =
+          L.marker([
+            loc.latitude,
+            loc.longitude
+          ]).addTo(map);
+
+        marker.bindPopup(
+          "<b>📍 Shared Location</b><br>" +
+          (
+            loc.city ||
+            loc.region ||
+            loc.country ||
+            "Location"
+          )
+        ).openPopup();
+
+        const info =
+          document.getElementById("sharedInfo");
+
+        const addInfo = (label, value) => {
+          if (!value) return;
+
+          const card =
+            document.createElement("div");
+
+          card.className =
+            "shared-info-card";
+
+          card.innerHTML =
+            "<span>" +
+            label +
+            "</span><strong>" +
+            String(value) +
+            "</strong>";
+
+          info.appendChild(card);
+        };
+
+        addInfo("Country", loc.country);
+        addInfo("Region", loc.region);
+        addInfo("City", loc.city);
+        addInfo("Postal", loc.postal);
+        addInfo("Timezone", loc.timezone);
+
+        addInfo(
+          "Coordinates",
+          loc.latitude.toFixed(6) +
+          ", " +
+          loc.longitude.toFixed(6)
+        );
+
+        const mapUrl =
+          "https://www.google.com/maps?q=" +
+          encodeURIComponent(
+            loc.latitude + "," + loc.longitude
+          );
+
+        document
+          .getElementById("googleMapsBtn")
+          .href = mapUrl;
+
+        document
+          .getElementById("copySharedBtn")
+          .addEventListener(
+            "click",
+            async () => {
+
+              try {
+
+                await navigator.clipboard.writeText(
+                  location.href
+                );
+
+                alert("✅ Map link copied!");
+
+              } catch (e) {
+
+                prompt(
+                  "Copy this location link:",
+                  location.href
+                );
+
+              }
+
+            }
+          );
+
+        document
+          .getElementById("shareSharedBtn")
+          .addEventListener(
+            "click",
+            async () => {
+
+              const shareData = {
+                title: "📍 Shared Location",
+                text:
+                  "Here is the shared location:",
+                url: location.href
+              };
+
+              try {
+
+                if (
+                  navigator.share
+                ) {
+
+                  await navigator.share(
+                    shareData
+                  );
+
+                } else {
+
+                  await navigator.clipboard.writeText(
+                    location.href
+                  );
+
+                  alert(
+                    "✅ Share link copied!"
+                  );
+
+                }
+
+              } catch (e) {
+
+                if (e.name !== "AbortError") {
+                  console.error(e);
+                }
+
+              }
+
+            }
+          );
+
+      } catch (error) {
+
+        console.error(error);
+
+        content.style.display =
+          "none";
+
+        errorBox.style.display =
+          "block";
+
+        errorText.textContent =
+          error.message ||
+          "Location unavailable";
+
+      }
+
+    })();
+  </script>
+
+</body>
+</html>

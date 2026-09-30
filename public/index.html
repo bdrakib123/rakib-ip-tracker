@@ -328,6 +328,92 @@
 
   </section>
 
+  <!-- NETWORK SECURITY -->
+
+  <section class="security-section glass">
+
+    <div class="mini-label">
+      NETWORK SECURITY
+    </div>
+
+    <h2>
+      VPN / Proxy Intelligence
+    </h2>
+
+    <div class="security-grid">
+
+      <div class="security-card">
+        <span>VPN</span>
+        <strong id="vpnStatus">CHECKING</strong>
+      </div>
+
+      <div class="security-card">
+        <span>PROXY</span>
+        <strong id="proxyStatus">CHECKING</strong>
+      </div>
+
+      <div class="security-card">
+        <span>TOR</span>
+        <strong id="torStatus">CHECKING</strong>
+      </div>
+
+      <div class="security-card">
+        <span>HOSTING</span>
+        <strong id="hostingStatus">CHECKING</strong>
+      </div>
+
+    </div>
+
+    <div class="mini-label signal-label">
+      DEVICE SIGNALS
+    </div>
+
+    <div class="signal-grid">
+
+      <div>
+        <span>Screen</span>
+        <strong id="screenInfo">—</strong>
+      </div>
+
+      <div>
+        <span>Viewport</span>
+        <strong id="viewportInfo">—</strong>
+      </div>
+
+      <div>
+        <span>Pixel Ratio</span>
+        <strong id="pixelInfo">—</strong>
+      </div>
+
+      <div>
+        <span>Touch</span>
+        <strong id="touchInfo">—</strong>
+      </div>
+
+      <div>
+        <span>CPU</span>
+        <strong id="cpuInfo">—</strong>
+      </div>
+
+      <div>
+        <span>Memory</span>
+        <strong id="memoryInfo">—</strong>
+      </div>
+
+      <div>
+        <span>Network</span>
+        <strong id="networkInfo">—</strong>
+      </div>
+
+      <div>
+        <span>WebGL</span>
+        <strong id="webglInfo">—</strong>
+      </div>
+
+    </div>
+
+  </section>
+
   <!-- HISTORY -->
 
   <section class="section-heading history-heading">
@@ -451,6 +537,30 @@
 
     </div>
 
+    <div class="history-tools">
+
+      <input
+        id="historySearch"
+        type="search"
+        placeholder="Search IP, city, ISP, ASN, device..."
+      >
+
+      <select id="historyCountry">
+        <option value="">All countries</option>
+      </select>
+
+      <select id="historyDevice">
+        <option value="">All devices</option>
+      </select>
+
+      <select id="historyVPN">
+        <option value="">VPN: All</option>
+        <option value="yes">VPN: Detected</option>
+        <option value="no">VPN: Not detected</option>
+      </select>
+
+    </div>
+
     <div
       id="adminHistory"
       class="admin-history"
@@ -529,6 +639,35 @@
 ></script>
 
 <script src="/app.js"></script>
+
+
+<div
+  id="visitorProfileModal"
+  class="visitor-profile-modal"
+>
+
+  <div
+    class="visitor-profile-backdrop"
+    onclick="closeVisitorProfile()"
+  ></div>
+
+  <div class="visitor-profile-dialog">
+
+    <button
+      type="button"
+      class="visitor-profile-close"
+      onclick="closeVisitorProfile()"
+    >
+      ×
+    </button>
+
+    <div
+      id="visitorProfileBody"
+    ></div>
+
+  </div>
+
+</div>
 
 </body>
 </html>
