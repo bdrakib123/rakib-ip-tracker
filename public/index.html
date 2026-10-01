@@ -63,6 +63,11 @@
     SYSTEM ONLINE
   </div>
 
+
+<a href="/admin-panel" class="admin-panel-link" aria-label="Open Admin Panel">
+  🔐 <span>Admin Panel</span>
+</a>
+
 </header>
 
 <main class="container">
@@ -428,196 +433,13 @@
       </h2>
     </div>
 
-    <button
-      id="unlockButton"
-      class="unlock-button"
-    >
-      🔐 Unlock Full History
-    </button>
-
   </section>
 
-  <section class="history glass">
 
-    <div class="history-lock">
-
-      <div class="lock-icon">
-        🔒
-      </div>
-
-      <div>
-
-        <div class="lock-title">
-          FULL HISTORY LOCKED
-        </div>
-
-        <div class="lock-text">
-          Recent activity is shown with masked IP addresses.
-          Unlock to view complete records.
-        </div>
-
-      </div>
-
-    </div>
-
-    <div
-      id="previewHistory"
-      class="history-list"
-    >
-      Loading...
-    </div>
-
-  </section>
 
   <!-- ADMIN -->
 
-  <section
-    id="adminPanel"
-    class="admin-panel glass hidden"
-  >
 
-    <div class="admin-header">
-
-      <div>
-        <div class="mini-label">
-          ADMIN MODE
-        </div>
-
-        <h2>
-          Full Visitor Intelligence
-        </h2>
-      </div>
-
-      <button
-        id="logoutButton"
-        class="logout"
-      >
-        Logout
-      </button>
-
-    </div>
-
-    <div class="stats-grid">
-
-      <div class="stat glass">
-        <span>Total Records</span>
-        <strong id="statTotal">0</strong>
-      </div>
-
-      <div class="stat glass">
-        <span>Unique IPs</span>
-        <strong id="statUnique">0</strong>
-      </div>
-
-      <div class="stat glass">
-        <span>Last 24 Hours</span>
-        <strong id="stat24">0</strong>
-      </div>
-
-    </div>
-
-    <div class="live-header">
-
-      <div>
-        <div class="mini-label">
-          LIVE STREAM
-        </div>
-
-        <h3>
-          Incoming Visitors
-        </h3>
-      </div>
-
-      <span
-        id="liveStatus"
-        class="live-status"
-      >
-        CONNECTING
-      </span>
-
-    </div>
-
-    <section
-      class="live-premium-dashboard"
-    >
-
-      <div class="section-heading">
-
-        <div>
-          <div class="eyebrow">
-            REAL-TIME INTELLIGENCE
-          </div>
-
-          <h2>
-            Live Visitor Network
-          </h2>
-        </div>
-
-        <div class="live-big-counter">
-          <span class="live-dot"></span>
-          <strong id="liveVisitorCount">0</strong>
-          <span>Live Events</span>
-        </div>
-
-      </div>
-
-      <div class="live-premium-grid">
-
-        <div class="live-map-card">
-
-          <div class="live-card-title">
-            <div>
-              <span class="eyebrow">
-                GLOBAL MAP
-              </span>
-
-              <h3>
-                🌍 Live Visitors
-              </h3>
-            </div>
-
-            <span class="live-pill">
-              LIVE
-            </span>
-          </div>
-
-          <div
-            id="liveWorldMap"
-            class="live-world-map"
-          ></div>
-
-        </div>
-
-        <div class="live-chart-card">
-
-          <div class="live-card-title">
-
-            <div>
-              <span class="eyebrow">
-                TRAFFIC
-              </span>
-
-              <h3>
-                📈 Last 30 Minutes
-              </h3>
-            </div>
-
-          </div>
-
-          <canvas
-            id="liveTrafficChart"
-            class="live-traffic-chart"
-          ></canvas>
-
-          <div class="live-chart-note">
-            Updates automatically when a new visitor arrives.
-          </div>
-
-        </div>
-
-      </div>
-
-    </section>
 
 
 
@@ -1071,91 +893,328 @@
 </section>
 
 
+
+
+
 <!-- =======================================================
-     DATA CONTROL CENTER
+     PUBLIC USER INTELLIGENCE LAB
 ======================================================== -->
 
-<section class="data-control-center" id="dataControlCenter">
+<section class="user-intelligence" id="userIntelligence">
 
-  <div class="data-control-header">
+  <div class="ui-header">
     <div>
-      <div class="data-control-kicker">ADMIN CONTROL</div>
-      <h2>Data Control Center</h2>
-      <p>Manage stored visitor and analytics data</p>
+      <span class="ui-kicker">PERSONAL DEVICE LAB</span>
+      <h2>YOUR DIGITAL PROFILE</h2>
+      <p>Everything this browser publicly reveals to this website</p>
     </div>
 
-    <span class="data-control-lock">ADMIN ONLY</span>
+    <div class="ui-live">
+      <span></span>
+      LIVE
+    </div>
   </div>
 
-  <div class="data-control-grid">
+  <!-- NETWORK -->
 
-    <button
-      class="data-clear-btn"
-      data-clear-type="24h"
-      data-clear-label="Last 24 Hours"
-    >
-      <span>🧹</span>
-      <b>Last 24 Hours</b>
-      <small>Visitor history</small>
-    </button>
+  <div class="ui-section-title">
+    <span>01</span>
+    <div>
+      <b>NETWORK INTELLIGENCE</b>
+      <small>Your public network information</small>
+    </div>
+  </div>
 
-    <button
-      class="data-clear-btn"
-      data-clear-type="7d"
-      data-clear-label="Last 7 Days"
-    >
-      <span>🗓️</span>
-      <b>Last 7 Days</b>
-      <small>Visitor history</small>
-    </button>
+  <div class="ui-grid ui-grid-4">
 
-    <button
-      class="data-clear-btn"
-      data-clear-type="analytics"
-      data-clear-label="Analytics Logs"
-    >
-      <span>📊</span>
-      <b>Analytics Logs</b>
-      <small>Requests / pages / security</small>
-    </button>
+    <article class="ui-card">
+      <span class="ui-icon">🌐</span>
+      <small>PUBLIC IP</small>
+      <strong id="uiIP">—</strong>
+    </article>
 
-    <button
-      class="data-clear-btn"
-      data-clear-type="sessions"
-      data-clear-label="Sessions"
-    >
-      <span>👥</span>
-      <b>Sessions</b>
-      <small>Stored sessions</small>
-    </button>
+    <article class="ui-card">
+      <span class="ui-icon">📡</span>
+      <small>ISP</small>
+      <strong id="uiISP">—</strong>
+    </article>
 
-    <button
-      class="data-clear-btn danger"
-      data-clear-type="history"
-      data-clear-label="All Visitor History"
-    >
-      <span>🗑️</span>
-      <b>All Visitor History</b>
-      <small>Delete visitor records</small>
-    </button>
+    <article class="ui-card">
+      <span class="ui-icon">🏢</span>
+      <small>ORGANIZATION</small>
+      <strong id="uiOrganization">—</strong>
+    </article>
 
-    <button
-      class="data-clear-btn danger"
-      data-clear-type="everything"
-      data-clear-label="Everything"
-    >
-      <span>⚠️</span>
-      <b>Clear Everything</b>
-      <small>All stored tracking data</small>
-    </button>
+    <article class="ui-card">
+      <span class="ui-icon">🔢</span>
+      <small>ASN</small>
+      <strong id="uiASN">—</strong>
+    </article>
 
   </div>
 
-  <div
-    class="data-clear-status"
-    id="dataClearStatus"
-  >
-    Ready
+  <!-- LOCATION -->
+
+  <div class="ui-section-title">
+    <span>02</span>
+    <div>
+      <b>APPROXIMATE LOCATION</b>
+      <small>IP-based geographic information</small>
+    </div>
+  </div>
+
+  <div class="ui-location-card">
+
+    <div class="ui-location-main">
+      <span class="ui-big-icon">📍</span>
+
+      <div>
+        <small>YOU ARE APPROXIMATELY IN</small>
+        <strong id="uiLocation">Loading...</strong>
+        <p id="uiRegion">—</p>
+      </div>
+    </div>
+
+    <div class="ui-location-meta">
+
+      <div>
+        <small>COUNTRY</small>
+        <b id="uiCountry">—</b>
+      </div>
+
+      <div>
+        <small>COUNTRY CODE</small>
+        <b id="uiCountryCode">—</b>
+      </div>
+
+      <div>
+        <small>POSTAL</small>
+        <b id="uiPostal">—</b>
+      </div>
+
+      <div>
+        <small>TIMEZONE</small>
+        <b id="uiTimezone">—</b>
+      </div>
+
+      <div>
+        <small>COORDINATES</small>
+        <b id="uiCoordinates">—</b>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- DEVICE -->
+
+  <div class="ui-section-title">
+    <span>03</span>
+    <div>
+      <b>DEVICE INTELLIGENCE</b>
+      <small>Information exposed by your browser</small>
+    </div>
+  </div>
+
+  <div class="ui-grid ui-grid-4">
+
+    <article class="ui-card">
+      <span class="ui-icon">📱</span>
+      <small>DEVICE</small>
+      <strong id="uiDevice">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">⚙️</span>
+      <small>OPERATING SYSTEM</small>
+      <strong id="uiOS">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🖥️</span>
+      <small>SCREEN</small>
+      <strong id="uiScreen">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">📐</span>
+      <small>VIEWPORT</small>
+      <strong id="uiViewport">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🔍</span>
+      <small>PIXEL RATIO</small>
+      <strong id="uiDPR">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🧠</span>
+      <small>CPU CORES</small>
+      <strong id="uiCPU">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">💾</span>
+      <small>DEVICE MEMORY</small>
+      <strong id="uiMemory">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">👆</span>
+      <small>TOUCH</small>
+      <strong id="uiTouch">—</strong>
+    </article>
+
+  </div>
+
+  <!-- BROWSER -->
+
+  <div class="ui-section-title">
+    <span>04</span>
+    <div>
+      <b>BROWSER INTELLIGENCE</b>
+      <small>Browser and client environment</small>
+    </div>
+  </div>
+
+  <div class="ui-grid ui-grid-3">
+
+    <article class="ui-card ui-card-wide">
+      <span class="ui-icon">🌎</span>
+      <small>BROWSER</small>
+      <strong id="uiBrowser">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">⚡</span>
+      <small>ENGINE</small>
+      <strong id="uiEngine">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">💻</span>
+      <small>PLATFORM</small>
+      <strong id="uiPlatform">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🗣️</span>
+      <small>LANGUAGE</small>
+      <strong id="uiLanguage">—</strong>
+    </article>
+
+    <article class="ui-card ui-card-wide">
+      <span class="ui-icon">🗣️</span>
+      <small>PREFERRED LANGUAGES</small>
+      <strong id="uiLanguages">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🍪</span>
+      <small>COOKIES</small>
+      <strong id="uiCookies">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🚫</span>
+      <small>DO NOT TRACK</small>
+      <strong id="uiDNT">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🟢</span>
+      <small>ONLINE</small>
+      <strong id="uiOnline">—</strong>
+    </article>
+
+  </div>
+
+  <!-- FINGERPRINT -->
+
+  <div class="ui-section-title">
+    <span>05</span>
+    <div>
+      <b>BROWSER LAB</b>
+      <small>Technical browser signals</small>
+    </div>
+  </div>
+
+  <div class="ui-lab">
+
+    <div class="ui-lab-row">
+      <span>Canvas Hash</span>
+      <b id="uiCanvas">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>WebGL Vendor</span>
+      <b id="uiWebGLVendor">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>WebGL Renderer</span>
+      <b id="uiWebGLRenderer">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>WebGL Version</span>
+      <b id="uiWebGLVersion">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>Color Depth</span>
+      <b id="uiColorDepth">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>Timezone Offset</span>
+      <b id="uiTimezoneOffset">—</b>
+    </div>
+
+  </div>
+
+  <!-- SECURITY -->
+
+  <div class="ui-section-title">
+    <span>06</span>
+    <div>
+      <b>NETWORK SIGNALS</b>
+      <small>Technical signals returned by the IP provider</small>
+    </div>
+  </div>
+
+  <div class="ui-security-grid">
+
+    <div class="ui-security-card">
+      <span>VPN</span>
+      <b id="uiVPN">—</b>
+    </div>
+
+    <div class="ui-security-card">
+      <span>PROXY</span>
+      <b id="uiProxy">—</b>
+    </div>
+
+    <div class="ui-security-card">
+      <span>TOR</span>
+      <b id="uiTor">—</b>
+    </div>
+
+    <div class="ui-security-card">
+      <span>HOSTING</span>
+      <b id="uiHosting">—</b>
+    </div>
+
+  </div>
+
+  <div class="ui-disclaimer">
+    <b>ℹ️ PRIVACY NOTE</b>
+    <span>
+      Location shown here is approximate and based on network information.
+      Browser signals are technical information exposed to this website;
+      they do not by themselves identify a person.
+    </span>
   </div>
 
 </section>
@@ -1193,63 +1252,6 @@
 
 </main>
 
-<!-- LOGIN MODAL -->
-
-<div
-  id="loginModal"
-  class="modal hidden"
->
-
-  <div class="modal-backdrop"></div>
-
-  <div class="modal-box glass">
-
-    <button
-      id="closeModal"
-      class="modal-close"
-    >
-      ×
-    </button>
-
-    <div class="modal-icon">
-      🔐
-    </div>
-
-    <div class="mini-label">
-      RESTRICTED AREA
-    </div>
-
-    <h2>
-      Unlock History
-    </h2>
-
-    <p>
-      Enter the administrator password to access
-      complete visitor records.
-    </p>
-
-    <input
-      id="passwordInput"
-      type="password"
-      placeholder="Enter password"
-      autocomplete="current-password"
-    >
-
-    <div
-      id="loginError"
-      class="login-error"
-    ></div>
-
-    <button
-      id="loginSubmit"
-      class="login-submit"
-    >
-      UNLOCK
-    </button>
-
-  </div>
-
-</div>
 
 <footer>
   <span>RAKIB IP INTELLIGENCE</span>

@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Rakib IP Intelligence — Admin</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  background:#050912;
+  color:#f5f7fb;
+  font-family:Arial,sans-serif;
+}
+.container{
+  width:min(1200px,calc(100% - 28px));
+  margin:auto;
+  padding:30px 0 60px;
+}
+.card{
+  background:#0c1320;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:18px;
+  padding:22px;
+  margin-bottom:18px;
+}
+.login{
+  max-width:420px;
+  margin:100px auto;
+}
+input,button{
+  width:100%;
+  padding:13px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  font-size:15px;
+}
+input{
+  background:#050912;
+  color:#fff;
+  margin:14px 0;
+}
+button{
+  background:#2563eb;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+.error{color:#fb7185;margin-top:10px}
+.muted{color:#94a3b8}
+.eyebrow{
+  color:#7dd3fc;
+  font-size:11px;
+  letter-spacing:2px;
+  font-weight:bold;
+}
+#dashboard{display:none}
+.top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+}
+.logout{
+  width:auto;
+  background:#172033;
+}
+.record-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:10px;
+}
+.field{
+  background:rgba(255,255,255,.035);
+  padding:13px;
+  border-radius:12px;
+}
+.field span{
+  display:block;
+  color:#8491a5;
+  font-size:10px;
+  letter-spacing:1px;
+  margin-bottom:6px;
+}
+.field strong{
+  word-break:break-word;
+}
+.section{
+  margin-top:22px;
+}
+.section h3{
+  color:#7dd3fc;
+  font-size:13px;
+  letter-spacing:1px;
+}
+pre{
+  background:#050912;
+  padding:14px;
+  border-radius:12px;
+  overflow:auto;
+  white-space:pre-wrap;
+  word-break:break-word;
+  font-size:12px;
+  color:#cbd5e1;
+}
+
+/* =========================================================
+   ADMIN LOCATION MAP + ACTIONS
+   ========================================================= */
+
+.admin-location-block{
+  margin-top:22px;
+  padding:18px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:18px;
+  background:rgba(255,255,255,.025);
+}
+
+.admin-location-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.admin-location-title{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.admin-location-title span{
+  font-size:10px;
+  letter-spacing:1.5px;
+  opacity:.55;
+}
+
+.admin-location-title strong{
+  font-size:14px;
+}
+
+.admin-location-status{
+  font-size:10px;
+  letter-spacing:1px;
+  padding:6px 9px;
+  border-radius:999px;
+  background:rgba(80,220,140,.10);
+  color:#72e0a0;
+  border:1px solid rgba(80,220,140,.18);
+}
+
+.admin-location-map{
+  width:100%;
+  height:280px;
+  border-radius:14px;
+  overflow:hidden;
+  background:#111;
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.admin-location-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  margin-top:12px;
+}
+
+.admin-location-action{
+  appearance:none;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.045);
+  color:inherit;
+  text-decoration:none;
+  padding:10px 13px;
+  border-radius:10px;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+  transition:.2s ease;
+}
+
+.admin-location-action:hover{
+  transform:translateY(-1px);
+  border-color:rgba(255,255,255,.25);
+  background:rgba(255,255,255,.08);
+}
+
+.admin-location-action.primary{
+  background:rgba(80,140,255,.13);
+  border-color:rgba(80,140,255,.28);
+}
+
+.admin-location-toast{
+  position:fixed;
+  left:50%;
+  bottom:24px;
+  transform:translate(-50%,20px);
+  opacity:0;
+  pointer-events:none;
+  z-index:99999;
+  padding:11px 16px;
+  border-radius:12px;
+  background:rgba(15,18,24,.96);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 12px 35px rgba(0,0,0,.35);
+  font-size:12px;
+  font-weight:700;
+  transition:.22s ease;
+}
+
+.admin-location-toast.show{
+  opacity:1;
+  transform:translate(-50%,0);
+}
+
+@media(max-width:600px){
+  .admin-location-map{
+    height:240px;
+  }
+
+  .admin-location-actions{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+
+  .admin-location-action{
+    text-align:center;
+  }
+}
+
+
+/* =========================================================
+   ADMIN DATA CONTROL CENTER
+   ========================================================= */
+
+.admin-data-control{
+  margin:24px 0;
+  padding:20px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:18px;
+  background:rgba(255,255,255,.025);
+}
+
+.admin-data-control-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:15px;
+  margin-bottom:18px;
+}
+
+.admin-data-control-kicker{
+  font-size:10px;
+  letter-spacing:1.6px;
+  opacity:.55;
+  margin-bottom:5px;
+}
+
+.admin-data-control-header h3{
+  margin:0;
+  font-size:19px;
+}
+
+.admin-data-control-header p{
+  margin:6px 0 0;
+  opacity:.55;
+  font-size:12px;
+}
+
+.admin-data-control-lock{
+  padding:7px 10px;
+  border-radius:999px;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:1px;
+  background:rgba(255,180,60,.10);
+  border:1px solid rgba(255,180,60,.20);
+}
+
+.admin-data-control-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:10px;
+}
+
+.admin-clear-btn{
+  appearance:none;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.035);
+  color:inherit;
+  border-radius:13px;
+  padding:15px;
+  text-align:left;
+  cursor:pointer;
+  transition:.2s ease;
+}
+
+.admin-clear-btn:hover{
+  transform:translateY(-2px);
+  background:rgba(255,255,255,.07);
+  border-color:rgba(255,255,255,.22);
+}
+
+.admin-clear-btn.danger{
+  border-color:rgba(255,80,80,.18);
+}
+
+.admin-clear-btn.danger:hover{
+  border-color:rgba(255,80,80,.38);
+  background:rgba(255,60,60,.07);
+}
+
+.admin-clear-btn span{
+  display:block;
+  font-size:20px;
+  margin-bottom:8px;
+}
+
+.admin-clear-btn b{
+  display:block;
+  font-size:12px;
+}
+
+.admin-clear-btn small{
+  display:block;
+  margin-top:4px;
+  opacity:.48;
+  font-size:10px;
+}
+
+.admin-clear-status{
+  margin-top:13px;
+  padding:10px 12px;
+  border-radius:10px;
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(255,255,255,.07);
+  font-size:11px;
+  opacity:.75;
+}
+
+@media(max-width:600px){
+  .admin-data-control-grid{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+@media(max-width:430px){
+  .admin-data-control-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<section id="login" class="card login">
+
+  <div class="eyebrow">
+    RAKIB IP INTELLIGENCE
+  </div>
+
+  <h1>🔐 Admin Panel</h1>
+
+  <p class="muted">
+    Full visitor information is available only here.
+  </p>
+
+  <input
+    id="password"
+    type="password"
+    placeholder="Admin password"
+    autocomplete="current-password"
+  >
+
+  <button id="loginBtn">
+    UNLOCK ADMIN PANEL
+  </button>
+
+  <div id="error" class="error"></div>
+
+</section>
+
+
+<section id="dashboard">
+
+  <div class="top card">
+
+    <div>
+      <div class="eyebrow">
+        PRIVATE ADMIN AREA
+      </div>
+
+      <h1>👑 Full Visitor Intelligence</h1>
+
+      <div
+        id="count"
+        class="muted"
+      >
+        Loading...
+      </div>
+    </div>
+
+    <button
+      id="logoutBtn"
+      class="logout"
+    >
+      Logout
+    </button>
+
+  </div>
+
+  
+<section
+  class="admin-data-control"
+  id="adminDataControl"
+>
+
+  <div class="admin-data-control-header">
+
+    <div>
+      <div class="admin-data-control-kicker">
+        ADMIN CONTROL
+      </div>
+
+      <h3>
+        Data Control Center
+      </h3>
+
+      <p>
+        Manage stored visitor and analytics data
+      </p>
+    </div>
+
+    <span class="admin-data-control-lock">
+      ADMIN ONLY
+    </span>
+
+  </div>
+
+  <div class="admin-data-control-grid">
+
+    <button
+      class="admin-clear-btn"
+      data-admin-clear-type="24h"
+      data-admin-clear-label="Last 24 Hours"
+    >
+      <span>🧹</span>
+      <b>Last 24 Hours</b>
+      <small>Visitor history</small>
+    </button>
+
+    <button
+      class="admin-clear-btn"
+      data-admin-clear-type="7d"
+      data-admin-clear-label="Last 7 Days"
+    >
+      <span>🗓️</span>
+      <b>Last 7 Days</b>
+      <small>Visitor history</small>
+    </button>
+
+    <button
+      class="admin-clear-btn"
+      data-admin-clear-type="analytics"
+      data-admin-clear-label="Analytics Logs"
+    >
+      <span>📊</span>
+      <b>Analytics Logs</b>
+      <small>Requests / pages / security</small>
+    </button>
+
+    <button
+      class="admin-clear-btn"
+      data-admin-clear-type="sessions"
+      data-admin-clear-label="Sessions"
+    >
+      <span>👥</span>
+      <b>Sessions</b>
+      <small>Stored sessions</small>
+    </button>
+
+    <button
+      class="admin-clear-btn danger"
+      data-admin-clear-type="history"
+      data-admin-clear-label="All Visitor History"
+    >
+      <span>🗑️</span>
+      <b>All Visitor History</b>
+      <small>Delete visitor records</small>
+    </button>
+
+    <button
+      class="admin-clear-btn danger"
+      data-admin-clear-type="everything"
+      data-admin-clear-label="Everything"
+    >
+      <span>⚠️</span>
+      <b>Clear Everything</b>
+      <small>All stored tracking data</small>
+    </button>
+
+  </div>
+
+  <div
+    class="admin-clear-status"
+    id="adminClearStatus"
+  >
+    Ready
+  </div>
+
+</section>
+
+<div id="records"></div>
+
+</section>
+
+</div>
+
+
+<script>
+
+const $ = id =>
+  document.getElementById(id);
+
+function esc(value){
+
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function show(value){
+
+  return value === null ||
+         value === undefined ||
+         value === ""
+    ? "Unknown"
+    : esc(value);
+}
+
+function obj(title,data){
+
+  return `
+    <div class="section">
+      <h3>${esc(title)}</h3>
+      <pre>${esc(
+        JSON.stringify(
+          data || {},
+          null,
+          2
+        )
+      )}</pre>
+    </div>
+  `;
+}
+
+function render(item,index){
+
+  const geo =
+    item.geo || {};
+
+  const device =
+    item.device || {};
+
+  const os =
+    item.os || {};
+
+  const browser =
+    item.browser || {};
+
+  const engine =
+    item.engine || {};
+
+  const security =
+    item.security || {};
+
+  const client =
+    item.client || {};
+
+  const lat =
+    Number(geo.lat);
+
+  const lon =
+    Number(geo.lon);
+
+  const hasCoordinates =
+    Number.isFinite(lat) &&
+    Number.isFinite(lon) &&
+    lat !== 0 &&
+    lon !== 0;
+
+  const mapLink =
+    hasCoordinates
+      ? `https://www.google.com/maps?q=${lat},${lon}`
+      : "";
+
+  const mapId =
+    `admin-map-${index}`;
+
+  return `
+    <article class="card">
+
+      <div class="eyebrow">
+        VISITOR #${index + 1}
+      </div>
+
+      <h2>
+        ${show(geo.city)},
+        ${show(geo.country)}
+      </h2>
+
+      <div class="muted">
+        ${show(
+          item.timestamp ||
+          item.createdAt
+        )}
+      </div>
+
+      <div class="section">
+
+        <h3>USER INFORMATION</h3>
+
+        <div class="record-grid">
+
+          <div class="field">
+            <span>IP ADDRESS</span>
+            <strong>${show(item.ip)}</strong>
+          </div>
+
+          <div class="field">
+            <span>COUNTRY</span>
+            <strong>${show(geo.country)}</strong>
+          </div>
+
+          <div class="field">
+            <span>COUNTRY CODE</span>
+            <strong>${show(geo.countryCode)}</strong>
+          </div>
+
+          <div class="field">
+            <span>REGION</span>
+            <strong>${show(geo.region)}</strong>
+          </div>
+
+          <div class="field">
+            <span>CITY</span>
+            <strong>${show(geo.city)}</strong>
+          </div>
+
+          <div class="field">
+            <span>POSTAL</span>
+            <strong>${show(geo.postal)}</strong>
+          </div>
+
+          <div class="field">
+            <span>TIMEZONE</span>
+            <strong>${show(geo.timezone)}</strong>
+          </div>
+
+          <div class="field">
+            <span>ISP</span>
+            <strong>${show(geo.isp)}</strong>
+          </div>
+
+          <div class="field">
+            <span>ORGANIZATION</span>
+            <strong>${show(geo.organization)}</strong>
+          </div>
+
+          <div class="field">
+            <span>ASN</span>
+            <strong>${show(geo.asn)}</strong>
+          </div>
+
+          <div class="field">
+            <span>LATITUDE</span>
+            <strong>${show(geo.lat)}</strong>
+          </div>
+
+          <div class="field">
+            <span>LONGITUDE</span>
+            <strong>${show(geo.lon)}</strong>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="admin-location-block">
+
+        <div class="admin-location-head">
+
+          <div class="admin-location-title">
+            <span>LOCATION SIGNAL</span>
+            <strong>📍 Approximate Visitor Location</strong>
+          </div>
+
+          <span class="admin-location-status">
+            ${hasCoordinates ? "AVAILABLE" : "UNAVAILABLE"}
+          </span>
+
+        </div>
+
+        <div
+          id="${mapId}"
+          class="admin-location-map"
+          data-lat="${hasCoordinates ? lat : ""}"
+          data-lon="${hasCoordinates ? lon : ""}"
+        >
+          ${
+            hasCoordinates
+              ? "Loading map..."
+              : "Map location unavailable"
+          }
+        </div>
+
+        ${
+          hasCoordinates
+            ? `
+              <div class="admin-location-actions">
+
+                <a
+                  class="admin-location-action primary"
+                  href="${mapLink}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  🗺️ Open Map
+                </a>
+
+                <button
+                  class="admin-location-action"
+                  type="button"
+                  onclick="adminCopyLocation(${lat},${lon})"
+                >
+                  📋 Copy Location
+                </button>
+
+                <button
+                  class="admin-location-action"
+                  type="button"
+                  onclick="adminShareLocation(${lat},${lon},${JSON.stringify(
+                    `${geo.city || "Visitor"}, ${geo.country || ""}`
+                  )})"
+                >
+                  📤 Share Location
+                </button>
+
+              </div>
+            `
+            : ""
+        }
+
+      </div>
+
+      <div class="section">
+
+        <h3>DEVICE</h3>
+
+        <div class="record-grid">
+
+          <div class="field">
+            <span>TYPE</span>
+            <strong>${show(device.type)}</strong>
+          </div>
+
+          <div class="field">
+            <span>VENDOR</span>
+            <strong>${show(device.vendor)}</strong>
+          </div>
+
+          <div class="field">
+            <span>MODEL</span>
+            <strong>${show(device.model)}</strong>
+          </div>
+
+          <div class="field">
+            <span>OS</span>
+            <strong>
+              ${show(os.name)}
+              ${show(os.version)}
+            </strong>
+          </div>
+
+          <div class="field">
+            <span>BROWSER</span>
+            <strong>
+              ${show(browser.name)}
+              ${show(browser.version)}
+            </strong>
+          </div>
+
+          <div class="field">
+            <span>ENGINE</span>
+            <strong>
+              ${show(engine.name)}
+              ${show(engine.version)}
+            </strong>
+          </div>
+
+        </div>
+
+      </div>
+
+      ${obj(
+        "SECURITY SIGNALS",
+        security
+      )}
+
+      ${obj(
+        "CLIENT / BROWSER SIGNALS",
+        client
+      )}
+
+    </article>
+  `;
+}
+
+async function login(){
+
+  $("error").textContent = "";
+
+  const password =
+    $("password").value;
+
+  if(!password){
+
+    $("error").textContent =
+      "Enter admin password.";
+
+    return;
+  }
+
+  $("loginBtn").disabled = true;
+
+  try{
+
+    const response =
+      await fetch(
+        "/api/live/login",
+        {
+          method:"POST",
+          credentials:"same-origin",
+          headers:{
+            "Content-Type":
+              "application/json"
+          },
+          body:JSON.stringify({
+            password
+          })
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if(
+      !response.ok ||
+      !result.success
+    ){
+      throw new Error(
+        "Incorrect password."
+      );
+    }
+
+    await load();
+
+    $("login").style.display =
+      "none";
+
+    $("dashboard").style.display =
+      "block";
+
+  }catch(error){
+
+    $("error").textContent =
+      error.message;
+
+  }finally{
+
+    $("loginBtn").disabled =
+      false;
+  }
+}
+
+
+async function load(){
+
+  const response =
+    await fetch(
+      "/api/admin/history",
+      {
+        cache:"no-store",
+        credentials:"same-origin"
+      }
+    );
+
+  const result =
+    await response.json();
+
+  if(
+    !response.ok ||
+    !result.success
+  ){
+    throw new Error(
+      result.error ||
+      "Unable to load admin data."
+    );
+  }
+
+  $("count").textContent =
+    `${result.count} visitor records`;
+
+  $("records").innerHTML =
+    result.data
+      .map(render)
+      .join("");
+
+  requestAnimationFrame(() => {
+    initializeAdminMapsWhenReady();
+  });
+}
+
+
+async function checkSession(){
+
+  try{
+
+    const response =
+      await fetch(
+        "/api/live/status",
+        {
+          cache:"no-store",
+          credentials:"same-origin"
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if(result.authenticated){
+
+      await load();
+
+      $("login").style.display =
+        "none";
+
+      $("dashboard").style.display =
+        "block";
+    }
+
+  }catch{}
+}
+
+
+$("loginBtn")
+  .addEventListener(
+    "click",
+    login
+  );
+
+$("password")
+  .addEventListener(
+    "keydown",
+    e => {
+      if(e.key === "Enter"){
+        login();
+      }
+    }
+  );
+
+
+$("logoutBtn")
+  .addEventListener(
+    "click",
+    async () => {
+
+      await fetch(
+        "/api/live/logout",
+        {
+          method:"POST",
+          credentials:"same-origin"
+        }
+      );
+
+      location.reload();
+    }
+  );
+
+
+/* Password is required whenever Admin Panel is opened. */
+/* Existing session is NOT auto-used. */
+
+
+/* =========================================================
+   ADMIN MAP / COPY / SHARE
+   ========================================================= */
+
+function showAdminToast(message){
+
+  let toast =
+    document.getElementById(
+      "adminLocationToast"
+    );
+
+  if(!toast){
+
+    toast =
+      document.createElement("div");
+
+    toast.id =
+      "adminLocationToast";
+
+    toast.className =
+      "admin-location-toast";
+
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent =
+    message;
+
+  toast.classList.add("show");
+
+  clearTimeout(
+    window.__adminToastTimer
+  );
+
+  window.__adminToastTimer =
+    setTimeout(() => {
+      toast.classList.remove("show");
+    }, 1800);
+}
+
+
+function adminMapUrl(lat,lon){
+
+  return `https://www.google.com/maps?q=${lat},${lon}`;
+}
+
+
+async function adminCopyLocation(lat,lon){
+
+  const url =
+    adminMapUrl(lat,lon);
+
+  try{
+
+    await navigator.clipboard.writeText(url);
+
+    showAdminToast(
+      "📋 Map link copied"
+    );
+
+  }catch{
+
+    const textarea =
+      document.createElement("textarea");
+
+    textarea.value = url;
+
+    document.body.appendChild(
+      textarea
+    );
+
+    textarea.select();
+
+    document.execCommand("copy");
+
+    textarea.remove();
+
+    showAdminToast(
+      "📋 Map link copied"
+    );
+  }
+}
+
+
+async function adminShareLocation(
+  lat,
+  lon,
+  label
+){
+
+  const url =
+    adminMapUrl(lat,lon);
+
+  if(
+    navigator.share
+  ){
+
+    try{
+
+      await navigator.share({
+        title:
+          "Visitor Location",
+        text:
+          `📍 ${label || "Visitor Location"}`,
+        url
+      });
+
+      return;
+
+    }catch(error){
+
+      if(
+        error &&
+        error.name === "AbortError"
+      ){
+        return;
+      }
+    }
+  }
+
+  await adminCopyLocation(
+    lat,
+    lon
+  );
+
+  showAdminToast(
+    "📤 Sharing unavailable — link copied"
+  );
+}
+
+
+function initializeAdminMaps(){
+
+  if(
+    typeof L === "undefined"
+  ){
+    return;
+  }
+
+  document
+    .querySelectorAll(
+      ".admin-location-map"
+    )
+    .forEach(element => {
+
+      if(
+        element.dataset.mapReady === "1"
+      ){
+        return;
+      }
+
+      const lat =
+        Number(
+          element.dataset.lat
+        );
+
+      const lon =
+        Number(
+          element.dataset.lon
+        );
+
+      if(
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lon) ||
+        lat === 0 ||
+        lon === 0
+      ){
+        return;
+      }
+
+      try{
+
+        const map =
+          L.map(element,{
+            zoomControl:true,
+            attributionControl:true
+          }).setView(
+            [lat,lon],
+            13
+          );
+
+        L.tileLayer(
+          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          {
+            maxZoom:19,
+            attribution:
+              "&copy; OpenStreetMap contributors"
+          }
+        ).addTo(map);
+
+        L.marker([
+          lat,
+          lon
+        ])
+        .addTo(map)
+        .bindPopup(
+          "📍 Approximate visitor location"
+        )
+        .openPopup();
+
+        element.dataset.mapReady =
+          "1";
+
+        setTimeout(() => {
+          map.invalidateSize();
+        },100);
+
+      }catch(error){
+
+        console.error(
+          "Admin map error:",
+          error
+        );
+
+        element.textContent =
+          "Map unavailable";
+      }
+
+    });
+}
+
+
+function initializeAdminMapsWhenReady(){
+
+  if(
+    typeof initializeAdminMaps !==
+    "function"
+  ){
+    return;
+  }
+
+  initializeAdminMaps();
+}
+
+
+/* =========================================================
+   ADMIN DATA CONTROL
+   ========================================================= */
+
+function setAdminClearStatus(message){
+
+  const status =
+    document.getElementById(
+      "adminClearStatus"
+    );
+
+  if(status){
+    status.textContent =
+      message;
+  }
+}
+
+
+async function adminClearData(
+  type,
+  label
+){
+
+  const confirmed =
+    window.confirm(
+      `Are you sure you want to clear "${label}"?`
+    );
+
+  if(!confirmed){
+    return;
+  }
+
+  setAdminClearStatus(
+    `Clearing ${label}...`
+  );
+
+  const buttons =
+    document.querySelectorAll(
+      ".admin-clear-btn"
+    );
+
+  buttons.forEach(
+    button => {
+      button.disabled = true;
+      button.style.opacity = ".55";
+    }
+  );
+
+  try{
+
+    const response =
+      await fetch(
+        "/api/admin/clear-data",
+        {
+          method:"POST",
+          credentials:"same-origin",
+          cache:"no-store",
+          headers:{
+            "Content-Type":
+              "application/json"
+          },
+          body:JSON.stringify({
+            type
+          })
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if(
+      !response.ok ||
+      !result.success
+    ){
+      throw new Error(
+        result.error ||
+        "Unable to clear data."
+      );
+    }
+
+    const deleted =
+      Object.values(
+        result.deleted || {}
+      )
+      .reduce(
+        (total,value) =>
+          total +
+          (
+            Number(value) || 0
+          ),
+        0
+      );
+
+    setAdminClearStatus(
+      `✅ ${label} cleared — ${deleted} record(s) removed.`
+    );
+
+    /*
+     * IMPORTANT:
+     * Reload admin visitor list immediately.
+     */
+    if(
+      typeof load === "function"
+    ){
+      await load();
+    }
+
+  }catch(error){
+
+    console.error(
+      "Admin clear error:",
+      error
+    );
+
+    setAdminClearStatus(
+      `❌ ${error.message}`
+    );
+
+  }finally{
+
+    buttons.forEach(
+      button => {
+        button.disabled = false;
+        button.style.opacity = "";
+      }
+    );
+  }
+}
+
+
+function setupAdminDataControl(){
+
+  document
+    .querySelectorAll(
+      ".admin-clear-btn"
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          const type =
+            button.dataset.adminClearType;
+
+          const label =
+            button.dataset.adminClearLabel ||
+            type;
+
+          adminClearData(
+            type,
+            label
+          );
+
+        }
+      );
+
+    });
+}
+
+if(
+  document.readyState === "loading"
+){
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    setupAdminDataControl,
+    {once:true}
+  );
+
+}else{
+
+  setupAdminDataControl();
+
+}
+
+</script>
+
+</body>
+</html>

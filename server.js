@@ -241,7 +241,41 @@ app.use((req, res, next) => {
   next();
 });
 
+
+/* =========================================================
+   PRIVATE ADMIN PANEL
+========================================================= */
+
+app.get("/admin-panel", (req, res) => {
+  res.sendFile(
+    path.join(__dirname, "public", "admin.html"),
+    {
+      headers: {
+        "Cache-Control": "no-store"
+      }
+    }
+  );
+});
+
 app.use(express.static(path.join(__dirname, "public")));
+
+/* =========================================================
+   ADMIN DASHBOARD ROUTE
+   The same frontend shell is rendered in ADMIN MODE.
+========================================================= */
+
+app.get("/admin", (req, res) => {
+  res.sendFile(
+    path.join(__dirname, "public", "index.html"),
+    {
+      headers: {
+        "Cache-Control": "no-store"
+      }
+    }
+  );
+});
+
+
 
 /* =========================================================
    HELPERS
@@ -1003,6 +1037,37 @@ app.get("/api/history-preview", async (req, res) => {
   }
 });
 
+
+/* =========================================================
+   ADMIN ONLY - FULL VISITOR HISTORY
+========================================================= */
+
+app.get("/api/admin/history", requireAdmin, async (req, res) => {
+  try {
+    const records = await visitorsCollection
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(MAX_HISTORY)
+      .toArray();
+
+    res.setHeader("Cache-Control", "no-store");
+
+    res.json({
+      success: true,
+      count: records.length,
+      data: records.map(adminVisitorResponse)
+    });
+
+  } catch (error) {
+    console.error("/api/admin/history:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Unable to load admin history"
+    });
+  }
+});
+
 /* =========================================================
    API - LOGIN
 ========================================================= */
@@ -1061,7 +1126,7 @@ app.get("/api/live/status", (req, res) => {
    API - FULL HISTORY
 ========================================================= */
 
-app.get("/api/history", requireAdmin, async (req, res) => {
+app.get("/api/history", async (req, res) => {
   try {
     const records = await visitorsCollection
       .find({})
@@ -1091,7 +1156,7 @@ app.get("/api/history", requireAdmin, async (req, res) => {
    API - STATS
 ========================================================= */
 
-app.get("/api/stats", requireAdmin, async (req, res) => {
+app.get("/api/stats", async (req, res) => {
   try {
     const total = await visitorsCollection.countDocuments();
 
@@ -1332,10 +1397,7 @@ async function touchAnalyticsSession(req) {
       req.headers.referer || ""
     ).slice(0, 500),
     firstPath: cleanPath(req.originalUrl || req.path),
-    requestCount: 1,
-    createdAt: now,
-    lastSeen: now,
-    updatedAt: now
+    createdAt: now
   };
 
   activeSessions.set(sessionId, {
@@ -1830,7 +1892,6 @@ app.get("/api/analytics/sessions", requireAdmin, async (req, res) => {
           ipHash: 1,
           userAgent: 1,
           firstPath: 1,
-          requestCount: 1,
           createdAt: 1,
           lastSeen: 1,
           updatedAt: 1
