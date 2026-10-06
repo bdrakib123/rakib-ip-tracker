@@ -1133,20 +1133,17 @@ function renderHistoryRecord(item, index) {
           </div>
 
           <h3>
-            Visitor #${index + 1}
+            ***
           </h3>
 
           <div class="history-visitor-location">
-            ${escapeHTML(city)},
-            ${escapeHTML(country)}
+            ***
           </div>
 
         </div>
 
         <div class="history-visitor-time">
-          ${escapeHTML(
-            formatDate(recordTime)
-          )}
+          ***
         </div>
 
       </div>
@@ -1156,52 +1153,52 @@ function renderHistoryRecord(item, index) {
         <div class="history-digital-field">
           <span>IP ADDRESS</span>
           <strong>
-            ${escapeHTML(maskedIP)}
+            ***
           </strong>
         </div>
 
         <div class="history-digital-field">
           <span>LOCATION</span>
           <strong>
-            ${escapeHTML(city)}
+            ***
           </strong>
           <small>
-            ${escapeHTML(region)}
+            ***
           </small>
         </div>
 
         <div class="history-digital-field">
           <span>COUNTRY</span>
           <strong>
-            ${escapeHTML(country)}
+            ***
           </strong>
         </div>
 
         <div class="history-digital-field">
           <span>DEVICE</span>
           <strong>
-            ${escapeHTML(deviceName)}
+            ***
           </strong>
         </div>
 
         <div class="history-digital-field">
           <span>OPERATING SYSTEM</span>
           <strong>
-            ${escapeHTML(osText)}
+            ***
           </strong>
         </div>
 
         <div class="history-digital-field">
           <span>BROWSER</span>
           <strong>
-            ${escapeHTML(browserText)}
+            ***
           </strong>
         </div>
 
         <div class="history-digital-field">
           <span>ENGINE</span>
           <strong>
-            ${escapeHTML(engineText)}
+            ***
           </strong>
         </div>
 
