@@ -594,10 +594,10 @@ function render(item,index){
     item.client || {};
 
   const lat =
-    Number(geo.lat);
+    Number(geo.latitude ?? geo.lat);
 
   const lon =
-    Number(geo.lon);
+    Number(geo.longitude ?? geo.lon);
 
   const hasCoordinates =
     Number.isFinite(lat) &&
