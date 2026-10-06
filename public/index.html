@@ -100,153 +100,419 @@
 
   </section>
 
-  <!-- CURRENT VISITOR -->
+  <!-- YOUR DIGITAL PROFILE -->
 
-  <section class="section-heading">
+<section class="user-intelligence" id="userIntelligence">
 
+  <div class="ui-header">
     <div>
-      <span class="mini-label">CURRENT SESSION</span>
-
-      <h2>
-        Your Connection
-      </h2>
+      <span class="ui-kicker">PERSONAL DEVICE LAB</span>
+      <h2>YOUR DIGITAL PROFILE</h2>
+      <p>Everything this browser publicly reveals to this website</p>
     </div>
 
-    <div class="live-pill">
+    <div class="ui-live">
       <span></span>
       LIVE
     </div>
+  </div>
 
-  </section>
+  <!-- NETWORK -->
 
-  <section class="ip-hero glass">
+  <div class="ui-section-title">
+    <span>01</span>
+    <div>
+      <b>NETWORK INTELLIGENCE</b>
+      <small>Your public network information</small>
+    </div>
+  </div>
 
-    <div class="ip-label">
-      YOUR PUBLIC IP ADDRESS
+  <div class="ui-grid ui-grid-4">
+
+    <article class="ui-card">
+      <span class="ui-icon">🌐</span>
+      <small>PUBLIC IP</small>
+      <strong id="uiIP">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">📡</span>
+      <small>ISP</small>
+      <strong id="uiISP">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🏢</span>
+      <small>ORGANIZATION</small>
+      <strong id="uiOrganization">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🔢</span>
+      <small>ASN</small>
+      <strong id="uiASN">—</strong>
+    </article>
+
+  </div>
+
+  <!-- LOCATION -->
+
+  <div class="ui-section-title">
+    <span>02</span>
+    <div>
+      <b>APPROXIMATE LOCATION</b>
+      <small>IP-based geographic information</small>
+    </div>
+  </div>
+
+  <div class="ui-location-card">
+
+    <div class="ui-location-main">
+      <span class="ui-big-icon">📍</span>
+
+      <div>
+        <small>YOU ARE APPROXIMATELY IN</small>
+        <strong id="uiLocation">Loading...</strong>
+        <p id="uiRegion">—</p>
+      </div>
     </div>
 
-    <div
-      id="currentIP"
-      class="big-ip"
-    >
-      Loading...
+    <div class="ui-location-meta">
+
+      <div>
+        <small>COUNTRY</small>
+        <b id="uiCountry">—</b>
+      </div>
+
+      <div>
+        <small>COUNTRY CODE</small>
+        <b id="uiCountryCode">—</b>
+      </div>
+
+      <div>
+        <small>POSTAL</small>
+        <b id="uiPostal">—</b>
+      </div>
+
+      <div>
+        <small>TIMEZONE</small>
+        <b id="uiTimezone">—</b>
+      </div>
+
+      <div>
+        <small>COORDINATES</small>
+        <b id="uiCoordinates">—</b>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- DEVICE -->
+
+  <div class="ui-section-title">
+    <span>03</span>
+    <div>
+      <b>DEVICE INTELLIGENCE</b>
+      <small>Information exposed by your browser</small>
+    </div>
+  </div>
+
+  <div class="ui-grid ui-grid-4">
+
+    <article class="ui-card">
+      <span class="ui-icon">📱</span>
+      <small>DEVICE</small>
+      <strong id="uiDevice">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">⚙️</span>
+      <small>OPERATING SYSTEM</small>
+      <strong id="uiOS">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🖥️</span>
+      <small>SCREEN</small>
+      <strong id="uiScreen">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">📐</span>
+      <small>VIEWPORT</small>
+      <strong id="uiViewport">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🔍</span>
+      <small>PIXEL RATIO</small>
+      <strong id="uiDPR">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🧠</span>
+      <small>CPU CORES</small>
+      <strong id="uiCPU">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">💾</span>
+      <small>DEVICE MEMORY</small>
+      <strong id="uiMemory">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">👆</span>
+      <small>TOUCH</small>
+      <strong id="uiTouch">—</strong>
+    </article>
+
+  </div>
+
+  <!-- BROWSER -->
+
+  <div class="ui-section-title">
+    <span>04</span>
+    <div>
+      <b>BROWSER INTELLIGENCE</b>
+      <small>Browser and client environment</small>
+    </div>
+  </div>
+
+  <div class="ui-grid ui-grid-3">
+
+    <article class="ui-card ui-card-wide">
+      <span class="ui-icon">🌎</span>
+      <small>BROWSER</small>
+      <strong id="uiBrowser">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">⚡</span>
+      <small>ENGINE</small>
+      <strong id="uiEngine">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">💻</span>
+      <small>PLATFORM</small>
+      <strong id="uiPlatform">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🗣️</span>
+      <small>LANGUAGE</small>
+      <strong id="uiLanguage">—</strong>
+    </article>
+
+    <article class="ui-card ui-card-wide">
+      <span class="ui-icon">🗣️</span>
+      <small>PREFERRED LANGUAGES</small>
+      <strong id="uiLanguages">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🍪</span>
+      <small>COOKIES</small>
+      <strong id="uiCookies">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🚫</span>
+      <small>DO NOT TRACK</small>
+      <strong id="uiDNT">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🟢</span>
+      <small>ONLINE</small>
+      <strong id="uiOnline">—</strong>
+    </article>
+
+  </div>
+
+  <!-- FINGERPRINT -->
+
+  <div class="ui-section-title">
+    <span>05</span>
+    <div>
+      <b>BROWSER LAB</b>
+      <small>Technical browser signals</small>
+    </div>
+  </div>
+
+  <div class="ui-lab">
+
+    <div class="ui-lab-row">
+      <span>Canvas Hash</span>
+      <b id="uiCanvas">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>WebGL Vendor</span>
+      <b id="uiWebGLVendor">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>WebGL Renderer</span>
+      <b id="uiWebGLRenderer">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>WebGL Version</span>
+      <b id="uiWebGLVersion">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>Color Depth</span>
+      <b id="uiColorDepth">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>Timezone Offset</span>
+      <b id="uiTimezoneOffset">—</b>
+    </div>
+
+  </div>
+
+  <!-- SECURITY -->
+
+  <div class="ui-section-title">
+    <span>06</span>
+    <div>
+      <b>NETWORK SIGNALS</b>
+      <small>Technical signals returned by the IP provider</small>
+    </div>
+  </div>
+
+  <div class="ui-security-grid">
+
+    <div class="ui-security-card">
+      <span>VPN</span>
+      <b id="uiVPN">—</b>
+    </div>
+
+    <div class="ui-security-card">
+      <span>PROXY</span>
+      <b id="uiProxy">—</b>
+    </div>
+
+    <div class="ui-security-card">
+      <span>TOR</span>
+      <b id="uiTor">—</b>
+    </div>
+
+    <div class="ui-security-card">
+      <span>HOSTING</span>
+      <b id="uiHosting">—</b>
+    </div>
+
+  </div>
+
+  <div class="ui-disclaimer">
+    <b>ℹ️ PRIVACY NOTE</b>
+    <span>
+      Location shown here is approximate and based on network information.
+      Browser signals are technical information exposed to this website;
+      they do not by themselves identify a person.
+    </span>
+  </div>
+
+</section>
+
+<!-- CURRENT VISITOR -->
+
+<section class="section-heading live-tracking-heading">
+
+  <div>
+    <div class="mini-label">
+      REAL-TIME SESSION
+    </div>
+
+    <h2>
+      Live Tracking
+    </h2>
+
+    <p class="section-subtitle">
+      Current connection status and active visitor session.
+    </p>
+  </div>
+
+  <div class="live-pill">
+    <span class="live-dot"></span>
+    LIVE
+  </div>
+
+</section>
+
+
+<section class="live-session-panel glass">
+
+  <div class="live-session-main">
+
+    <div class="ip-label">
+      CURRENT SESSION
+    </div>
+
+    <div class="ip-value" id="currentIP">
+      —
     </div>
 
     <div class="ip-note">
-      This is the public IP address visible to this website.
+      Live connection detected from this browser session.
     </div>
 
-  </section>
+  </div>
 
-  <section class="cards">
 
-    <article class="info-card glass">
+  <div class="live-session-grid">
 
-      <div class="card-icon">🌍</div>
+    <div class="live-session-item">
+      <span class="mini-label">LOCATION</span>
+      <strong id="location">—</strong>
+    </div>
 
-      <div>
-        <div class="card-label">
-          LOCATION
-        </div>
+    <div class="live-session-item">
+      <span class="mini-label">REGION</span>
+      <strong id="region">—</strong>
+    </div>
 
-        <div
-          id="location"
-          class="card-value"
-        >
-          Loading...
-        </div>
+    <div class="live-session-item">
+      <span class="mini-label">ISP</span>
+      <strong id="isp">—</strong>
+    </div>
 
-        <div
-          id="region"
-          class="card-muted"
-        >
-          —
-        </div>
-      </div>
+    <div class="live-session-item">
+      <span class="mini-label">ASN</span>
+      <strong id="asn">—</strong>
+    </div>
 
-    </article>
+    <div class="live-session-item">
+      <span class="mini-label">DEVICE</span>
+      <strong id="device">—</strong>
+    </div>
 
-    <article class="info-card glass">
+    <div class="live-session-item">
+      <span class="mini-label">OS</span>
+      <strong id="os">—</strong>
+    </div>
 
-      <div class="card-icon">📡</div>
+    <div class="live-session-item">
+      <span class="mini-label">BROWSER</span>
+      <strong id="browser">—</strong>
+    </div>
 
-      <div>
-        <div class="card-label">
-          ISP
-        </div>
+    <div class="live-session-item">
+      <span class="mini-label">ENGINE</span>
+      <strong id="engine">—</strong>
+    </div>
 
-        <div
-          id="isp"
-          class="card-value"
-        >
-          Loading...
-        </div>
+  </div>
 
-        <div
-          id="asn"
-          class="card-muted"
-        >
-          —
-        </div>
-      </div>
+</section>
 
-    </article>
-
-    <article class="info-card glass">
-
-      <div class="card-icon">📱</div>
-
-      <div>
-        <div class="card-label">
-          DEVICE
-        </div>
-
-        <div
-          id="device"
-          class="card-value"
-        >
-          Loading...
-        </div>
-
-        <div
-          id="os"
-          class="card-muted"
-        >
-          —
-        </div>
-      </div>
-
-    </article>
-
-    <article class="info-card glass">
-
-      <div class="card-icon">🌐</div>
-
-      <div>
-        <div class="card-label">
-          BROWSER
-        </div>
-
-        <div
-          id="browser"
-          class="card-value"
-        >
-          Loading...
-        </div>
-
-        <div
-          id="engine"
-          class="card-muted"
-        >
-          —
-        </div>
-      </div>
-
-    </article>
-
-  </section>
-
-  <!-- MAP -->
+<!-- MAP -->
 
   <section class="map-section glass">
 
@@ -900,324 +1166,7 @@
      PUBLIC USER INTELLIGENCE LAB
 ======================================================== -->
 
-<section class="user-intelligence" id="userIntelligence">
 
-  <div class="ui-header">
-    <div>
-      <span class="ui-kicker">PERSONAL DEVICE LAB</span>
-      <h2>YOUR DIGITAL PROFILE</h2>
-      <p>Everything this browser publicly reveals to this website</p>
-    </div>
-
-    <div class="ui-live">
-      <span></span>
-      LIVE
-    </div>
-  </div>
-
-  <!-- NETWORK -->
-
-  <div class="ui-section-title">
-    <span>01</span>
-    <div>
-      <b>NETWORK INTELLIGENCE</b>
-      <small>Your public network information</small>
-    </div>
-  </div>
-
-  <div class="ui-grid ui-grid-4">
-
-    <article class="ui-card">
-      <span class="ui-icon">🌐</span>
-      <small>PUBLIC IP</small>
-      <strong id="uiIP">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">📡</span>
-      <small>ISP</small>
-      <strong id="uiISP">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">🏢</span>
-      <small>ORGANIZATION</small>
-      <strong id="uiOrganization">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">🔢</span>
-      <small>ASN</small>
-      <strong id="uiASN">—</strong>
-    </article>
-
-  </div>
-
-  <!-- LOCATION -->
-
-  <div class="ui-section-title">
-    <span>02</span>
-    <div>
-      <b>APPROXIMATE LOCATION</b>
-      <small>IP-based geographic information</small>
-    </div>
-  </div>
-
-  <div class="ui-location-card">
-
-    <div class="ui-location-main">
-      <span class="ui-big-icon">📍</span>
-
-      <div>
-        <small>YOU ARE APPROXIMATELY IN</small>
-        <strong id="uiLocation">Loading...</strong>
-        <p id="uiRegion">—</p>
-      </div>
-    </div>
-
-    <div class="ui-location-meta">
-
-      <div>
-        <small>COUNTRY</small>
-        <b id="uiCountry">—</b>
-      </div>
-
-      <div>
-        <small>COUNTRY CODE</small>
-        <b id="uiCountryCode">—</b>
-      </div>
-
-      <div>
-        <small>POSTAL</small>
-        <b id="uiPostal">—</b>
-      </div>
-
-      <div>
-        <small>TIMEZONE</small>
-        <b id="uiTimezone">—</b>
-      </div>
-
-      <div>
-        <small>COORDINATES</small>
-        <b id="uiCoordinates">—</b>
-      </div>
-
-    </div>
-
-  </div>
-
-  <!-- DEVICE -->
-
-  <div class="ui-section-title">
-    <span>03</span>
-    <div>
-      <b>DEVICE INTELLIGENCE</b>
-      <small>Information exposed by your browser</small>
-    </div>
-  </div>
-
-  <div class="ui-grid ui-grid-4">
-
-    <article class="ui-card">
-      <span class="ui-icon">📱</span>
-      <small>DEVICE</small>
-      <strong id="uiDevice">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">⚙️</span>
-      <small>OPERATING SYSTEM</small>
-      <strong id="uiOS">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">🖥️</span>
-      <small>SCREEN</small>
-      <strong id="uiScreen">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">📐</span>
-      <small>VIEWPORT</small>
-      <strong id="uiViewport">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">🔍</span>
-      <small>PIXEL RATIO</small>
-      <strong id="uiDPR">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">🧠</span>
-      <small>CPU CORES</small>
-      <strong id="uiCPU">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">💾</span>
-      <small>DEVICE MEMORY</small>
-      <strong id="uiMemory">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">👆</span>
-      <small>TOUCH</small>
-      <strong id="uiTouch">—</strong>
-    </article>
-
-  </div>
-
-  <!-- BROWSER -->
-
-  <div class="ui-section-title">
-    <span>04</span>
-    <div>
-      <b>BROWSER INTELLIGENCE</b>
-      <small>Browser and client environment</small>
-    </div>
-  </div>
-
-  <div class="ui-grid ui-grid-3">
-
-    <article class="ui-card ui-card-wide">
-      <span class="ui-icon">🌎</span>
-      <small>BROWSER</small>
-      <strong id="uiBrowser">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">⚡</span>
-      <small>ENGINE</small>
-      <strong id="uiEngine">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">💻</span>
-      <small>PLATFORM</small>
-      <strong id="uiPlatform">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">🗣️</span>
-      <small>LANGUAGE</small>
-      <strong id="uiLanguage">—</strong>
-    </article>
-
-    <article class="ui-card ui-card-wide">
-      <span class="ui-icon">🗣️</span>
-      <small>PREFERRED LANGUAGES</small>
-      <strong id="uiLanguages">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">🍪</span>
-      <small>COOKIES</small>
-      <strong id="uiCookies">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">🚫</span>
-      <small>DO NOT TRACK</small>
-      <strong id="uiDNT">—</strong>
-    </article>
-
-    <article class="ui-card">
-      <span class="ui-icon">🟢</span>
-      <small>ONLINE</small>
-      <strong id="uiOnline">—</strong>
-    </article>
-
-  </div>
-
-  <!-- FINGERPRINT -->
-
-  <div class="ui-section-title">
-    <span>05</span>
-    <div>
-      <b>BROWSER LAB</b>
-      <small>Technical browser signals</small>
-    </div>
-  </div>
-
-  <div class="ui-lab">
-
-    <div class="ui-lab-row">
-      <span>Canvas Hash</span>
-      <b id="uiCanvas">—</b>
-    </div>
-
-    <div class="ui-lab-row">
-      <span>WebGL Vendor</span>
-      <b id="uiWebGLVendor">—</b>
-    </div>
-
-    <div class="ui-lab-row">
-      <span>WebGL Renderer</span>
-      <b id="uiWebGLRenderer">—</b>
-    </div>
-
-    <div class="ui-lab-row">
-      <span>WebGL Version</span>
-      <b id="uiWebGLVersion">—</b>
-    </div>
-
-    <div class="ui-lab-row">
-      <span>Color Depth</span>
-      <b id="uiColorDepth">—</b>
-    </div>
-
-    <div class="ui-lab-row">
-      <span>Timezone Offset</span>
-      <b id="uiTimezoneOffset">—</b>
-    </div>
-
-  </div>
-
-  <!-- SECURITY -->
-
-  <div class="ui-section-title">
-    <span>06</span>
-    <div>
-      <b>NETWORK SIGNALS</b>
-      <small>Technical signals returned by the IP provider</small>
-    </div>
-  </div>
-
-  <div class="ui-security-grid">
-
-    <div class="ui-security-card">
-      <span>VPN</span>
-      <b id="uiVPN">—</b>
-    </div>
-
-    <div class="ui-security-card">
-      <span>PROXY</span>
-      <b id="uiProxy">—</b>
-    </div>
-
-    <div class="ui-security-card">
-      <span>TOR</span>
-      <b id="uiTor">—</b>
-    </div>
-
-    <div class="ui-security-card">
-      <span>HOSTING</span>
-      <b id="uiHosting">—</b>
-    </div>
-
-  </div>
-
-  <div class="ui-disclaimer">
-    <b>ℹ️ PRIVACY NOTE</b>
-    <span>
-      Location shown here is approximate and based on network information.
-      Browser signals are technical information exposed to this website;
-      they do not by themselves identify a person.
-    </span>
-  </div>
-
-</section>
 
 <div class="history-tools">
 

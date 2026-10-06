@@ -256,26 +256,48 @@ async function loadCurrentVisitor() {
 
 function renderPublicIntelligence(visitor) {
 
-  const geo = visitor.geo || {};
-  const device = visitor.device || {};
-  const os = visitor.os || {};
-  const browser = visitor.browser || {};
-  const engine = visitor.engine || {};
-  const security = visitor.security || {};
-  const client = visitor.client || {};
+  const geo = visitor?.geo || {};
+  const device = visitor?.device || {};
+  const os = visitor?.os || {};
+  const browser = visitor?.browser || {};
+  const engine = visitor?.engine || {};
+  const security = visitor?.security || geo?.security || {};
+  const client = visitor?.client || {};
 
-  const set = (id, value) => {
+  const set = (id, value, fallback = "Unavailable") => {
     const el = document.getElementById(id);
-    if (el) {
-      el.textContent = safe(
-        value,
-        "Unavailable"
-      );
+    if (!el) return;
+
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      el.textContent = fallback;
+      return;
     }
+
+    el.textContent = String(value);
   };
 
-  const yesNo = value =>
-    value ? "YES" : "NO";
+  const yesNo = value => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return "UNKNOWN";
+    }
+
+    return (
+      value === true ||
+      value === 1 ||
+      value === "1" ||
+      value === "true"
+    )
+      ? "YES"
+      : "NO";
+  };
 
   const deviceName = [
     device.vendor &&
@@ -311,134 +333,195 @@ function renderPublicIntelligence(visitor) {
     .filter(Boolean)
     .join(" ");
 
+  const screen = client.screen || {};
+  const viewport = client.viewport || {};
+  const connection = client.connection || {};
+  const webgl = client.webgl || {};
+
+  /* =========================
+     NETWORK
+  ========================= */
+
   set("uiIP", visitor.ip);
-  set("uiISP", geo.isp);
-  set("uiOrganization", geo.organization);
-  set("uiASN", geo.asn);
+
+  set(
+    "uiISP",
+    geo.isp || geo.provider || geo.org
+  );
+
+  set(
+    "uiOrganization",
+    geo.organization || geo.org
+  );
+
+  set(
+    "uiASN",
+    geo.asn || geo.as
+  );
+
+  /* =========================
+     LOCATION
+  ========================= */
+
+  const locationParts = [
+    geo.city,
+    geo.region,
+    geo.country
+  ].filter(Boolean);
 
   set(
     "uiLocation",
-    `${geo.city || "Unknown"}, ${geo.country || "Unknown"}`
+    locationParts.length
+      ? locationParts.join(", ")
+      : null
   );
 
   set("uiRegion", geo.region);
   set("uiCountry", geo.country);
   set("uiCountryCode", geo.countryCode);
   set("uiPostal", geo.postal);
-  set("uiTimezone", geo.timezone);
+  set(
+    "uiTimezone",
+    geo.timezone ||
+      client.timezone
+  );
+
+  const latitude =
+    Number(
+      geo.latitude ??
+      geo.lat
+    );
+
+  const longitude =
+    Number(
+      geo.longitude ??
+      geo.lon
+    );
 
   if (
-    typeof geo.latitude === "number" &&
-    typeof geo.longitude === "number"
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude !== 0 &&
+    longitude !== 0
   ) {
     set(
       "uiCoordinates",
-      `${geo.latitude.toFixed(5)}, ${geo.longitude.toFixed(5)}`
+      `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
     );
+  } else {
+    set("uiCoordinates", null);
   }
+
+  /* =========================
+     DEVICE
+  ========================= */
 
   set(
     "uiDevice",
     deviceName ||
-      device.type ||
-      "Unknown"
+      device.type
   );
 
   set(
     "uiOS",
-    osName || "Unknown"
+    osName
   );
-
-  const screen =
-    client.screen || {};
-
-  const viewport =
-    client.viewport || {};
 
   set(
     "uiScreen",
-    screen.width && screen.height
+    screen.width &&
+    screen.height
       ? `${screen.width} × ${screen.height}`
-      : "Unknown"
+      : null
   );
 
   set(
     "uiViewport",
-    viewport.width && viewport.height
+    viewport.width &&
+    viewport.height
       ? `${viewport.width} × ${viewport.height}`
-      : "Unknown"
+      : null
   );
 
   set(
     "uiDPR",
     client.pixelRatio != null
-      ? client.pixelRatio
-      : "Unknown"
+      ? `${client.pixelRatio}x`
+      : null
   );
 
   set(
     "uiCPU",
     client.hardwareConcurrency != null
       ? `${client.hardwareConcurrency} cores`
-      : "Unknown"
+      : null
   );
 
   set(
     "uiMemory",
     client.deviceMemory != null
       ? `${client.deviceMemory} GB`
-      : "Unavailable"
+      : null
   );
 
-  set(
-    "uiTouch",
-    client.touchSupport
-      ? `${client.touchPoints || 0} points`
-      : "NO"
-  );
+  if (client.touchSupport) {
+    set(
+      "uiTouch",
+      `${client.touchPoints || 0} touch points`
+    );
+  } else {
+    set("uiTouch", "NO");
+  }
+
+  /* =========================
+     BROWSER
+  ========================= */
 
   set(
     "uiBrowser",
-    browserName || "Unknown"
+    browserName
   );
 
   set(
     "uiEngine",
-    engineName || "Unknown"
+    engineName
   );
 
   set(
     "uiPlatform",
     client.platform ||
-      navigator.platform ||
-      "Unknown"
+      navigator.platform
   );
 
   set(
     "uiLanguage",
     client.language ||
       visitor.language ||
-      navigator.language ||
-      "Unknown"
+      navigator.language
   );
 
   const languages =
-    Array.isArray(client.languages)
+    Array.isArray(client.languages) &&
+    client.languages.length
       ? client.languages
-      : [];
+      : (
+          Array.isArray(navigator.languages)
+            ? navigator.languages
+            : []
+        );
 
   set(
     "uiLanguages",
     languages.length
       ? languages.join(" • ")
-      : "Unavailable"
+      : null
   );
 
   set(
     "uiCookies",
     client.cookiesEnabled != null
       ? yesNo(client.cookiesEnabled)
-      : "Unknown"
+      : null
   );
 
   set(
@@ -451,54 +534,106 @@ function renderPublicIntelligence(visitor) {
             ? "ON"
             : "OFF"
         )
-      : "Unknown"
+      : null
   );
 
   set(
     "uiOnline",
     client.online != null
       ? yesNo(client.online)
-      : "Unknown"
+      : null
   );
+
+  /* =========================
+     BROWSER LAB
+  ========================= */
 
   set(
     "uiCanvas",
     client.canvasHash ||
-      client.canvas ||
-      "Unavailable"
+      client.canvas
   );
 
+  /* FIX: WebGL is nested inside client.webgl */
   set(
     "uiWebGLVendor",
-    client.webglVendor ||
-      "Unavailable"
+    webgl.vendor ||
+      client.webglVendor
   );
 
   set(
     "uiWebGLRenderer",
-    client.webglRenderer ||
-      "Unavailable"
+    webgl.renderer ||
+      client.webglRenderer
   );
 
   set(
     "uiWebGLVersion",
-    client.webglVersion ||
-      "Unavailable"
+    webgl.version ||
+      client.webglVersion
   );
 
   set(
     "uiColorDepth",
     client.colorDepth != null
       ? `${client.colorDepth}-bit`
-      : "Unavailable"
+      : null
   );
 
   set(
     "uiTimezoneOffset",
     client.timezoneOffset != null
       ? `${client.timezoneOffset} min`
-      : "Unavailable"
+      : null
   );
+
+  /* =========================
+     NETWORK CONNECTION
+  ========================= */
+
+  const networkParts = [];
+
+  if (connection.effectiveType) {
+    networkParts.push(
+      connection.effectiveType
+    );
+  }
+
+  if (connection.type) {
+    networkParts.push(
+      connection.type
+    );
+  }
+
+  if (
+    connection.downlink !== null &&
+    connection.downlink !== undefined
+  ) {
+    networkParts.push(
+      `${connection.downlink} Mbps`
+    );
+  }
+
+  if (
+    connection.rtt !== null &&
+    connection.rtt !== undefined
+  ) {
+    networkParts.push(
+      `${connection.rtt} ms RTT`
+    );
+  }
+
+  /* Existing live tracking signal */
+  set(
+    "networkInfo",
+    networkParts.length
+      ? networkParts.join(" • ")
+      : null
+  );
+
+  /* =========================
+     SECURITY
+  ========================= */
 
   set(
     "uiVPN",
@@ -520,7 +655,6 @@ function renderPublicIntelligence(visitor) {
     yesNo(security.hosting)
   );
 }
-
 
 function renderCurrent(visitor) {
 
