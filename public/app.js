@@ -1062,16 +1062,28 @@ function renderHistoryRecord(item, index) {
     item.ip ||
     "Unavailable";
 
-  const deviceName =
-    [
-      device.vendor,
-      device.model
-    ]
-      .filter(Boolean)
-      .filter(v => v !== "Unknown")
-      .join(" ") ||
-    device.type ||
-    "Unknown";
+  const historyDeviceName = [
+    device.vendor && device.vendor !== "Unknown"
+      ? device.vendor
+      : "",
+    device.model && device.model !== "Unknown"
+      ? device.model
+      : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const deviceType =
+    device.type && device.type !== "Unknown"
+      ? device.type
+      : "";
+
+  const deviceName = [
+    historyDeviceName,
+    deviceType
+  ]
+    .filter(Boolean)
+    .join(" • ") || "Unknown";
 
   const osText =
     [

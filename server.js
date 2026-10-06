@@ -988,6 +988,30 @@ function previewVisitorResponse(visitor) {
   };
 }
 
+function publicHistoryVisitorResponse(visitor) {
+  return {
+    id: String(visitor._id),
+
+    // NEVER expose decrypted/full IP publicly.
+    ip: visitor.ipMasked || "Unavailable",
+
+    geo: {
+      city: visitor.geo?.city || "Unknown",
+      region: visitor.geo?.region || "Unknown",
+      country: visitor.geo?.country || "Unknown",
+      countryCode: visitor.geo?.countryCode || "",
+      timezone: visitor.geo?.timezone || ""
+    },
+
+    device: visitor.device || {},
+    os: visitor.os || {},
+    browser: visitor.browser || {},
+    engine: visitor.engine || {},
+
+    timestamp: visitor.createdAt
+  };
+}
+
 function adminVisitorResponse(visitor) {
   const fullIP = decryptIP(visitor.ipEncrypted);
 
@@ -1214,7 +1238,7 @@ app.get("/api/history", async (req, res) => {
       success: true,
       locked: false,
       count: records.length,
-      data: records.map(adminVisitorResponse)
+      data: records.map(publicHistoryVisitorResponse)
     });
   } catch (error) {
     console.error("/api/history:", error);
