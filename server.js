@@ -634,14 +634,88 @@ async function getGeoData(ip) {
 
 function parseUserAgent(userAgent) {
   const parser = new UAParser(userAgent);
-
   const result = parser.getResult();
+
+  let deviceType = result.device?.type || "";
+  let deviceVendor = result.device?.vendor || "";
+  let deviceModel = result.device?.model || "";
+
+  /*
+   * Android fallback:
+   * Some Android browsers do not let UAParser detect the
+   * actual phone model correctly.
+   *
+   * Example:
+   * Android 13; 220333QAG Build/...
+   */
+  if (
+    !deviceModel ||
+    /^(unknown|generic smartphone|smartphone|mobile)$/i.test(deviceModel)
+  ) {
+    const androidModel = userAgent.match(
+      /Android[^;)]*;[^;)]*;\\s*([^;)]+?)(?:\\s+Build[\\/;]|[;)])/i
+    );
+
+    if (androidModel?.[1]) {
+      const detected = androidModel[1].trim();
+
+      if (
+        detected &&
+        detected.length < 80 &&
+        !/^(Linux|Android|Mobile|wv|Build)$/i.test(detected)
+      ) {
+        deviceModel = detected;
+      }
+    }
+  }
+
+  /*
+   * Vendor fallback from model.
+   */
+  if (!deviceVendor || /^unknown$/i.test(deviceVendor)) {
+    const m = deviceModel.toLowerCase();
+
+    if (
+      /xiaomi|redmi|poco|^22\\d{4}|^23\\d{4}|^24\\d{4}|^25\\d{4}|^26\\d{4}/i.test(
+        m
+      )
+    ) {
+      deviceVendor = "Xiaomi";
+    } else if (/samsung|galaxy|^sm-/i.test(m)) {
+      deviceVendor = "Samsung";
+    } else if (/pixel/i.test(m)) {
+      deviceVendor = "Google";
+    } else if (/realme|^rmx/i.test(m)) {
+      deviceVendor = "realme";
+    } else if (/vivo/i.test(m)) {
+      deviceVendor = "vivo";
+    } else if (/oppo|^cph/i.test(m)) {
+      deviceVendor = "OPPO";
+    } else if (/oneplus/i.test(m)) {
+      deviceVendor = "OnePlus";
+    } else if (/huawei|honor/i.test(m)) {
+      deviceVendor = "Huawei/Honor";
+    }
+  }
+
+  /*
+   * Device type fallback.
+   */
+  if (!deviceType) {
+    if (/tablet|ipad/i.test(userAgent)) {
+      deviceType = "tablet";
+    } else if (/mobile|android|iphone/i.test(userAgent)) {
+      deviceType = "mobile";
+    } else {
+      deviceType = "desktop";
+    }
+  }
 
   return {
     device: {
-      type: result.device?.type || "desktop",
-      vendor: result.device?.vendor || "Unknown",
-      model: result.device?.model || "Unknown"
+      type: deviceType || "desktop",
+      vendor: deviceVendor || "Unknown",
+      model: deviceModel || "Unknown"
     },
 
     os: {

@@ -416,10 +416,22 @@ function renderPublicIntelligence(visitor) {
      DEVICE
   ========================= */
 
+  const deviceType =
+    device.type &&
+    device.type !== "Unknown"
+      ? device.type
+      : "";
+
+  const deviceDisplay = [
+    deviceName,
+    deviceType
+  ]
+    .filter(Boolean)
+    .join(" • ");
+
   set(
     "uiDevice",
-    deviceName ||
-      device.type
+    deviceDisplay || "Unknown"
   );
 
   set(
