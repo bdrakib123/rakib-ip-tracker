@@ -6,6 +6,11 @@ let liveWorldMarkers = new Map();
 let liveTraffic = [];
 let liveVisitorCount = 0;
 let liveNotificationPermission = false;
+let adminAuthorized = false;
+let liveRefreshTimer = null;
+let telemetryTimer = null;
+let telemetryInFlight = false;
+let telemetryAbortController = null;
 
 
 /* =========================================================
@@ -1057,10 +1062,7 @@ function renderHistoryRecord(item, index) {
     item.region ||
     "Unknown";
 
-  const maskedIP =
-    item.maskedIP ||
-    item.ip ||
-    "Unavailable";
+  const maskedIP = item.ip || item.maskedIP || "Unavailable";
 
   const historyDeviceName = [
     device.vendor && device.vendor !== "Unknown"
@@ -1103,20 +1105,13 @@ function renderHistoryRecord(item, index) {
       .join(" ") ||
       "Unknown";
 
-  const engineText =
-    [
-      engine.name,
-      engine.version
-    ]
-      .filter(Boolean)
-      .join(" ") ||
-      "Unknown";
-
   const recordTime =
     item.timestamp ||
     item.createdAt ||
     item.updatedAt ||
     "";
+  const location = [city, region].filter(value => value && value !== "Unknown").join(", ") || "Unknown";
+  const safeTime = formatDate(recordTime);
 
   return `
     <article
@@ -1133,17 +1128,17 @@ function renderHistoryRecord(item, index) {
           </div>
 
           <h3>
-            ***
+            Visitor ${index + 1}
           </h3>
 
           <div class="history-visitor-location">
-            ***
+            ${escapeHTML(location)}
           </div>
 
         </div>
 
         <div class="history-visitor-time">
-          ***
+          <time datetime="${escapeHTML(recordTime)}">${escapeHTML(safeTime)}</time>
         </div>
 
       </div>
@@ -1153,52 +1148,52 @@ function renderHistoryRecord(item, index) {
         <div class="history-digital-field">
           <span>IP ADDRESS</span>
           <strong>
-            ***
+            ${escapeHTML(maskedIP)}
           </strong>
         </div>
 
         <div class="history-digital-field">
           <span>LOCATION</span>
           <strong>
-            ***
+            ${escapeHTML(location)}
           </strong>
           <small>
-            ***
+            ${escapeHTML(country)}
           </small>
         </div>
 
         <div class="history-digital-field">
           <span>COUNTRY</span>
           <strong>
-            ***
+            ${escapeHTML(country)}
           </strong>
         </div>
 
         <div class="history-digital-field">
           <span>DEVICE</span>
           <strong>
-            ***
+            ${escapeHTML(deviceName)}
           </strong>
         </div>
 
         <div class="history-digital-field">
           <span>OPERATING SYSTEM</span>
           <strong>
-            ***
+            ${escapeHTML(osText)}
           </strong>
         </div>
 
         <div class="history-digital-field">
           <span>BROWSER</span>
           <strong>
-            ***
+            ${escapeHTML(browserText)}
           </strong>
         </div>
 
         <div class="history-digital-field">
           <span>ENGINE</span>
           <strong>
-            ***
+            ${escapeHTML([engine.name, engine.version].filter(Boolean).join(" ") || "Unknown")}
           </strong>
         </div>
 
@@ -1206,6 +1201,233 @@ function renderHistoryRecord(item, index) {
 
     </article>
   `;
+}
+
+function updateHistoryFilterOptions(records) {
+  const populate = (id, values, label) => {
+    const select = $(id);
+    if (!select) return;
+    const selected = select.value;
+    const options = [...new Set(values.filter(value => value && value !== "Unknown"))]
+      .sort((a, b) => a.localeCompare(b));
+    select.replaceChildren(new Option(label, ""));
+    options.forEach(value => select.add(new Option(value, value)));
+    if (options.includes(selected)) select.value = selected;
+  };
+
+  populate("historyCountry", records.map(item => item.geo?.country), "All countries");
+  populate("historyDevice", records.map(item => item.device?.type), "All devices");
+}
+
+function applyHistoryFilters() {
+  const query = ($("historySearch")?.value || "").trim().toLocaleLowerCase();
+  const country = $("historyCountry")?.value || "";
+  const device = $("historyDevice")?.value || "";
+  const vpn = $("historyVPN")?.value || "";
+  let visible = 0;
+
+  document.querySelectorAll("#adminHistory .history-digital-card").forEach((card, index) => {
+    const item = historyRecords[index] || {};
+    const text = [item.ip, item.geo?.city, item.geo?.region, item.geo?.country,
+      item.device?.type, item.device?.vendor, item.device?.model,
+      item.browser?.name, item.os?.name].join(" ").toLocaleLowerCase();
+    const security = item.security || item.geo?.security || {};
+    const matches = (!query || text.includes(query)) &&
+      (!country || item.geo?.country === country) &&
+      (!device || item.device?.type === device) &&
+      (!vpn || (vpn === "yes") === Boolean(security.vpn));
+    card.hidden = !matches;
+    if (matches) visible += 1;
+  });
+
+  let empty = $("historyNoResults");
+  if (!empty && visible === 0 && historyRecords.length) {
+    empty = document.createElement("div");
+    empty.id = "historyNoResults";
+    empty.className = "history-empty";
+    empty.setAttribute("role", "status");
+    empty.textContent = "No records match these filters.";
+    $("adminHistory")?.append(empty);
+  }
+  if (empty) empty.hidden = visible !== 0;
+}
+
+function downloadHistory(format) {
+  const rows = historyRecords.map(item => ({
+    ip: item.ip || item.maskedIP || "Unavailable",
+    city: item.geo?.city || "Unknown",
+    region: item.geo?.region || "Unknown",
+    country: item.geo?.country || "Unknown",
+    device: item.device?.type || "Unknown",
+    os: [item.os?.name, item.os?.version].filter(Boolean).join(" "),
+    browser: [item.browser?.name, item.browser?.version].filter(Boolean).join(" "),
+    timestamp: item.timestamp || ""
+  }));
+  if (!rows.length) return;
+
+  const csvCell = value => `"${String(value ?? "").replaceAll('"', '""')}"`;
+  const content = format === "csv"
+    ? [Object.keys(rows[0]).map(csvCell).join(","), ...rows.map(row => Object.values(row).map(csvCell).join(","))].join("\r\n")
+    : JSON.stringify(rows, null, 2);
+  const blob = new Blob([content], { type: format === "csv" ? "text/csv;charset=utf-8" : "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `visitor-history.${format}`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function setupAdminDashboardControls() {
+  $("smartThemeButton")?.addEventListener("click", () => {
+    const enabled = document.body.classList.toggle("dashboard-soft-theme");
+    $("smartThemeButton").setAttribute("aria-pressed", String(enabled));
+  });
+  $("smartExportCSV")?.addEventListener("click", () => downloadHistory("csv"));
+  $("smartExportJSON")?.addEventListener("click", () => downloadHistory("json"));
+  document.querySelectorAll("[data-smart-toggle]").forEach(button => {
+    const target = document.querySelector(`.${CSS.escape(button.dataset.smartToggle)}`);
+    if (!target) {
+      button.disabled = true;
+      button.title = "This panel is not available on this page.";
+      return;
+    }
+    button.setAttribute("aria-pressed", "true");
+    button.addEventListener("click", () => {
+      const hidden = target.classList.toggle("smart-hidden-widget");
+      button.setAttribute("aria-pressed", String(!hidden));
+      if (!hidden && target.classList.contains("map-section") && map) {
+        requestAnimationFrame(() => map.invalidateSize());
+      }
+    });
+  });
+}
+
+function setTelemetryState(state, message) {
+  const panel = $("serverIntelligence");
+  const status = $("serverHealthText");
+  const messageNode = $("serverTelemetryMessage");
+  if (panel) panel.dataset.state = state;
+  if (status) status.textContent = state.toUpperCase();
+  if (messageNode) {
+    messageNode.textContent = message;
+    messageNode.hidden = !message;
+  }
+}
+
+function formatUptime(seconds) {
+  const total = Math.max(0, Number(seconds) || 0);
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  return days ? `${days}d ${hours}h` : hours ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
+function renderTelemetryRanking(id, rows, nameKey, countKey) {
+  const container = $(id);
+  if (!container) return;
+  const data = Array.isArray(rows) ? rows.filter(row => Number(row[countKey]) > 0) : [];
+  if (!data.length) {
+    container.innerHTML = '<div class="server-empty">No recorded data yet.</div>';
+    return;
+  }
+  const max = Math.max(...data.map(row => Number(row[countKey]) || 0), 1);
+  container.innerHTML = data.slice(0, 6).map(row => {
+    const count = Number(row[countKey]) || 0;
+    const label = String(row[nameKey] ?? "Unknown");
+    return `<div class="server-ranking-row">
+      <span class="server-ranking-name" title="${escapeHTML(label)}">${escapeHTML(label)}</span>
+      <strong class="server-ranking-count">${count.toLocaleString()}</strong>
+      <div class="server-ranking-bar"><i style="width:${Math.round(count / max * 100)}%"></i></div>
+    </div>`;
+  }).join("");
+}
+
+function renderServerTelemetry(healthPayload, analyticsPayload) {
+  const server = healthPayload.server || {};
+  const runtime = server.analytics || {};
+  const memory = server.memory || {};
+  const load = server.load || {};
+  const last24h = analyticsPayload.last24h || {};
+  const set = (id, value) => { if ($(id)) $(id).textContent = String(value); };
+
+  set("serverUptime", formatUptime(server.uptime));
+  set("serverRAM", `${Number(memory.rssMB) || 0} MB RSS · ${Number(memory.heapUsedMB) || 0}/${Number(memory.heapTotalMB) || 0} MB heap`);
+  set("serverCPU", `${Number(load.oneMinute) || 0} load · ${Number(server.cpuCount) || 0} cores`);
+  set("serverRequests", Number(runtime.requests || 0).toLocaleString());
+  set("serverErrors", `${Number(runtime.errorRate || 0)}%`);
+  set("serverSessions", Number(runtime.activeSessions || analyticsPayload.activeSessions || 0).toLocaleString());
+  set("serverUnique", Number(last24h.uniqueVisitors || 0).toLocaleString());
+  set("serverReturning", Number(last24h.returningVisitors || 0).toLocaleString());
+  set("server24Requests", Number(last24h.requests || 0).toLocaleString());
+  set("server24Pages", Number(last24h.pageViews || 0).toLocaleString());
+  set("server24Sessions", Number(last24h.sessions || 0).toLocaleString());
+  set("server24Security", Number(last24h.securityEvents || 0).toLocaleString());
+  set("serverNode", server.node || "Unavailable");
+  set("serverPID", server.pid ?? "Unavailable");
+  set("serverArch", server.arch || "Unavailable");
+  set("serverLastRequest", runtime.lastRequestAt ? formatDate(runtime.lastRequestAt) : "No requests recorded");
+
+  renderTelemetryRanking("serverEndpoints", analyticsPayload.endpoints, "path", "count");
+  renderTelemetryRanking("serverStatuses", analyticsPayload.statusCodes, "status", "count");
+}
+
+async function refreshServerTelemetry() {
+  if (!adminAuthorized || telemetryInFlight || document.hidden || !$("serverIntelligence")) return;
+  telemetryInFlight = true;
+  telemetryAbortController = new AbortController();
+  const timeout = setTimeout(() => telemetryAbortController?.abort(), 10000);
+  setTelemetryState("loading", "Refreshing runtime and analytics metrics…");
+
+  try {
+    const options = { cache: "no-store", credentials: "same-origin", signal: telemetryAbortController.signal };
+    const responses = await Promise.all([
+      fetch("/api/server-health", options),
+      fetch("/api/analytics/overview", options)
+    ]);
+    if (responses.some(response => response.status === 401)) {
+      adminAuthorized = false;
+      document.body.classList.remove("admin-authenticated");
+      stopAdminLive();
+      setTelemetryState("disconnected", "Admin session expired. Sign in again to view telemetry.");
+      return;
+    }
+    const payloads = await Promise.all(responses.map(response => response.json()));
+    if (responses.some(response => !response.ok) || payloads.some(payload => !payload.success)) {
+      throw new Error("Analytics service returned an error.");
+    }
+    renderServerTelemetry(payloads[0], payloads[1]);
+    setTelemetryState("online", "Metrics are current.");
+  } catch (error) {
+    if (error.name === "AbortError" || error instanceof TypeError || !navigator.onLine) {
+      setTelemetryState("disconnected", "Telemetry service is disconnected. Retrying when available.");
+    } else {
+      setTelemetryState("error", "Telemetry could not be refreshed. Existing values are retained.");
+    }
+    if (error.name !== "AbortError") console.error("Server telemetry:", error);
+  } finally {
+    clearTimeout(timeout);
+    telemetryAbortController = null;
+    telemetryInFlight = false;
+  }
+}
+
+function scheduleTelemetryRefresh() {
+  clearTimeout(telemetryTimer);
+  telemetryTimer = null;
+  if (!adminAuthorized || document.hidden) return;
+  telemetryTimer = setTimeout(async () => {
+    await refreshServerTelemetry();
+    scheduleTelemetryRefresh();
+  }, 30000);
+}
+
+function stopAdminLive() {
+  clearTimeout(liveRefreshTimer);
+  if (liveSource) {
+    liveSource.close();
+    liveSource = null;
+  }
 }
 
 async function copyHistoryLocation(lat, lon) {
@@ -1340,7 +1562,7 @@ function initializeHistoryMaps() {
   // Public history intentionally has no embedded maps.
 }
 
-async function loadAdminHistory() {
+async function loadAdminHistory({ silent = false } = {}) {
 
   const container =
     $("adminHistory");
@@ -1349,17 +1571,20 @@ async function loadAdminHistory() {
     return;
   }
 
-  container.innerHTML = `
-    <div class="history-loading">
-      Loading visitor history...
-    </div>
-  `;
+  container.setAttribute("aria-live", "polite");
+  if (!silent) {
+    container.innerHTML = `
+      <div class="history-loading" role="status">
+        Loading visitor history...
+      </div>
+    `;
+  }
 
   try {
 
     const response =
       await fetch(
-        "/api/history",
+        adminAuthorized ? "/api/admin/history" : "/api/history",
         {
           cache: "no-store"
         }
@@ -1401,6 +1626,9 @@ async function loadAdminHistory() {
         )
         .join("");
 
+    applyHistoryFilters();
+    renderAdminSummary();
+
     if (
       typeof updateHistoryFilterOptions ===
       "function"
@@ -1424,6 +1652,47 @@ async function loadAdminHistory() {
         Unable to load visitor history.
       </div>
     `;
+  }
+}
+
+function renderAdminSummary() {
+  const records = historyRecords;
+  const unique = values => [...new Set(values.filter(value => value && value !== "Unknown"))];
+  const countries = records.map(item => item.geo?.country || "Unknown");
+  const devices = records.map(item => item.device?.type || "Unknown");
+  const browsers = records.map(item => item.browser?.name || "Unknown");
+  const riskFlags = ["vpn", "proxy", "tor", "hosting"];
+  const risky = records.filter(item => {
+    const security = item.security || item.geo?.security || {};
+    return riskFlags.some(flag => Boolean(security[flag]));
+  });
+  const setText = (id, value) => { if ($(id)) $(id).textContent = String(value); };
+  setText("smartLiveEvents", records.length);
+  setText("smartCountries", unique(countries).length);
+  setText("smartRiskCount", risky.length);
+  setText("smartDevices", unique(devices).length);
+
+  const renderCounts = (id, values) => {
+    const element = $(id);
+    if (!element) return;
+    const counts = values.reduce((map, value) => map.set(value, (map.get(value) || 0) + 1), new Map());
+    const sorted = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    element.innerHTML = sorted.length ? sorted.map(([name, count]) => `
+      <div class="smart-rank-item"><div class="smart-rank-label"><span>${escapeHTML(name)}</span><strong>${count}</strong></div>
+      <div class="smart-rank-bar"><span style="width:${Math.round(count / sorted[0][1] * 100)}%"></span></div></div>`).join("") : '<div class="smart-empty">No data available.</div>';
+  };
+  renderCounts("smartCountryRanking", countries);
+  renderCounts("smartDeviceRanking", devices);
+  renderCounts("smartBrowserRanking", browsers);
+
+  const feed = $("smartActivityFeed");
+  if (feed) feed.innerHTML = records.slice(0, 6).map(item => `
+    <div class="smart-activity-item"><div class="smart-activity-main"><strong>${escapeHTML(item.geo?.city || "Unknown")}, ${escapeHTML(item.geo?.country || "Unknown")}</strong>
+    <span>${escapeHTML(item.ip || "Masked address")} · ${escapeHTML(item.device?.type || "Unknown device")}</span></div>
+    <time class="smart-activity-time">${escapeHTML(formatDate(item.timestamp))}</time></div>`).join("") || '<div class="smart-empty">No visitor activity yet.</div>';
+
+  for (const flag of riskFlags) {
+    setText(`smart${flag[0].toUpperCase()}${flag.slice(1)}`, records.filter(item => Boolean((item.security || item.geo?.security || {})[flag])).length);
   }
 }
 
@@ -1513,8 +1782,42 @@ async function login() {
    PUBLIC / ADMIN UI ISOLATION
 ========================================================= */
 
-function setupAdminOnlyUI() {
-  // PUBLIC MODE: everything is visible.
+async function setupAdminOnlyUI() {
+  try {
+    const response = await fetch("/api/live/status", { cache: "no-store" });
+    const result = await response.json();
+    adminAuthorized = response.ok && result.authenticated === true;
+  } catch {
+    adminAuthorized = false;
+  }
+
+  document.body.classList.toggle("admin-authenticated", adminAuthorized);
+  if (adminAuthorized) {
+    connectAdminLive();
+    setupAdminDashboardControls();
+    refreshServerTelemetry().finally(scheduleTelemetryRefresh);
+  }
+}
+
+function connectAdminLive() {
+  if (typeof EventSource === "undefined" || liveSource) return;
+  liveSource = new EventSource("/api/live");
+  liveSource.onopen = () => {
+    document.body.dataset.liveConnection = "connected";
+  };
+  liveSource.onmessage = event => {
+    try {
+      const payload = JSON.parse(event.data);
+      if (payload.type !== "visitor") return;
+      clearTimeout(liveRefreshTimer);
+      liveRefreshTimer = setTimeout(() => loadAdminHistory({ silent: true }), 700);
+    } catch (error) {
+      console.error("Invalid live update:", error);
+    }
+  };
+  liveSource.onerror = () => {
+    document.body.dataset.liveConnection = "reconnecting";
+  };
 }
 
 
@@ -1522,7 +1825,8 @@ function setupAdminOnlyUI() {
    PUBLIC PAGE STARTUP
 ========================================================= */
 
-function initializePublicPage() {
+async function initializePublicPage() {
+  await setupAdminOnlyUI();
 
   if (
     typeof loadCurrentVisitor ===
@@ -1537,7 +1841,29 @@ function initializePublicPage() {
   ) {
     loadAdminHistory();
   }
+
+  ["historySearch", "historyCountry", "historyDevice", "historyVPN"].forEach(id => {
+    const control = $(id);
+    if (!control) return;
+    control.addEventListener(control.tagName === "SELECT" ? "change" : "input", applyHistoryFilters);
+  });
 }
+
+window.addEventListener("pagehide", () => {
+  clearTimeout(liveRefreshTimer);
+  clearTimeout(telemetryTimer);
+  telemetryAbortController?.abort();
+  stopAdminLive();
+}, { once: true });
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    clearTimeout(telemetryTimer);
+    telemetryTimer = null;
+  } else if (adminAuthorized) {
+    refreshServerTelemetry().finally(scheduleTelemetryRefresh);
+  }
+});
 
 if (document.readyState === "loading") {
 

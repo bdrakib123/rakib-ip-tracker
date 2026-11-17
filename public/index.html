@@ -687,7 +687,7 @@
 
   <!-- HISTORY -->
 
-  <section class="section-heading history-heading">
+  <section class="section-heading history-heading admin-only-ui">
 
     <div>
       <span class="mini-label">
@@ -711,7 +711,7 @@
 
     <!-- SMART COMMAND CENTER -->
 
-    <section class="smart-intelligence">
+    <section class="smart-intelligence admin-only-ui">
 
       <div class="smart-header">
 
@@ -758,9 +758,9 @@
         <div class="smart-kpi">
           <div class="smart-kpi-icon">◉</div>
           <div>
-            <span>LIVE EVENTS</span>
+            <span>VISITOR RECORDS</span>
             <strong id="smartLiveEvents">0</strong>
-            <small>incoming now</small>
+            <small>in available history</small>
           </div>
         </div>
 
@@ -962,7 +962,7 @@
 
           <button
             type="button"
-            data-smart-toggle="live-premium-dashboard"
+            data-smart-toggle="map-section"
           >Live Map</button>
 
           <button
@@ -1035,7 +1035,7 @@
      SERVER INTELLIGENCE
 ======================================================== -->
 
-<section class="server-intelligence" id="serverIntelligence">
+<section class="server-intelligence admin-only-ui" id="serverIntelligence">
 
   <div class="server-intelligence-header">
     <div>
@@ -1046,9 +1046,11 @@
 
     <div class="server-health-state">
       <span class="server-health-dot" id="serverHealthDot"></span>
-      <span id="serverHealthText">CHECKING</span>
+      <span id="serverHealthText">LOADING</span>
     </div>
   </div>
+
+  <p id="serverTelemetryMessage" class="server-telemetry-message" role="status" aria-live="polite">Loading server telemetry…</p>
 
   <div class="server-kpi-grid">
 
@@ -1103,7 +1105,7 @@
       </div>
 
       <div id="serverEndpoints" class="server-ranking-list">
-        <div class="server-empty">Loading...</div>
+        <div class="server-empty" role="status">Loading…</div>
       </div>
     </div>
 
@@ -1114,7 +1116,7 @@
       </div>
 
       <div id="serverStatuses" class="server-ranking-list">
-        <div class="server-empty">Loading...</div>
+        <div class="server-empty" role="status">Loading…</div>
       </div>
     </div>
 
@@ -1168,23 +1170,24 @@
 
 
 
-<div class="history-tools">
+<div class="history-tools admin-only-ui">
 
       <input
         id="historySearch"
         type="search"
+        aria-label="Search visitor history"
         placeholder="Search IP, city, ISP, ASN, device..."
       >
 
-      <select id="historyCountry">
+      <select id="historyCountry" aria-label="Filter history by country">
         <option value="">All countries</option>
       </select>
 
-      <select id="historyDevice">
+      <select id="historyDevice" aria-label="Filter history by device">
         <option value="">All devices</option>
       </select>
 
-      <select id="historyVPN">
+      <select id="historyVPN" aria-label="Filter history by VPN status">
         <option value="">VPN: All</option>
         <option value="yes">VPN: Detected</option>
         <option value="no">VPN: Not detected</option>
@@ -1194,7 +1197,8 @@
 
     <div
       id="adminHistory"
-      class="admin-history"
+      class="admin-history admin-only-ui"
+      aria-live="polite"
     ></div>
 
   </section>
