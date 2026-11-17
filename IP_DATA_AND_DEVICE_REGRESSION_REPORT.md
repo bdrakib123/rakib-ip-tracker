@@ -47,4 +47,4 @@ The checks use mocks and synthetic data. They do not prove that `ipwho.is` is re
 - Verify `ipwho.is` response/reachability and rate-limit behavior from the deployed Render runtime without logging visitor addresses.
 - Verify the Render deployment includes these uncommitted changes before evaluating browser behavior.
 - Inspect representative database records only with explicit safe access; no production record was read in this phase.
-- The current and remote Git branch remain at the previously pushed commit; this validation has not been committed or deployed.
+- The repair is committed locally as `a17cec5`. It has not been pushed or deployed; the remote branch remains at its previous commit.
