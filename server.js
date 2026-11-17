@@ -6,7 +6,11 @@ const crypto = require("crypto");
 const os = require("os");
 const { performance } = require("perf_hooks");
 const { MongoClient } = require("mongodb");
-const UAParser = require("ua-parser-js");
+const {
+  collectVisitorData,
+  publicHistoryVisitorResponse,
+  visitorGeo
+} = require("./lib/ipData");
 
 const app = express();
 
@@ -531,213 +535,6 @@ function requireAdmin(req, res, next) {
 }
 
 /* =========================================================
-   GEOLOCATION
-========================================================= */
-
-async function getGeoData(ip) {
-  if (
-    !ip ||
-    ip === "127.0.0.1" ||
-    ip === "::1" ||
-    ip.startsWith("192.168.") ||
-    ip.startsWith("10.") ||
-    ip.startsWith("172.16.")
-  ) {
-    return {
-      country: "Local",
-      countryCode: "",
-      region: "Local",
-      city: "Local",
-      postal: "",
-      timezone: "",
-      isp: "",
-      organization: "",
-      asn: "",
-      latitude: null,
-      longitude: null
-    };
-  }
-
-  try {
-    const response = await fetch(
-      `https://ipwho.is/${encodeURIComponent(ip)}`
-    );
-
-    const data = await response.json();
-
-    if (!data || data.success === false) {
-      throw new Error("Geo lookup failed");
-    }
-
-    return {
-      country: data.country || "Unknown",
-      countryCode: data.country_code || "",
-      region: data.region || "Unknown",
-      city: data.city || "Unknown",
-      postal: data.postal || "",
-      timezone:
-        data.timezone?.id ||
-        data.timezone?.utc ||
-        "",
-      isp: data.connection?.isp || "Unknown",
-      organization:
-        data.connection?.org ||
-        data.connection?.isp ||
-        "Unknown",
-      asn: data.connection?.asn
-        ? `AS${data.connection.asn}`
-        : "Unknown",
-      latitude:
-        typeof data.latitude === "number"
-          ? data.latitude
-          : null,
-      longitude:
-        typeof data.longitude === "number"
-          ? data.longitude
-          : null,
-
-      security: {
-        vpn: !!data.security?.vpn,
-        proxy: !!data.security?.proxy,
-        tor: !!data.security?.tor,
-        hosting: !!data.security?.hosting,
-        source: "ipwho.is"
-      }
-    };
-  } catch (error) {
-    return {
-      country: "Unknown",
-      countryCode: "",
-      region: "Unknown",
-      city: "Unknown",
-      postal: "",
-      timezone: "",
-      isp: "Unknown",
-      organization: "Unknown",
-      asn: "Unknown",
-      latitude: null,
-      longitude: null,
-      security: {
-        vpn: false,
-        proxy: false,
-        tor: false,
-        hosting: false,
-        source: "unavailable"
-      }
-    };
-  }
-}
-
-/* =========================================================
-   USER AGENT
-========================================================= */
-
-function parseUserAgent(userAgent) {
-  const parser = new UAParser(userAgent);
-  const result = parser.getResult();
-
-  let deviceType = result.device?.type || "";
-  let deviceVendor = result.device?.vendor || "";
-  let deviceModel = result.device?.model || "";
-
-  /*
-   * Android fallback:
-   * Some Android browsers do not let UAParser detect the
-   * actual phone model correctly.
-   *
-   * Example:
-   * Android 13; 220333QAG Build/...
-   */
-  if (
-    !deviceModel ||
-    /^(unknown|generic smartphone|smartphone|mobile)$/i.test(deviceModel)
-  ) {
-    const androidModel = userAgent.match(
-      /Android[^;)]*;[^;)]*;\\s*([^;)]+?)(?:\\s+Build[\\/;]|[;)])/i
-    );
-
-    if (androidModel?.[1]) {
-      const detected = androidModel[1].trim();
-
-      if (
-        detected &&
-        detected.length < 80 &&
-        !/^(Linux|Android|Mobile|wv|Build)$/i.test(detected)
-      ) {
-        deviceModel = detected;
-      }
-    }
-  }
-
-  /*
-   * Vendor fallback from model.
-   */
-  if (!deviceVendor || /^unknown$/i.test(deviceVendor)) {
-    const m = deviceModel.toLowerCase();
-
-    if (
-      /xiaomi|redmi|poco|^22\\d{4}|^23\\d{4}|^24\\d{4}|^25\\d{4}|^26\\d{4}/i.test(
-        m
-      )
-    ) {
-      deviceVendor = "Xiaomi";
-    } else if (/samsung|galaxy|^sm-/i.test(m)) {
-      deviceVendor = "Samsung";
-    } else if (/pixel/i.test(m)) {
-      deviceVendor = "Google";
-    } else if (/realme|^rmx/i.test(m)) {
-      deviceVendor = "realme";
-    } else if (/vivo/i.test(m)) {
-      deviceVendor = "vivo";
-    } else if (/oppo|^cph/i.test(m)) {
-      deviceVendor = "OPPO";
-    } else if (/oneplus/i.test(m)) {
-      deviceVendor = "OnePlus";
-    } else if (/huawei|honor/i.test(m)) {
-      deviceVendor = "Huawei/Honor";
-    }
-  }
-
-  /*
-   * Device type fallback.
-   */
-  if (!deviceType) {
-    if (/tablet|ipad/i.test(userAgent)) {
-      deviceType = "tablet";
-    } else if (/mobile|android|iphone/i.test(userAgent)) {
-      deviceType = "mobile";
-    } else {
-      deviceType = "desktop";
-    }
-  }
-
-  return {
-    device: {
-      type: deviceType || "desktop",
-      vendor: deviceVendor || "Unknown",
-      model: deviceModel || "Unknown"
-    },
-
-    os: {
-      name: result.os?.name || "Unknown",
-      version: result.os?.version || ""
-    },
-
-    browser: {
-      name: result.browser?.name || "Unknown",
-      version: result.browser?.version || ""
-    },
-
-    engine: {
-      name: result.engine?.name || "Unknown",
-      version: result.engine?.version || ""
-    },
-
-    userAgent
-  };
-}
-
-/* =========================================================
    DATABASE
 ========================================================= */
 
@@ -833,8 +630,7 @@ async function createVisitor(req, clientData = {}) {
   const ip = getClientIP(req);
   const userAgent = req.headers["user-agent"] || "Unknown";
 
-  const ua = parseUserAgent(userAgent);
-  const geo = await getGeoData(ip);
+  const { geo, ua } = await collectVisitorData(ip, userAgent);
 
   const sessionId =
     req.rakibAnalytics?.sessionId || "";
@@ -946,15 +742,16 @@ async function trimHistory() {
 
 function currentVisitorResponse(visitor) {
   const fullIP = decryptIP(visitor.ipEncrypted);
+  const geo = visitorGeo(visitor);
 
   return {
     id: String(visitor._id),
 
     ip: fullIP || visitor.ipMasked,
 
-    geo: visitor.geo,
-    security: visitor.geo?.security || {},
-      risk: calculateRiskScore(visitor),
+    geo,
+    security: geo.security || {},
+    risk: calculateRiskScore(visitor),
 
     device: visitor.device,
     os: visitor.os,
@@ -970,15 +767,16 @@ function currentVisitorResponse(visitor) {
 }
 
 function previewVisitorResponse(visitor) {
+  const geo = visitorGeo(visitor);
   return {
     id: String(visitor._id),
 
     ip: visitor.ipMasked,
 
-    country: visitor.geo?.country || "Unknown",
-    countryCode: visitor.geo?.countryCode || "",
-    region: visitor.geo?.region || "Unknown",
-    city: visitor.geo?.city || "Unknown",
+    country: geo.country,
+    countryCode: geo.countryCode,
+    region: geo.region,
+    city: geo.city,
 
     device: visitor.device,
     os: visitor.os,
@@ -988,32 +786,9 @@ function previewVisitorResponse(visitor) {
   };
 }
 
-function publicHistoryVisitorResponse(visitor) {
-  return {
-    id: String(visitor._id),
-
-    // NEVER expose decrypted/full IP publicly.
-    ip: visitor.ipMasked || "Unavailable",
-
-    geo: {
-      city: visitor.geo?.city || "Unknown",
-      region: visitor.geo?.region || "Unknown",
-      country: visitor.geo?.country || "Unknown",
-      countryCode: visitor.geo?.countryCode || "",
-      timezone: visitor.geo?.timezone || ""
-    },
-
-    device: visitor.device || {},
-    os: visitor.os || {},
-    browser: visitor.browser || {},
-    engine: visitor.engine || {},
-
-    timestamp: visitor.createdAt
-  };
-}
-
 function adminVisitorResponse(visitor) {
   const fullIP = decryptIP(visitor.ipEncrypted);
+  const geo = visitorGeo(visitor);
 
   return {
     id: String(visitor._id),
@@ -1021,8 +796,8 @@ function adminVisitorResponse(visitor) {
     ip: fullIP || visitor.ipMasked,
     maskedIP: visitor.ipMasked,
 
-    geo: visitor.geo,
-    security: visitor.geo?.security || {},
+    geo,
+    security: geo.security || {},
 
     device: visitor.device,
     os: visitor.os,
