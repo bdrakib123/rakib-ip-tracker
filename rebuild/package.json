@@ -1,0 +1,29 @@
+{
+  "name": "rakib-ip-intelligence-v2",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Isolated, mobile-first RAKIB IP Intelligence System V2",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "backup": "node scripts/storageBackup.js",
+    "test:storage-load": "node scripts/storageLoadTest.js",
+    "test": "node --test test/*.test.js",
+    "check": "node --check src/config.js && node --check src/server.js && node --check src/app.js && node --check src/lib/rateLimit.js && node --check src/db/jsonFileRepository.js && node --check src/db/storage.js && node --check src/db/storageBackup.js && node --check scripts/storageBackup.js",
+    "test:browser": "playwright test",
+    "staging:check": "node scripts/stagingMongoIntegration.js --check",
+    "staging:integration": "node scripts/stagingMongoIntegration.js"
+  },
+  "engines": {
+    "node": ">=20.18.1"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "ua-parser-js": "^2.0.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "mongodb": "^6.20.0"
+  }
+}
