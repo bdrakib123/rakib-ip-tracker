@@ -95,3 +95,28 @@ test("normal production cannot opt into temporary storage with only one staging 
   const env = { ...validEnv(), NODE_ENV: "production", TRUST_PROXY_HOPS: "0", STAGING_EPHEMERAL_STORAGE: "true" };
   assert.throws(() => loadConfig(env), /both be explicitly enabled/);
 });
+
+test("Vercel production requires Neon storage, DATABASE_URL, and an explicitly reviewed proxy hop count", () => {
+  const env = { ...validEnv(), NODE_ENV: "production", VERCEL: "1", STORAGE_BACKEND: "neon-postgres", DATABASE_URL: "postgresql://synthetic.invalid/db", TRUST_PROXY_HOPS: "0" };
+  delete env.STORAGE_FILE;
+  const config = loadConfig(env);
+  assert.equal(config.vercelMode, true);
+  assert.equal(config.storageBackend, "neon-postgres");
+  assert.equal(config.databaseUrl, env.DATABASE_URL);
+  assert.equal(config.trustProxyHops, 0);
+  assert.equal(config.storageFile, null);
+  assert.equal(config.storageMountPath, null);
+  const missingBackend = { ...env }; delete missingBackend.STORAGE_BACKEND;
+  assert.throws(() => loadConfig(missingBackend), /STORAGE_BACKEND/);
+  const missingDatabase = { ...env }; delete missingDatabase.DATABASE_URL;
+  assert.throws(() => loadConfig(missingDatabase), /DATABASE_URL/);
+  const malformedDatabase = { ...env, DATABASE_URL: "not-a-database-url" };
+  assert.throws(() => loadConfig(malformedDatabase), /PostgreSQL connection URL/);
+  const missingProxy = { ...env }; delete missingProxy.TRUST_PROXY_HOPS;
+  assert.throws(() => loadConfig(missingProxy), /TRUST_PROXY_HOPS/);
+  assert.throws(() => loadConfig({ ...env, TRUST_PROXY_HOPS: "not-an-integer" }), /TRUST_PROXY_HOPS/);
+  assert.throws(() => loadConfig({ ...env, STORAGE_BACKEND: "json-file" }), /Vercel requires STORAGE_BACKEND/);
+  assert.throws(() => loadConfig({ ...env, STORAGE_BACKEND: "unconfigured-backend" }), /Vercel requires STORAGE_BACKEND/);
+  assert.throws(() => loadConfig({ ...env, STORAGE_FILE: "/tmp/visitors.json" }), /cannot use file storage/);
+  assert.throws(() => loadConfig({ ...env, STAGING_MODE: "true", STAGING_EPHEMERAL_STORAGE: "true" }), /cannot use file storage/);
+});

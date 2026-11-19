@@ -12,7 +12,7 @@ test("V3 has one root manifest, lockfile, and startup entry with no nested rebui
   const lock = JSON.parse(fs.readFileSync(path.join(root, "package-lock.json"), "utf8"));
   assert.equal(manifest.name, "rakib-ip-tracker");
   assert.equal(manifest.version, "3.0.0");
-  assert.equal(manifest.main, "src/server.js");
+  assert.equal(manifest.main, "src/index.js");
   assert.equal(manifest.scripts.start, "node src/server.js");
   assert.equal(lock.name, manifest.name);
   assert.equal(lock.version, manifest.version);
@@ -60,6 +60,33 @@ test("separate Free staging blueprint explicitly uses guarded ephemeral storage 
   assert.match(productionBlueprint, /STORAGE_MOUNT_PATH/);
   assert.match(productionBlueprint, /BACKUP_DIR/);
   assert.doesNotMatch(productionBlueprint, /STAGING_MODE/);
+});
+
+test("Vercel entry exports an Express app without opening a listener and keeps static assets in public", () => {
+  const entry = fs.readFileSync(path.join(root, "src", "index.js"), "utf8");
+  const vercel = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
+  assert.match(entry, /require\("express"\)/);
+  assert.match(entry, /module\.exports = functionApp/);
+  assert.doesNotMatch(entry, /\.listen\s*\(/);
+  assert.equal(fs.existsSync(path.join(root, "public", "index.html")), true);
+  assert.equal(fs.existsSync(path.join(root, "public", "admin.html")), true);
+  assert.ok(vercel.rewrites.some(rule => rule.source === "/admin" && rule.destination === "/admin.html"));
+  assert.ok(vercel.rewrites.some(rule => rule.source === "/admin-panel" && rule.destination === "/admin.html"));
+  assert.equal(fs.readFileSync(path.join(root, "render.yaml"), "utf8").includes("/var/data"), true);
+  assert.equal(fs.readFileSync(path.join(root, "render-free-staging.yaml"), "utf8").includes("STAGING_EPHEMERAL_STORAGE"), true);
+});
+
+test("Express and Vercel CSP policies consistently allow only exact OSM tile host patterns", () => {
+  const appSource = fs.readFileSync(path.join(root, "src", "app.js"), "utf8");
+  const appPolicy = appSource.match(/setHeader\("Content-Security-Policy", "([^"]+)"\)/)?.[1];
+  const vercel = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
+  const vercelPolicy = vercel.headers.find(item => item.source === "/(.*)").headers
+    .find(item => item.key === "Content-Security-Policy").value;
+  assert.ok(appPolicy);
+  assert.equal(appPolicy, vercelPolicy);
+  assert.match(appPolicy, /img-src 'self' data: https:\/\/tile\.openstreetmap\.org https:\/\/\*\.tile\.openstreetmap\.org/);
+  assert.doesNotMatch(appPolicy, /https:\/\/\*\.openstreetmap\.org/);
+  assert.match(appPolicy, /script-src 'self' https:\/\/unpkg\.com/);
 });
 
 test("admin telemetry UI consumes the top-level analytics contracts and displays their counts", () => {

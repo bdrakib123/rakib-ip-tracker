@@ -69,6 +69,12 @@ function materialize(record) {
   return { ...record, createdAt: dateValue(record.createdAt) };
 }
 
+function newestAnalyticsFirst(events) {
+  return events.map((event, index) => ({ event, index }))
+    .sort((left, right) => Date.parse(right.event.createdAt) - Date.parse(left.event.createdAt) || right.index - left.index)
+    .map(item => item.event);
+}
+
 class JsonFileVisitorRepository {
   #filePath;
   #directory;
@@ -405,7 +411,11 @@ class JsonFileVisitorRepository {
         state.analytics.security.length, state.analytics.sessions.length];
       const trimmed = analyticsLengths.some((length, index) => length !== trimmedLengths[index]);
       if (trimmed) await this.#atomicWrite(state);
-      return JSON.parse(JSON.stringify(state.analytics));
+      const analytics = JSON.parse(JSON.stringify(state.analytics));
+      analytics.requests = newestAnalyticsFirst(analytics.requests);
+      analytics.pages = newestAnalyticsFirst(analytics.pages);
+      analytics.security = newestAnalyticsFirst(analytics.security);
+      return analytics;
     });
   }
 
@@ -499,14 +509,14 @@ class JsonFileVisitorRepository {
         averageResponseMs: analytics.requests.length ? Math.round(analytics.requests.reduce((sum, event) => sum + event.duration, 0) / analytics.requests.length) : 0 },
       statusCodes: [...statusCodes].map(([status, count]) => ({ status, count })).sort((a, b) => b.count - a.count),
       endpoints: [...endpoints.values()].sort((a, b) => b.count - a.count).slice(0, 20),
-      requestEvents: analytics.requests.slice(-500).reverse(),
+      requestEvents: analytics.requests.slice(0, 500),
       pageRows: [...new Set(analytics.pages.map(event => event.path))].map(pathName => {
         const rows = analytics.pages.filter(event => event.path === pathName);
           const measured = rows.filter(event => Number.isFinite(event.duration));
           return { path: pathName, views: rows.length, averageDuration: measured.length ? Math.round(measured.reduce((sum, event) => sum + event.duration, 0) / measured.length) : null };
       }).sort((a, b) => b.views - a.views).slice(0, 50),
       sessions: analytics.sessions.slice().sort((a, b) => Date.parse(b.lastSeen) - Date.parse(a.lastSeen)),
-      securityEvents: analytics.security.slice(-200).reverse(),
+      securityEvents: analytics.security.slice(0, 200),
       availability: { historical: false, collectedFrom: analytics.collectedFrom, retentionDays: 30,
         requestEventsCapped: analytics.requests.length >= 5000, pageEventsCapped: analytics.pages.length >= 2000,
         securityEventsCapped: analytics.security.length >= 1000 }
@@ -520,8 +530,8 @@ class JsonFileVisitorRepository {
     if (!session) return null;
     return {
       session: { ...session, ipHash: null, userAgent: null, referrer: null },
-      pages: analytics.pages.filter(event => event.sessionId === sessionId).slice(-MAX_SESSION_EVENTS).map(event => ({ ...event, ipHash: null })),
-      requests: analytics.requests.filter(event => event.sessionId === sessionId).slice(-MAX_SESSION_EVENTS).map(event => ({ ...event, referrer: null })),
+      pages: analytics.pages.filter(event => event.sessionId === sessionId).slice(0, MAX_SESSION_EVENTS).map(event => ({ ...event, ipHash: null })),
+      requests: analytics.requests.filter(event => event.sessionId === sessionId).slice(0, MAX_SESSION_EVENTS).map(event => ({ ...event, referrer: null })),
       visitors: []
     };
   }

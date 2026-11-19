@@ -67,7 +67,7 @@ function getCookie(req, name) {
   try { return decodeURIComponent(value.slice(prefix.length)); } catch { return null; }
 }
 
-function createAdminAuth({ password, production = false, now = Date.now, maxSessions = 1000 }) {
+function createAdminAuth({ password, production = false, now = Date.now, maxSessions = 1000, sessionStore = null }) {
   const sessions = new Map();
   const cookieOptions = `Path=/; HttpOnly; SameSite=Strict${production ? "; Secure" : ""}`;
 
@@ -82,32 +82,46 @@ function createAdminAuth({ password, production = false, now = Date.now, maxSess
 
   function setSession(res) {
     cleanup();
-    if (sessions.size >= maxSessions) sessions.delete(sessions.keys().next().value);
     const token = crypto.randomBytes(32).toString("base64url");
     const expiresAt = now() + SESSION_TTL_MS;
-    sessions.set(token, expiresAt);
-    res.setHeader("Set-Cookie", `${COOKIE_NAME}=${encodeURIComponent(token)}; ${cookieOptions}; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`);
+    const persist = sessionStore
+      ? sessionStore.createAdminSession(crypto.createHash("sha256").update(token).digest("hex"), new Date(expiresAt))
+      : (sessions.size >= maxSessions && sessions.delete(sessions.keys().next().value), sessions.set(token, expiresAt));
+    const setCookie = () => res.setHeader("Set-Cookie", `${COOKIE_NAME}=${encodeURIComponent(token)}; ${cookieOptions}; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`);
+    return persist && typeof persist.then === "function" ? persist.then(setCookie) : setCookie();
   }
 
   function clearSession(req, res) {
     const token = getCookie(req, COOKIE_NAME);
-    if (token) sessions.delete(token);
-    res.setHeader("Set-Cookie", `${COOKIE_NAME}=; ${cookieOptions}; Max-Age=0`);
+    const revoke = token && sessionStore
+      ? sessionStore.revokeAdminSession(crypto.createHash("sha256").update(token).digest("hex"))
+      : token ? sessions.delete(token) : null;
+    const clearCookie = () => res.setHeader("Set-Cookie", `${COOKIE_NAME}=; ${cookieOptions}; Max-Age=0`);
+    return revoke && typeof revoke.then === "function" ? revoke.then(clearCookie) : clearCookie();
   }
 
   function requireAdmin(req, res, next) {
     cleanup();
     const token = getCookie(req, COOKIE_NAME);
-    if (!token || !sessions.has(token)) {
+    const authenticated = token && sessionStore
+      ? sessionStore.hasAdminSession(crypto.createHash("sha256").update(token).digest("hex"))
+      : Boolean(token && sessions.has(token));
+    const finish = allowed => {
+      if (allowed) return next();
       return res.status(401).json({ success: false, error: { code: "UNAUTHORIZED", message: "Administrator sign-in is required." } });
-    }
-    next();
+    };
+    return authenticated && typeof authenticated.then === "function"
+      ? authenticated.then(finish).catch(next)
+      : finish(authenticated);
   }
 
   function isAuthenticated(req) {
     cleanup();
     const token = getCookie(req, COOKIE_NAME);
-    return Boolean(token && sessions.has(token));
+    if (!token) return false;
+    return sessionStore
+      ? sessionStore.hasAdminSession(crypto.createHash("sha256").update(token).digest("hex"))
+      : sessions.has(token);
   }
 
   return { authenticate, clearSession, isAuthenticated, requireAdmin, setSession };

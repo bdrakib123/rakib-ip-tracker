@@ -16,19 +16,30 @@ function cookieValue(req, name) {
 
 function createAdminAnalytics({ repository, geoService, encryptionKey, now = Date.now, flushDelayMs = FLUSH_DELAY_MS }) {
   let pending = [];
+  let deferred = [];
   let timer = null;
   let flushing = null;
+  let persistentPending = [];
+  let persistentDeferred = [];
+  let persistentFlushing = null;
+  let persistentOutstanding = 0;
+  let persistentFailureCount = 0;
+  let lastPersistentFailure = null;
+  let jsonInFlight = 0;
   let closed = false;
   let paused = false;
+  let activeBarrier = null;
   let droppedPendingEvents = 0;
   let lastPersistenceError = null;
   const ready = repository.getAnalytics ? repository.getAnalytics().then(() => true) : Promise.resolve(true);
 
   function boundPending() {
-    if (pending.length <= MAX_PENDING_EVENTS) return;
-    const overflow = pending.length - MAX_PENDING_EVENTS;
-    pending.splice(0, overflow);
-    droppedPendingEvents += overflow;
+    while (pending.length + deferred.length + jsonInFlight > MAX_PENDING_EVENTS) {
+      if (deferred.length) deferred.shift();
+      else pending.shift();
+      droppedPendingEvents += 1;
+      lastPersistenceError = "ANALYTICS_QUEUE_FULL";
+    }
   }
 
   function sessionFor(req, res, secureCookie = req.secure) {
@@ -42,47 +53,135 @@ function createAdminAnalytics({ repository, geoService, encryptionKey, now = Dat
   }
 
   function scheduleFlush() {
-    if (closed || paused || timer || !repository.saveAnalyticsBatch) return;
+    if (closed || paused || timer || !repository.saveAnalyticsBatch || repository.persistent === true) return;
     timer = setTimeout(() => {
       timer = null;
       if (paused) return;
-      flush().catch(() => scheduleFlush());
+      flushJson().catch(() => scheduleFlush());
     }, flushDelayMs);
     timer.unref?.();
   }
 
-  function record(event) {
-    if (!repository.saveAnalyticsBatch || closed) return;
-    pending.push(event);
-    boundPending();
-    if (pending.length >= 500) {
-      clearTimeout(timer);
+  function schedulePersistentFlush() {
+    if (closed || paused || timer || repository.persistent !== true || !persistentPending.length) return;
+    timer = setTimeout(() => {
       timer = null;
-      flush().catch(() => scheduleFlush());
-    } else scheduleFlush();
+      startPersistentFlush().catch(() => {});
+    }, flushDelayMs);
+    timer.unref?.();
   }
 
-  async function flush() {
+  function startPersistentFlush(force = false) {
+    if (persistentFlushing) return persistentFlushing;
+    if (paused && !force || !persistentPending.length) return Promise.resolve();
+    const current = (async () => {
+      await ready;
+      while (persistentPending.length && (force || !paused)) {
+        const batch = persistentPending.splice(0, 250);
+        try {
+          await repository.saveAnalyticsBatch(batch.map(item => item.event));
+          lastPersistenceError = null;
+          for (const item of batch) item.resolve();
+        } catch (error) {
+          lastPersistentFailure = error;
+          persistentFailureCount += 1;
+          lastPersistenceError = typeof error?.code === "string" ? error.code : "STORAGE_ERROR";
+          for (const item of batch) item.reject(error);
+          throw error;
+        } finally {
+          persistentOutstanding -= batch.length;
+        }
+      }
+    })();
+    persistentFlushing = current;
+    current.finally(() => {
+      if (persistentFlushing === current) persistentFlushing = null;
+      if (persistentPending.length) schedulePersistentFlush();
+    }).catch(() => {});
+    return current;
+  }
+
+  async function flushPersistent(force = false) {
     await ready;
-    if (paused) return;
-    if (flushing) return flushing;
+    while (true) {
+      if (persistentFlushing) {
+        await persistentFlushing;
+        continue;
+      }
+      if (!persistentPending.length || paused && !force) return;
+      await startPersistentFlush(force);
+    }
+  }
+
+  async function flushJson(force = false) {
+    await ready;
+    if (paused && !force) return;
+    if (flushing) {
+      await flushing;
+      if (force && pending.length) return flushJson(true);
+      return;
+    }
     clearTimeout(timer);
     timer = null;
     flushing = (async () => {
       while (pending.length) {
         const batch = pending.splice(0, 500);
+        jsonInFlight = batch.length;
         try {
           await repository.saveAnalyticsBatch(batch);
           lastPersistenceError = null;
         } catch (error) {
           pending = batch.concat(pending);
-          boundPending();
           lastPersistenceError = typeof error?.code === "string" ? error.code : "STORAGE_ERROR";
           throw error;
+        } finally {
+          jsonInFlight = 0;
+          boundPending();
         }
       }
     })();
-    try { await flushing; } finally { flushing = null; if (pending.length) scheduleFlush(); }
+    try { await flushing; }
+    finally {
+      flushing = null;
+      if (pending.length && !closed && !paused) scheduleFlush();
+    }
+  }
+
+  async function flush(force = false) {
+    if (repository.persistent === true) return flushPersistent(force);
+    return flushJson(force);
+  }
+
+  function record(event) {
+    if (!repository.saveAnalyticsBatch || closed) return;
+    if (repository.persistent === true) {
+      if (persistentOutstanding >= MAX_PENDING_EVENTS) {
+        droppedPendingEvents += 1;
+        lastPersistenceError = "ANALYTICS_QUEUE_FULL";
+        const error = new Error("Analytics persistence queue is full.");
+        error.code = "ANALYTICS_QUEUE_FULL";
+        return Promise.reject(error);
+      }
+      persistentOutstanding += 1;
+      const promise = new Promise((resolve, reject) => {
+        const item = { event, resolve, reject };
+        (paused ? persistentDeferred : persistentPending).push(item);
+      });
+      if (!paused) startPersistentFlush().catch(() => {});
+      return promise;
+    }
+    if (pending.length + deferred.length + jsonInFlight >= MAX_PENDING_EVENTS && paused) {
+      droppedPendingEvents += 1;
+      lastPersistenceError = "ANALYTICS_QUEUE_FULL";
+      return;
+    }
+    (paused ? deferred : pending).push(event);
+    boundPending();
+    if (pending.length >= 500) {
+      clearTimeout(timer);
+      timer = null;
+      flushJson().catch(() => scheduleFlush());
+    } else scheduleFlush();
   }
 
   async function snapshot() {
@@ -95,11 +194,35 @@ function createAdminAnalytics({ repository, geoService, encryptionKey, now = Dat
     return { ...current, availability: { ...current.availability, pendingDroppedEvents: droppedPendingEvents, persistenceError: lastPersistenceError } };
   }
 
-  async function withBarrier(operation) {
-    await flush();
+  function withBarrier(operation) {
+    if (closed) return Promise.reject(Object.assign(new Error("Analytics service is closed."), { code: "ANALYTICS_CLOSED" }));
+    if (activeBarrier) return Promise.reject(Object.assign(new Error("An analytics barrier is already active."), { code: "ANALYTICS_BARRIER_ACTIVE", status: 409 }));
     paused = true;
-    try { return await operation(); }
-    finally { paused = false; if (pending.length) scheduleFlush(); }
+    let release;
+    const barrierDone = new Promise(resolve => { release = resolve; });
+    activeBarrier = barrierDone;
+    const failuresAtStart = persistentFailureCount;
+    return (async () => {
+      try {
+        await flush(true);
+        if (persistentFailureCount > failuresAtStart) throw lastPersistentFailure;
+        return await operation();
+      } finally {
+        paused = false;
+        if (repository.persistent === true) {
+          persistentPending.push(...persistentDeferred);
+          persistentDeferred = [];
+        } else {
+          pending.push(...deferred);
+          deferred = [];
+          boundPending();
+        }
+        activeBarrier = null;
+        release();
+        if (repository.persistent === true) startPersistentFlush().catch(() => {});
+        else if (pending.length) scheduleFlush();
+      }
+    })();
   }
 
   async function legacyOverview() {
@@ -157,7 +280,20 @@ function createAdminAnalytics({ repository, geoService, encryptionKey, now = Dat
       closed = true;
       clearTimeout(timer);
       timer = null;
-      await flush();
+      if (activeBarrier) await activeBarrier;
+      try {
+        await flush(true);
+      } catch (error) {
+        if (repository.persistent === true && persistentPending.length) {
+          lastPersistentFailure = error;
+          lastPersistenceError = typeof error?.code === "string" ? error.code : "STORAGE_ERROR";
+          for (const item of persistentPending.splice(0)) {
+            persistentOutstanding -= 1;
+            item.reject(error);
+          }
+        }
+        throw error;
+      }
     }
   };
 }

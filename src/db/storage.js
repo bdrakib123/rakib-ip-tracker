@@ -32,6 +32,19 @@ async function assertPersistentMountAvailable(mountPath, mountInfoFile = "/proc/
 
 async function createStorageRepository(config) {
   if (!config || config.storageBackend !== "json-file") {
+    if (config?.vercelMode === true && config.storageBackend === "neon-postgres") {
+      if (typeof config.databaseUrl !== "string" || !config.databaseUrl) {
+        const error = new Error("DATABASE_URL is required for Vercel PostgreSQL storage.");
+        error.code = "DATABASE_URL_REQUIRED";
+        throw error;
+      }
+      const { neon } = require("@neondatabase/serverless");
+      const { createNeonRepository } = require("./neonRepository");
+      const repository = createNeonRepository({ sql: neon(config.databaseUrl) });
+      await repository.assertSchema();
+      await repository.ping();
+      return repository;
+    }
     const error = new Error("Unsupported storage backend.");
     error.code = "STORAGE_BACKEND_UNSUPPORTED";
     throw error;

@@ -50,6 +50,25 @@ test("admin session cookies are secure in production and sessions expire and rev
   assert.equal(auth.isAuthenticated(secondRequest), false);
 });
 
+test("persistent admin sessions store only token hashes and support revocation across auth instances", async () => {
+  const rows = new Map();
+  const sessionStore = {
+    async createAdminSession(hash, expiresAt) { rows.set(hash, expiresAt); },
+    async hasAdminSession(hash) { return rows.has(hash) && rows.get(hash) > new Date(1000); },
+    async revokeAdminSession(hash) { rows.delete(hash); }
+  };
+  const auth = createAdminAuth({ password: "persistent-unit-test-password", production: true, now: () => 1000, sessionStore });
+  const res = response();
+  await auth.setSession(res);
+  const token = decodeURIComponent(res.headers["Set-Cookie"].split(";")[0].split("=")[1]);
+  const req = request(res.headers["Set-Cookie"].split(";")[0]);
+  assert.equal(rows.has(token), false);
+  assert.equal([...rows.keys()][0].length, 64);
+  assert.equal(await createAdminAuth({ password: "persistent-unit-test-password", sessionStore }).isAuthenticated(req), true);
+  await auth.clearSession(req, response());
+  assert.equal(await createAdminAuth({ password: "persistent-unit-test-password", sessionStore }).isAuthenticated(req), false);
+});
+
 test("admin write origin validation rejects cross-origin and missing fetch metadata", () => {
   const req = {
     get(name) {

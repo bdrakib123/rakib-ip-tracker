@@ -1,7 +1,7 @@
 "use strict";
 
 const $ = id => document.getElementById(id);
-const state = { page: 1, pages: 1, total: 0, search: "", country: "", device: "", eventSource: null, timer: null, overviewFlight: false, historyFlight: false, activityFlight: false, refreshTimer: null };
+const state = { page: 1, pages: 1, total: 0, search: "", country: "", device: "", liveTimer: null, timer: null, overviewFlight: false, historyFlight: false, activityFlight: false, refreshTimer: null };
 
 function escapeHTML(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -287,22 +287,28 @@ function scheduleRefresh() {
 
 function startLive() {
   stopLive();
-  state.eventSource = new EventSource("/api/admin/live");
-  state.eventSource.addEventListener("open", () => {
-    $("live-state").innerHTML = "<i></i><b>Live updates connected</b>";
-    $("live-state").dataset.state = "available";
-  });
-  state.eventSource.addEventListener("visitor", scheduleRefresh);
-  state.eventSource.addEventListener("error", () => {
-    $("live-state").innerHTML = "<i></i><b>Reconnecting to live feed</b>";
-    $("live-state").dataset.state = "unavailable";
-  });
+  pollLive();
 }
 
 function stopLive() {
-  if (state.eventSource) state.eventSource.close();
-  state.eventSource = null;
+  clearTimeout(state.liveTimer);
+  state.liveTimer = null;
   clearTimeout(state.refreshTimer);
+}
+
+async function pollLive() {
+  try {
+    await apiPayload("/api/admin/live");
+    $("live-state").innerHTML = "<i></i><b>Live updates · polling</b>";
+    $("live-state").dataset.state = "available";
+    await Promise.all([refreshOverview(), loadHistory()]);
+  } catch (error) {
+    $("live-state").innerHTML = "<i></i><b>Live refresh unavailable</b>";
+    $("live-state").dataset.state = "unavailable";
+    if (error.message.includes("authentication")) return;
+  } finally {
+    if (!document.hidden && !$("admin-view").hidden) state.liveTimer = setTimeout(pollLive, 20_000);
+  }
 }
 
 async function refreshAll() {

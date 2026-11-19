@@ -13,19 +13,18 @@ function csvCell(value) {
   return `"${clean.replaceAll('"', '""')}"`;
 }
 
-function createApp({ config, repository, visitorService, geoService, analytics, logger = createLogger(), now = Date.now }) {
+function createApp({ config, repository, visitorService, geoService, analytics, logger = createLogger(), now = Date.now, waitUntil = null }) {
   const app = express();
-  const auth = createAdminAuth({ password: config.adminPassword, production: config.secureCookies ?? config.nodeEnv === "production", now });
-  const publicLimiter = createRateLimiter({ windowMs: 60_000, max: config.publicRateLimit, now });
-  const historyLimiter = createRateLimiter({ windowMs: 60_000, max: config.publicRateLimit * 2, now });
-  const loginLimiter = createRateLimiter({ windowMs: 15 * 60_000, max: config.loginRateLimit, now });
-  const adminLiveClients = new Set();
+  const auth = createAdminAuth({ password: config.adminPassword, production: config.secureCookies ?? config.nodeEnv === "production", now,
+    sessionStore: config.vercelMode ? repository : null });
+  const sharedLimit = config.vercelMode ? { store: repository, keySecret: config.encryptionKey } : {};
+  const publicLimiter = createRateLimiter({ windowMs: 60_000, max: config.publicRateLimit, now, bucketName: "public", ...sharedLimit });
+  const historyLimiter = createRateLimiter({ windowMs: 60_000, max: config.publicRateLimit * 2, now, bucketName: "history", ...sharedLimit });
+  const loginLimiter = createRateLimiter({ windowMs: 15 * 60_000, max: config.loginRateLimit, now, bucketName: "login", ...sharedLimit });
   const requestCounts = new Map();
 
   app.disable("x-powered-by");
-  app.locals.closeAdminStreams = () => {
-    for (const client of adminLiveClients) client.end();
-  };
+  app.locals.closeAdminStreams = () => {};
   app.set("trust proxy", config.trustProxyHops);
   app.use((req, res, next) => {
     const startedAt = process.hrtime.bigint();
@@ -33,7 +32,7 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("Referrer-Policy", "no-referrer");
     res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-    res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://*.tile.openstreetmap.org; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
+    res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://tile.openstreetmap.org https://*.tile.openstreetmap.org; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
     if (config.secureCookies ?? config.nodeEnv === "production") res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
     if (req.path.startsWith("/api/")) res.setHeader("Cache-Control", "no-store");
     const route = `${req.method} ${req.path.replace(/\/[a-f0-9-]{16,}(?=\/|$)/gi, "/:id")}`.slice(0, 180);
@@ -59,10 +58,18 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
         const routePath = req.route?.path ? `${req.baseUrl || ""}${req.route.path}` : (req.path === "/" ? "/" : "/[unmatched]");
         const eventTime = new Date().toISOString();
         const duration = Math.max(0, Math.min(600_000, Number(process.hrtime.bigint() - startedAt) / 1e6));
-        analytics.record({ type: "request", method: req.method, path: suspiciousPath || res.statusCode === 404 ? "/[redacted]" : routePath,
+        const tracked = analytics.record({ type: "request", method: req.method, path: suspiciousPath || res.statusCode === 404 ? "/[redacted]" : routePath,
           status: res.statusCode, duration, createdAt: eventTime, sessionId: trackRequest ? req.analyticsSessionId || null : null, securityType });
+        if (tracked && typeof tracked.then === "function") {
+          const task = tracked.catch(error => logger.error?.("analytics_persist_failed", { code: typeof error?.code === "string" ? error.code : "DATABASE_OPERATION_FAILED" }));
+          if (config.vercelMode && typeof waitUntil === "function") waitUntil(task);
+        }
         if (req.method === "GET" && req.path === "/") {
-          analytics.record({ type: "page", method: "GET", path: "/", duration: null, createdAt: eventTime, sessionId: req.analyticsSessionId || null });
+          const pageEvent = analytics.record({ type: "page", method: "GET", path: "/", duration: null, createdAt: eventTime, sessionId: req.analyticsSessionId || null });
+          if (pageEvent && typeof pageEvent.then === "function") {
+            const task = pageEvent.catch(error => logger.error?.("analytics_persist_failed", { code: typeof error?.code === "string" ? error.code : "DATABASE_OPERATION_FAILED" }));
+            if (config.vercelMode && typeof waitUntil === "function") waitUntil(task);
+          }
         }
       }
     });
@@ -83,7 +90,7 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
 
   const requireAdmin = auth.requireAdmin;
   const adminWriteOrigin = (req, res, next) => {
-    if (!isSameOrigin(req, { stagingHttps: config.stagingMode === true })) return res.status(403).json({ success: false, error: { code: "BAD_ORIGIN", message: "Request origin is not allowed." } });
+    if (!isSameOrigin(req, { stagingHttps: config.stagingMode === true || config.vercelMode === true })) return res.status(403).json({ success: false, error: { code: "BAD_ORIGIN", message: "Request origin is not allowed." } });
     next();
   };
   const aggregateTelemetry = async () => {
@@ -94,7 +101,12 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
     return { requests: [...requestCounts.values()].reduce((sum, row) => sum + row.count, 0), pageViews: 0 };
   };
 
-  app.get("/healthz", (_req, res) => res.json({ success: true, status: "ok" }));
+  app.get("/healthz", async (_req, res) => {
+    if (config.vercelMode) {
+      try { await repository.ping(); } catch { return res.status(503).json({ success: false, status: "unavailable" }); }
+    }
+    res.json({ success: true, status: "ok" });
+  });
   app.get("/", (_req, res) => res.sendFile(path.join(__dirname, "..", "public", "index.html")));
   const sendAdmin = (_req, res) => res.sendFile(path.join(__dirname, "..", "public", "admin.html"));
   app.get("/admin", sendAdmin);
@@ -159,28 +171,28 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
     } catch (error) { next(error); }
   });
 
-  app.get("/api/admin/auth/status", (req, res) => res.json({ success: true, data: { authenticated: auth.isAuthenticated(req) } }));
-  app.post("/api/admin/auth/login", adminWriteOrigin, (req, res) => {
+  app.get("/api/admin/auth/status", async (req, res, next) => {
+    try { res.json({ success: true, data: { authenticated: await auth.isAuthenticated(req) } }); } catch (error) { next(error); }
+  });
+  app.post("/api/admin/auth/login", adminWriteOrigin, async (req, res, next) => {
     const candidate = typeof req.body?.password === "string" ? req.body.password.slice(0, 256) : "";
     if (!auth.authenticate(candidate)) return res.status(401).json({ success: false, error: { code: "INVALID_CREDENTIALS", message: "Sign-in failed." } });
-    auth.setSession(res);
-    res.json({ success: true });
+    try { await auth.setSession(res); res.json({ success: true }); } catch (error) { next(error); }
   });
-  app.post("/api/live/login", adminWriteOrigin, (req, res) => {
+  app.post("/api/live/login", adminWriteOrigin, async (req, res, next) => {
     const candidate = typeof req.body?.password === "string" ? req.body.password.slice(0, 256) : "";
     if (!auth.authenticate(candidate)) return res.status(401).json({ success: false, error: "INVALID_PASSWORD" });
-    auth.setSession(res);
-    res.json({ success: true });
+    try { await auth.setSession(res); res.json({ success: true }); } catch (error) { next(error); }
   });
-  app.post("/api/admin/auth/logout", adminWriteOrigin, (req, res) => {
-    auth.clearSession(req, res);
-    res.json({ success: true });
+  app.post("/api/admin/auth/logout", adminWriteOrigin, async (req, res, next) => {
+    try { await auth.clearSession(req, res); res.json({ success: true }); } catch (error) { next(error); }
   });
-  app.post("/api/live/logout", adminWriteOrigin, (req, res) => {
-    auth.clearSession(req, res);
-    res.json({ success: true });
+  app.post("/api/live/logout", adminWriteOrigin, async (req, res, next) => {
+    try { await auth.clearSession(req, res); res.json({ success: true }); } catch (error) { next(error); }
   });
-  app.get("/api/live/status", (req, res) => res.json({ success: true, authenticated: auth.isAuthenticated(req) }));
+  app.get("/api/live/status", async (req, res, next) => {
+    try { res.json({ success: true, authenticated: await auth.isAuthenticated(req) }); } catch (error) { next(error); }
+  });
 
   app.get("/api/admin/history", requireAdmin, async (req, res, next) => {
     try {
@@ -222,14 +234,16 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
         availability: result.availability });
     } catch (error) { next(error); }
   });
-  app.post("/api/analytics/pageview", (req, res) => {
+  app.post("/api/analytics/pageview", async (req, res, next) => {
     const candidate = typeof req.body?.path === "string" ? req.body.path.slice(0, 200) : "";
     if (!candidate.startsWith("/") || candidate.startsWith("//") || /[\r\n]/.test(candidate)) return res.status(400).json({ success: false, error: { code: "INVALID_PATH", message: "A local page path is required." } });
     const page = candidate.split(/[?#]/, 1)[0].replace(/\/{2,}/g, "/").slice(0, 180) || "/";
     const rawDuration = req.body?.duration === undefined ? null : Number(req.body.duration);
     if (rawDuration !== null && (!Number.isFinite(rawDuration) || rawDuration < 0 || rawDuration > 3_600_000)) return res.status(400).json({ success: false, error: "Invalid page duration." });
-    analytics.record?.({ type: "page", method: "POST", path: page, duration: rawDuration === null ? null : Math.round(rawDuration), createdAt: new Date().toISOString(), sessionId: req.analyticsSessionId || null });
-    res.json({ success: true });
+    try {
+      await analytics.record?.({ type: "page", method: "POST", path: page, duration: rawDuration === null ? null : Math.round(rawDuration), createdAt: new Date().toISOString(), sessionId: req.analyticsSessionId || null });
+      res.json({ success: true });
+    } catch (error) { next(error); }
   });
   app.get("/api/analytics/pages", requireAdmin, async (_req, res, next) => {
     try { const result = await analytics.pages(); res.json({ success: true, pages: result.pages, data: result.pages,
@@ -269,7 +283,7 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
       node: process.version,
       telemetry,
       storage,
-      database: "not_configured",
+      database: config.vercelMode ? storage : "not_configured",
       observedAt: new Date(now()).toISOString()
     } });
   });
@@ -318,50 +332,9 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
     } catch (error) { next(error); }
   });
 
-  const adminEventStream = (req, res, legacyFormat = false) => {
-    if (adminLiveClients.size >= 100) return res.status(503).end();
-    res.status(200);
-    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
-    res.setHeader("Connection", "keep-alive");
-    res.flushHeaders?.();
-    res.write(legacyFormat
-      ? `data: ${JSON.stringify({ type: "connected", timestamp: now() })}\n\n`
-      : `event: ready\ndata: ${JSON.stringify({ connected: true })}\n\n`);
-    let closed = false;
-    const send = payload => {
-      if (closed) return;
-      if (!auth.isAuthenticated(req)) {
-        res.end();
-        return;
-      }
-      res.write(legacyFormat
-        ? `data: ${JSON.stringify({ type: "visitor", ...payload })}\n\n`
-        : `event: visitor\ndata: ${JSON.stringify(payload)}\n\n`);
-    };
-    const unsubscribe = visitorService.subscribe(send);
-    adminLiveClients.add(res);
-    const cleanup = () => {
-      if (closed) return;
-      closed = true;
-      clearInterval(heartbeat);
-      unsubscribe();
-      adminLiveClients.delete(res);
-    };
-    const heartbeat = setInterval(() => {
-      if (!auth.isAuthenticated(req)) {
-        cleanup();
-        res.end();
-        return;
-      }
-      res.write(": heartbeat\n\n");
-    }, 25_000);
-    heartbeat.unref?.();
-    req.on("close", cleanup);
-    res.on("close", cleanup);
-  };
-  app.get("/api/admin/live", requireAdmin, (req, res) => adminEventStream(req, res, false));
-  app.get("/api/live", requireAdmin, (req, res) => adminEventStream(req, res, true));
+  const livePoll = (_req, res) => res.json({ success: true, data: { mode: "polling", intervalMs: 20_000, observedAt: new Date(now()).toISOString() } });
+  app.get("/api/admin/live", requireAdmin, livePoll);
+  app.get("/api/live", requireAdmin, livePoll);
 
   app.use((req, res) => res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "Endpoint not found." } }));
   app.use((error, req, res, _next) => {

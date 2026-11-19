@@ -13,6 +13,7 @@ const password = "rebuild-test-password-strong";
 
 function makeRepository() {
   const records = [];
+  const adminSessions = new Map();
   let savedAnalytics = { version: 1, collectedFrom: new Date().toISOString(), requests: [], pages: [], security: [], sessions: [] };
   return {
     records,
@@ -25,6 +26,10 @@ function makeRepository() {
     async clearAll() { const count = records.length; records.splice(0); return count; },
     async clearCreatedSince(cutoff) { const before = records.length; for (let i = records.length - 1; i >= 0; i--) if (new Date(records[i].createdAt) >= cutoff) records.splice(i, 1); return before - records.length; },
     async distinctIpCount() { return new Set(records.map(record => record.ipHash).filter(Boolean)).size; },
+    async createAdminSession(tokenHash, expiresAt) { adminSessions.set(tokenHash, expiresAt); },
+    async hasAdminSession(tokenHash) { const expiresAt = adminSessions.get(tokenHash); return Boolean(expiresAt && expiresAt > new Date()); },
+    async revokeAdminSession(tokenHash) { adminSessions.delete(tokenHash); },
+    async consumeRateLimit(_key, _windowMs, max) { return { allowed: true, remaining: max - 1, resetAt: new Date(Date.now() + 60_000) }; },
     async distinctIpCountSince() { return this.distinctIpCount(); },
     async returningVisitorCountSince() { return records.filter(record => record.analytics?.returningVisitor).length; },
     async getAnalytics() { return structuredClone(savedAnalytics); },
@@ -68,7 +73,7 @@ function makeRepository() {
   };
 }
 
-async function withServer(fn, { rateLimit = 30, trustProxyHops = 0, stagingPassword = null } = {}) {
+async function withServer(fn, { rateLimit = 30, trustProxyHops = 0, stagingPassword = null, vercelMode = false } = {}) {
   const repository = makeRepository();
   const visitorService = createVisitorService({
     repository,
@@ -87,6 +92,7 @@ async function withServer(fn, { rateLimit = 30, trustProxyHops = 0, stagingPassw
   const geoService = { health: () => ({ provider: "mock", state: "error", lastCheckedAt: null, lastErrorCode: "network_error" }) };
   const loggedErrors = [];
   const config = { adminPassword: password, nodeEnv: "test", trustProxyHops, publicRateLimit: rateLimit, loginRateLimit: 5,
+    ...(vercelMode ? { vercelMode: true } : {}),
     ...(stagingPassword ? { stagingMode: true, stagingAccessPassword: stagingPassword, secureCookies: true } : {}) };
   const analytics = createAdminAnalytics({ repository, geoService, encryptionKey: key, flushDelayMs: 60_000 });
   const app = createApp({ config, repository, visitorService, geoService, analytics, logger: { error(...args) { loggedErrors.push(args); } } });
@@ -446,44 +452,39 @@ test("security headers are sent and health endpoint reveals no internal state", 
   });
 });
 
-test("authenticated SSE streams only on an admin session and cleans up on disconnect", async () => {
-  await withServer(async ({ origin, activeSSEListeners }) => {
+test("admin server health reports the configured Neon repository state", async () => {
+  await withServer(async ({ origin }) => {
+    const secureOrigin = `https://${new URL(origin).host}`;
     const login = await fetch(`${origin}/api/admin/auth/login`, {
-      method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify({ password })
+      method: "POST", headers: { Origin: secureOrigin, "Content-Type": "application/json" }, body: JSON.stringify({ password })
     });
+    assert.equal(login.status, 200);
     const cookie = login.headers.get("set-cookie").split(";")[0];
-    const response = await fetch(`${origin}/api/admin/live`, { headers: { Cookie: cookie } });
+    const response = await fetch(`${origin}/api/admin/server/health`, { headers: { Cookie: cookie } });
+    const body = await response.json();
     assert.equal(response.status, 200);
-    assert.match(response.headers.get("content-type"), /text\/event-stream/);
-    assert.equal(activeSSEListeners(), 1);
-    const reader = response.body.getReader();
-    const chunk = await reader.read();
-    assert.match(new TextDecoder().decode(chunk.value), /event: ready/);
-    await reader.cancel();
-    await new Promise(resolve => setTimeout(resolve, 30));
-    assert.equal(activeSSEListeners(), 0);
-  });
+    assert.equal(body.data.storage, "available");
+    assert.equal(body.data.database, "available");
+  }, { vercelMode: true });
 });
 
-test("server shutdown hook closes admin SSE clients and unsubscribes listeners", async () => {
-  await withServer(async ({ origin, app, activeSSEListeners }) => {
+test("live refresh uses bounded authenticated polling rather than a long-lived SSE connection", async () => {
+  await withServer(async ({ origin }) => {
+    const unauthorized = await fetch(`${origin}/api/admin/live`);
+    assert.equal(unauthorized.status, 401);
     const login = await fetch(`${origin}/api/admin/auth/login`, {
       method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify({ password })
     });
     const cookie = login.headers.get("set-cookie").split(";")[0];
     const response = await fetch(`${origin}/api/admin/live`, { headers: { Cookie: cookie } });
     assert.equal(response.status, 200);
-    assert.equal(activeSSEListeners(), 1);
-    app.locals.closeAdminStreams();
-    const text = await response.text();
-    assert.match(text, /event: ready/);
-    assert.equal(activeSSEListeners(), 0);
+    assert.match(response.headers.get("content-type"), /application\/json/);
+    const body = await response.json();
+    assert.equal(body.data.mode, "polling");
+    assert.equal(body.data.intervalMs, 20_000);
     const legacyResponse = await fetch(`${origin}/api/live`, { headers: { Cookie: cookie } });
     assert.equal(legacyResponse.status, 200);
-    app.locals.closeAdminStreams();
-    const legacyText = await legacyResponse.text();
-    assert.match(legacyText, /"type":"connected"/);
-    assert.equal(activeSSEListeners(), 0);
+    assert.equal((await legacyResponse.json()).data.mode, "polling");
   });
 });
 

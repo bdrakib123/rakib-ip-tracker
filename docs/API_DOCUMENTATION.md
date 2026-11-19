@@ -1,6 +1,6 @@
 # API Documentation
 
-All API responses use `Cache-Control: no-store`. JSON bodies are limited to 16 KiB. V3 history, analytics, export, and SSE endpoints require an authenticated admin session. Temporary staging adds Basic Auth to every route except `GET /healthz`.
+All API responses use `Cache-Control: no-store`. JSON bodies are limited to 16 KiB. V3 history, analytics, export, and live-refresh endpoints require an authenticated admin session. Temporary Render staging adds Basic Auth to every route except `GET /healthz`.
 
 ## Public endpoints
 
@@ -50,7 +50,7 @@ These paths remain admin-only. Historical analytics from before storage format V
 | `GET /api/analytics/session/:sessionId` | Opaque 64-hex keyed session ID | `200 {success,session,pages,requests,visitors,historicalDataAvailable:false,collectedFrom}`; detail arrays are bounded | `400` malformed ID, `401`, `404` absent/expired session, generic `500` |
 | `GET /api/analytics/security` | None | `{success,count,data:[{type,method,path,createdAt,sessionId:null}],historicalDataAvailable,collectedFrom}` | `401`, generic `500` |
 
-Session cookies are random, HTTP-only, SameSite=Lax, and expire after 30 minutes. Only a keyed digest is stored as the session identifier; the bearer cookie value is never persisted. Session records contain no IP hash, user agent, or referrer. Request analytics contain a normalized route, method, status and duration. Page analytics retain local paths and only report average duration where a duration was actually provided. Security events are limited to unauthorized, forbidden, not-found, rate-limited, suspicious-path, and unusual-method categories; suspicious and unmatched paths are redacted. No passwords, credentials, tokens, raw IPs, or user agents are collected in telemetry.
+Admin session cookies are random, HTTP-only, SameSite=Strict, and expire after 30 minutes. They include the Secure attribute in production. Only a keyed digest is stored as the session identifier; the bearer cookie value is never persisted. Session records contain no IP hash, user agent, or referrer. Request analytics contain a normalized route, method, status and duration. Page analytics retain local paths and only report average duration where a duration was actually provided. Security events are limited to unauthorized, forbidden, not-found, rate-limited, suspicious-path, and unusual-method categories; suspicious and unmatched paths are redacted. No passwords, credentials, tokens, raw IPs, or user agents are collected in telemetry.
 
 ## Other protected operations
 
@@ -60,7 +60,11 @@ Session cookies are random, HTTP-only, SameSite=Lax, and expire after 30 minutes
 | `GET /api/admin/provider/health` | Last actual provider state | `401` |
 | `GET /api/admin/server/health`, `GET /api/server-health` | Process, telemetry and storage health | `401`, generic `500` |
 | `GET /api/admin/export?format=json|csv` | Detailed export; CSV neutralizes spreadsheet formulas | `401`, `400` invalid format, generic `500` |
-| `GET /api/admin/live`, `GET /api/live` | Admin-authenticated SSE | `401`, `503` at client cap |
+| `GET /api/admin/live`, `GET /api/live` | Admin-authenticated bounded polling metadata: `{success:true,data:{mode:"polling",intervalMs:20000,observedAt}}` | `401`, generic `500` if shared session storage is unavailable |
 | `POST /api/admin/clear-data` | `{type:"24h"|"7d"|"history"}`; origin checked | `400` invalid type, `401`, `403` bad origin, generic `500` |
 
 Generic server errors use `{success:false,error:{code,message}}` and do not disclose paths or storage contents. Legacy-compatible analytics intentionally omit legacy IP hashes, user agents, referrers, raw session IDs, security details, and historical data unavailable in V3.
+
+## Vercel-specific behavior
+
+Vercel preserves the route shapes and authorization boundaries above. The live endpoints use the polling contract listed above in all deployment modes, including Render and Vercel; they do not expose SSE. The browser polls while the admin view is visible. `GET /healthz` checks the Neon database in Vercel mode and returns only healthy/unavailable status; Render's health behavior remains unchanged. Public static HTML/CSS/JS are delivered from `public/` by Vercel's CDN.

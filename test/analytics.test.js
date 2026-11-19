@@ -19,6 +19,22 @@ function request({ path: route = "/", status = 200, createdAt = new Date().toISO
   return { type: "request", method: "GET", path: route, status, duration: 12, createdAt, sessionId };
 }
 
+function persistentAnalyticsRepository(saveAnalyticsBatch) {
+  return {
+    persistent: true,
+    getAnalytics: async () => ({ collectedFrom: new Date().toISOString(), requests: [], pages: [], security: [], sessions: [] }),
+    saveAnalyticsBatch,
+    analyticsSnapshot: async () => ({ availability: {}, requestEvents: [], securityEvents: [], sessions: [], pageRows: [] })
+  };
+}
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
+
 test("analytics are persisted atomically and survive repository restart", async t => {
   const fixture = await openFixture();
   t.after(async () => fs.rm(fixture.directory, { recursive: true, force: true }));
@@ -47,6 +63,35 @@ test("analytics are persisted atomically and survive repository restart", async 
   assert.equal(detail.session.userAgent, null);
   assert.equal(detail.session.ipHash, null);
   await reopened.close();
+});
+
+test("JSON analytics use newest-first ordering with reverse insertion order for equal timestamps", async t => {
+  const fixture = await openFixture();
+  t.after(async () => { await fixture.repository.close(); await fs.rm(fixture.directory, { recursive: true, force: true }); });
+  const sessionId = "e".repeat(64);
+  const base = Date.now() - 5_000;
+  const at = offset => new Date(base + offset).toISOString();
+  await fixture.repository.saveAnalyticsBatch([
+    request({ path: "/request-tie-old", createdAt: at(0), sessionId }),
+    request({ path: "/request-latest", createdAt: at(2000), sessionId }),
+    request({ path: "/request-middle", createdAt: at(1000), sessionId }),
+    request({ path: "/request-tie-new", createdAt: at(0), sessionId }),
+    request({ path: "/security-tie-old", status: 401, createdAt: at(0), sessionId }),
+    request({ path: "/security-latest", status: 403, createdAt: at(2000), sessionId }),
+    request({ path: "/security-tie-new", status: 429, createdAt: at(0), sessionId }),
+    { type: "page", method: "POST", path: "/page-tie-old", duration: 2, createdAt: at(0), sessionId },
+    { type: "page", method: "POST", path: "/page-latest", duration: 2, createdAt: at(2000), sessionId },
+    { type: "page", method: "POST", path: "/page-tie-new", duration: 2, createdAt: at(0), sessionId }
+  ]);
+  const raw = await fixture.repository.getAnalytics();
+  const snapshot = await fixture.repository.analyticsSnapshot();
+  const detail = await fixture.repository.sessionAnalyticsDetail(sessionId);
+  assert.deepEqual(raw.requests.slice(0, 4).map(event => event.path), ["/security-latest", "/request-latest", "/request-middle", "/security-tie-new"]);
+  assert.deepEqual(snapshot.requestEvents.slice(0, 4).map(event => event.path), ["/security-latest", "/request-latest", "/request-middle", "/security-tie-new"]);
+  assert.deepEqual(raw.security.map(event => event.path), ["/security-latest", "/security-tie-new", "/security-tie-old"]);
+  assert.deepEqual(raw.pages.map(event => event.path), ["/page-latest", "/page-tie-new", "/page-tie-old"]);
+  assert.deepEqual(detail.pages.map(event => event.path), ["/page-latest", "/page-tie-new", "/page-tie-old"]);
+  assert.deepEqual(detail.requests.slice(0, 4).map(event => event.path), ["/security-latest", "/request-latest", "/request-middle", "/security-tie-new"]);
 });
 
 test("graceful analytics close flushes queued events before repository shutdown", async t => {
@@ -80,6 +125,133 @@ test("simultaneous visitor and analytics mutations are serialized without lost r
   assert.equal((await fixture.repository.history({ limit: 50 })).total, 12);
   assert.equal((await fixture.repository.analyticsSnapshot()).runtime.totalRequests, 12);
   await fixture.repository.close();
+});
+
+test("persistent barrier waits for a write started before the barrier", async () => {
+  const started = deferred();
+  const finish = deferred();
+  const repository = persistentAnalyticsRepository(async () => { started.resolve(); await finish.promise; });
+  const analytics = createAdminAnalytics({ repository, geoService: { health() {} }, encryptionKey: "0123456789abcdef".repeat(4) });
+  const write = analytics.record(request({ path: "/before-barrier" }));
+  await started.promise;
+  let operationStarted = false;
+  const barrier = analytics.withBarrier(async () => { operationStarted = true; });
+  await Promise.resolve();
+  assert.equal(operationStarted, false);
+  finish.resolve();
+  await Promise.all([write, barrier]);
+  assert.equal(operationStarted, true);
+  await analytics.close();
+});
+
+test("persistent writes received during a barrier are saved after the destructive operation", async () => {
+  const writeStarted = deferred();
+  const writeFinish = deferred();
+  const operationStarted = deferred();
+  const operationFinish = deferred();
+  const batches = [];
+  const repository = persistentAnalyticsRepository(async events => {
+    batches.push(events.map(event => event.path));
+    if (events.some(event => event.path === "/barrier-prior")) { writeStarted.resolve(); await writeFinish.promise; }
+  });
+  const analytics = createAdminAnalytics({ repository, geoService: { health() {} }, encryptionKey: "0123456789abcdef".repeat(4) });
+  const prior = analytics.record(request({ path: "/barrier-prior" }));
+  await writeStarted.promise;
+  const barrier = analytics.withBarrier(async () => { operationStarted.resolve(); await operationFinish.promise; });
+  writeFinish.resolve();
+  await operationStarted.promise;
+  const during = analytics.record(request({ path: "/barrier-during" }));
+  assert.equal(batches.some(batch => batch.includes("/barrier-during")), false);
+  operationFinish.resolve();
+  await Promise.all([prior, barrier, during]);
+  assert.deepEqual(batches.flat(), ["/barrier-prior", "/barrier-during"]);
+  await analytics.close();
+});
+
+test("JSON analytics defer barrier-time events until the protected operation finishes", async t => {
+  const fixture = await openFixture();
+  t.after(async () => { await fixture.repository.close(); await fs.rm(fixture.directory, { recursive: true, force: true }); });
+  const analytics = createAdminAnalytics({ repository: fixture.repository, geoService: { health() {} }, encryptionKey: "0123456789abcdef".repeat(4), flushDelayMs: 60_000 });
+  analytics.record(request({ path: "/json-before" }));
+  await analytics.withBarrier(async () => {
+    analytics.record(request({ path: "/json-during" }));
+    const viewDuring = await fixture.repository.analyticsSnapshot();
+    assert.deepEqual(viewDuring.requestEvents.map(event => event.path), ["/json-before"]);
+  });
+  await analytics.close();
+  const after = await fixture.repository.analyticsSnapshot();
+  assert.deepEqual(after.requestEvents.map(event => event.path), ["/json-during", "/json-before"]);
+});
+
+test("persistent write failure aborts barrier synchronization and remains observable", async () => {
+  const failure = Object.assign(new Error("synthetic write failure"), { code: "SYNTHETIC_WRITE_FAILED" });
+  const repository = persistentAnalyticsRepository(async () => { throw failure; });
+  const analytics = createAdminAnalytics({ repository, geoService: { health() {} }, encryptionKey: "0123456789abcdef".repeat(4) });
+  const write = analytics.record(request({ path: "/failed-before-barrier" }));
+  const writeAssertion = assert.rejects(write, error => error === failure);
+  let operationStarted = false;
+  await assert.rejects(analytics.withBarrier(async () => { operationStarted = true; }), error => error === failure);
+  await writeAssertion;
+  assert.equal(operationStarted, false);
+  const snapshot = await analytics.snapshot();
+  assert.equal(snapshot.availability.persistenceError, "SYNTHETIC_WRITE_FAILED");
+  await analytics.close().catch(() => {});
+});
+
+test("failed destructive operation releases the barrier and flushes deferred writes", async () => {
+  const batches = [];
+  const repository = persistentAnalyticsRepository(async events => { batches.push(events.map(event => event.path)); });
+  const analytics = createAdminAnalytics({ repository, geoService: { health() {} }, encryptionKey: "0123456789abcdef".repeat(4) });
+  const failure = new Error("synthetic destructive failure");
+  let during;
+  await assert.rejects(analytics.withBarrier(async () => {
+    during = analytics.record(request({ path: "/after-failed-operation" }));
+    throw failure;
+  }), error => error === failure);
+  await during;
+  assert.deepEqual(batches.flat(), ["/after-failed-operation"]);
+  await analytics.withBarrier(async () => "barrier-released");
+  await analytics.close();
+});
+
+test("concurrent persistent writes are serialized and bounded by the shared queue", async () => {
+  let active = 0;
+  let maximumActive = 0;
+  const stored = [];
+  const repository = persistentAnalyticsRepository(async events => {
+    active += 1;
+    maximumActive = Math.max(maximumActive, active);
+    await new Promise(resolve => setImmediate(resolve));
+    stored.push(...events.map(event => event.path));
+    active -= 1;
+  });
+  const analytics = createAdminAnalytics({ repository, geoService: { health() {} }, encryptionKey: "0123456789abcdef".repeat(4) });
+  await Promise.all(Array.from({ length: 20 }, (_, index) => analytics.record(request({ path: `/concurrent-${index}` }))));
+  assert.equal(maximumActive, 1);
+  assert.equal(stored.length, 20);
+  await analytics.close();
+});
+
+test("close waits for persistent writes already outstanding", async () => {
+  const started = deferred();
+  const finish = deferred();
+  const stored = [];
+  const repository = persistentAnalyticsRepository(async events => {
+    stored.push(...events.map(event => event.path));
+    if (events.some(event => event.path === "/close-waits")) { started.resolve(); await finish.promise; }
+  });
+  const analytics = createAdminAnalytics({ repository, geoService: { health() {} }, encryptionKey: "0123456789abcdef".repeat(4) });
+  const write = analytics.record(request({ path: "/close-waits" }));
+  await started.promise;
+  const queued = analytics.record(request({ path: "/close-queued" }));
+  let closed = false;
+  const closing = analytics.close().then(() => { closed = true; });
+  await Promise.resolve();
+  assert.equal(closed, false);
+  finish.resolve();
+  await Promise.all([write, queued, closing]);
+  assert.equal(closed, true);
+  assert.deepEqual(stored, ["/close-waits", "/close-queued"]);
 });
 
 test("analytics retention removes expired events and caps stored request records", async t => {

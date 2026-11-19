@@ -6,23 +6,22 @@ All application tests below used synthetic fixtures or isolated temporary direct
 
 | Command | Result |
 |---|---|
-| `npm ci` | PASS — 76 packages added, 77 audited, 0 vulnerabilities |
-| `npm ci --omit=dev` | PASS — 73 packages added, 74 audited, 0 vulnerabilities |
+| `npm ci` | PASS — 102 packages added, 103 audited, 0 vulnerabilities |
 | `npm run check` | PASS |
-| `npm test` | PASS — **90 passed, 0 failed** |
+| `npm test` | PASS — **123 passed, 0 failed** |
 | `node --check` across `src/`, `scripts/`, `test/`, `public/`, and `playwright.config.js` | PASS |
-| `npm ls --omit=dev --depth=0` | PASS — `dotenv`, `express`, `ua-parser-js` only |
+| `npm ls --omit=dev --depth=0` | PASS — `@neondatabase/serverless`, `@vercel/functions`, `dotenv`, `express`, `ua-parser-js` |
 | `npm audit --omit=dev` | PASS — 0 vulnerabilities |
 | `git diff --check` | PASS |
 | CSS/HTML responsive source checks | PASS as part of the suite; not a real browser render |
 
-`npm ci --omit=dev` leaves browser tooling out of the installed runtime, as expected. The Playwright config and browser tests are preserved, but a real V3 browser suite was not run in this environment. Historical V2 screenshots in the working copy are not represented as V3 verification and should not be included in the V3 source release.
+The Playwright config and browser tests are preserved, but a real V3 browser suite was not run in this verification. Historical V2 screenshots in the working copy are not represented as V3 verification and should not be included in the V3 source release.
 
 ## Coverage
 
-The suite exercises geo-provider success/failure/timeout/retry/cache/coalescing and independent device detection; public/admin serializers and privacy; authentication, logout, origin validation, rate limits, export formula protection and SSE lifecycle; proxy-spoof handling; versioned JSON storage, lock ownership, atomic writes, corruption rejection and restart; backup checksum, retention and isolated restore; staging access gate; responsive source safeguards; legacy API aliases; persistent bounded telemetry restart/retention/corruption behavior; privacy-reduced session/security analytics contracts and admin authorization; authenticated retention actions; and V3/Render root structure invariants.
+The suite exercises geo-provider success/failure/timeout/retry/cache/coalescing and independent device detection; public/admin serializers and privacy; authentication, logout, origin validation, rate limits, export formula protection and authenticated live polling; proxy-spoof handling; versioned JSON storage, lock ownership, atomic writes, corruption rejection and restart; backup checksum, retention and isolated restore; staging access gate; responsive source safeguards; legacy API aliases; persistent bounded telemetry restart/retention/corruption behavior; privacy-reduced session/security analytics contracts and admin authorization; authenticated retention actions; and V3/Render root structure invariants. Vercel bootstrap, Neon repository, and migration tests use mocks; they do not verify a real Neon database, Vercel Preview, production proxy topology, provider backup/PITR, or a deployed restore.
 
-Latest complete local security/data-integrity audit run: **90 passed, 0 failed** (`npm test`). `npm run check`, `npm ls --omit=dev --depth=0`, `npm audit --omit=dev` (0 vulnerabilities), and `git diff --check` also passed. Analytics, migration, failure-injection, and backup/restore tests use synthetic data in isolated temporary directories. The browser command was attempted but did not start: `playwright: not found`; no browser rendering or console inspection is claimed. In a supported Linux CI/development environment with outbound access to ipwho.is and OpenStreetMap tiles, install development dependencies and Firefox, then run `npm ci`, `npx playwright install --with-deps firefox`, and `npm run test:browser` from the repository root. The browser harness uses an in-memory repository and a safe public test IP; it does not use production data.
+Latest local automated run: **123 passed, 0 failed** (`npm test`). These are local unit/API tests with synthetic data and isolated temporary storage. After `npm ci`, `npm run check`, `npm ls --omit=dev --depth=0`, `npm audit --omit=dev` (0 vulnerabilities), and `git diff --check` also passed. No browser suite was run in this verification, so no browser rendering or console inspection is claimed. In a supported Linux CI/development environment with outbound access to ipwho.is and OpenStreetMap tiles, install Firefox, then run `npx playwright install --with-deps firefox` and `npm run test:browser` from the repository root. The browser harness uses an in-memory repository and a safe public test IP; it does not use production data.
 
 This audit found and repaired implementation gaps: expired analytics were only pruned on writes; admin UI code unwrapped top-level session/security responses as if nested under `data`; malformed JSON could fail before consuming route rate limits; and `/api/track` no longer matched its legacy 200 `{success,visitor}` contract. Retention now prunes atomically on startup and analytics reads; the dashboard consumes actual response shapes and displays retained-window, active-session, and 24-hour security counts; rate-limit checks run before JSON parsing; and GET/POST `/api/track` restore the old response contract. Regression tests cover these findings.
 
@@ -41,4 +40,4 @@ The 64 MiB + 1 synthetic fixture failed closed with `STORAGE_FILE_INVALID`. RSS 
 
 ## Not verified
 
-No real browser render, Render service/disk, proxy topology, production environment, MongoDB, independent backup destination, or deployed health check was accessed. No live restore was performed. The lack of hosting evidence keeps production NO-GO.
+No real Neon database, Vercel Preview, Render service/disk, production proxy topology, production environment, independent backup/PITR destination, or deployed health check was accessed. No live restore was performed. Mock tests do not verify Neon transactions or Vercel runtime behavior. Production remains NO-GO.
