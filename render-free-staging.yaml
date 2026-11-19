@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: rakib-ip-tracker-free-staging
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    numInstances: 1
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.1
+      - key: NODE_ENV
+        value: production
+      - key: STORAGE_BACKEND
+        value: json-file
+      - key: STAGING_MODE
+        value: "true"
+      - key: STAGING_EPHEMERAL_STORAGE
+        value: "true"
+      - key: STAGING_STORAGE_DIR
+        value: /tmp/rakib-ip-tracker-staging
+      - key: TRUST_PROXY_HOPS
+        value: "0"
+      - key: GEO_PROVIDER
+        value: ipwho.is
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: IP_ENCRYPTION_KEY
+        sync: false
+      - key: STAGING_ACCESS_PASSWORD
+        sync: false

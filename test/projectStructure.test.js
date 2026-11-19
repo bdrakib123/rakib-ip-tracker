@@ -37,6 +37,31 @@ test("Render blueprint points at the root JSON app with persistent single-instan
   assert.match(blueprint, /STORAGE_FILE/);
 });
 
+test("separate Free staging blueprint explicitly uses guarded ephemeral storage without changing production blueprint", () => {
+  const productionBlueprint = fs.readFileSync(path.join(root, "render.yaml"), "utf8");
+  const stagingBlueprint = fs.readFileSync(path.join(root, "render-free-staging.yaml"), "utf8");
+
+  assert.match(stagingBlueprint, /name: rakib-ip-tracker-free-staging/);
+  assert.match(stagingBlueprint, /plan: free/);
+  assert.match(stagingBlueprint, /buildCommand: npm ci --omit=dev/);
+  assert.match(stagingBlueprint, /startCommand: npm start/);
+  assert.match(stagingBlueprint, /numInstances: 1/);
+  assert.match(stagingBlueprint, /healthCheckPath: \/healthz/);
+  assert.match(stagingBlueprint, /key: STAGING_MODE\n\s+value: "true"/);
+  assert.match(stagingBlueprint, /key: STAGING_EPHEMERAL_STORAGE\n\s+value: "true"/);
+  assert.match(stagingBlueprint, /key: STAGING_STORAGE_DIR\n\s+value: \/tmp\/rakib-ip-tracker-staging/);
+  assert.match(stagingBlueprint, /key: TRUST_PROXY_HOPS\n\s+value: "0"/);
+  for (const secretName of ["ADMIN_PASSWORD", "IP_ENCRYPTION_KEY", "STAGING_ACCESS_PASSWORD"]) {
+    assert.match(stagingBlueprint, new RegExp(`key: ${secretName}\\n\\s+sync: false`));
+  }
+  assert.doesNotMatch(stagingBlueprint, /STORAGE_MOUNT_PATH|STORAGE_FILE|BACKUP_DIR|MONGODB_URI|disk:/);
+
+  assert.match(productionBlueprint, /mountPath: \/var\/data/);
+  assert.match(productionBlueprint, /STORAGE_MOUNT_PATH/);
+  assert.match(productionBlueprint, /BACKUP_DIR/);
+  assert.doesNotMatch(productionBlueprint, /STAGING_MODE/);
+});
+
 test("admin telemetry UI consumes the top-level analytics contracts and displays their counts", () => {
   const admin = fs.readFileSync(path.join(root, "public", "admin.js"), "utf8");
   const html = fs.readFileSync(path.join(root, "public", "admin.html"), "utf8");

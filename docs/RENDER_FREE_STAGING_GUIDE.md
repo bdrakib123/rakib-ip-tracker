@@ -4,6 +4,8 @@
 
 ## V3 service settings to verify
 
+The isolated Blueprint is `render-free-staging.yaml`. When creating a new Blueprint in Render, set **Blueprint Path** to `render-free-staging.yaml`; do not select or sync the production `render.yaml`. Render supports custom Blueprint paths. Review the proposed resource name before approving so it creates only `rakib-ip-tracker-free-staging` as a new service.
+
 | Render setting | Value |
 |---|---|
 | Service name | `rakib-ip-tracker-free-staging` |
@@ -16,7 +18,7 @@
 | Node version | `20.18.1` minimum per `package.json`; configure `NODE_VERSION=20.18.1` if supported in the dashboard |
 | Persistent disk | **Do not attach one** |
 
-These settings match the V3 root package and routes; no Render dashboard was accessed and the service does not exist yet. Previously recorded plan limits require owner verification against current Render documentation before creation.
+These settings match the V3 root package and routes. The Blueprint explicitly sets `plan: free`, one instance, and does not declare a disk. No Render dashboard was accessed and the service does not exist yet. Render documents Free web services as using ephemeral filesystems and not supporting persistent disks; changes to the local filesystem can be lost during restart, redeploy, or spin-down. Confirm current plan availability and the proposed Blueprint diff in the owner dashboard before creation.
 
 ## Explicit temporary-storage mode
 
@@ -46,13 +48,13 @@ Do **not** configure `STORAGE_MOUNT_PATH`, `STORAGE_FILE` (unless it exactly mat
 
 ## Owner dashboard procedure
 
-1. Create a **new Web Service** from the reviewed GitHub repository and selected branch. Confirm repository ownership and branch manually. Do not use or sync the existing production `render.yaml`; it describes the persistent-disk production-intended service.
-2. Set the service name and settings from the table above. Leave Root Directory blank so Render uses the repository root. Configure one instance and select Free. Do not attach a disk, autoscaler, worker, or production domain.
-3. Add non-secret variables using the exact staging values/formats above. Let Render provide `PORT`.
-4. Generate three distinct staging-only secrets using an owner-approved secret manager or local secure generator: `ADMIN_PASSWORD` (minimum 16 characters), `IP_ENCRYPTION_KEY` (32 random bytes encoded as 64 hex characters), and `STAGING_ACCESS_PASSWORD` (32–256 printable ASCII characters). Enter them directly into Render’s protected environment-variable interface. Never put values in Git, command history, logs, screenshots, reports, or chat. Never copy production secrets.
-5. Review all environment-variable names without revealing values. Confirm both staging flags are `true`, `TRUST_PROXY_HOPS` is `0`, and no persistent storage path, MongoDB URI, production credentials, or production domain is configured.
+1. In Render, choose **New > Blueprint**, connect the reviewed repository and branch, and set Blueprint Path to `render-free-staging.yaml`. Do not select `render.yaml`, which remains the persistent-disk configuration.
+2. Before creating anything, review the Blueprint diff. It must propose only a new web service named `rakib-ip-tracker-free-staging`; cancel if it proposes changes to an existing service or any database/disk resource.
+3. Confirm root directory is the repository root (the Blueprint omits `rootDir`), build/start/health commands match the table, plan is Free, and instance count is one. The Blueprint has no disk declaration; do not attach a disk, autoscaler, worker, or production domain.
+4. Provide `ADMIN_PASSWORD`, `IP_ENCRYPTION_KEY`, and `STAGING_ACCESS_PASSWORD` only through Render’s protected secret prompt or environment-variable interface. Generate unique staging-only values: admin password at least 16 characters, encryption key 32 random bytes encoded as 64 hex characters, and access password 32–256 printable ASCII characters. Keep them distinct and never reuse production secrets. Never put values in Git, command history, logs, screenshots, reports, or chat.
+5. Confirm the non-secret variables from the Blueprint: both staging flags true, exact `/tmp/rakib-ip-tracker-staging` path, `STORAGE_BACKEND=json-file`, `TRUST_PROXY_HOPS=0`, and no `STORAGE_MOUNT_PATH`, `STORAGE_FILE`, `BACKUP_DIR`, MongoDB URI, production credentials, or production domain. Let Render supply `PORT`.
 6. Restrict who receives the staging URL. Free service inbound IP restrictions are not assumed available. Basic Auth is mandatory and the app refuses staging startup without its password. Do not treat this as suitable for public or real-visitor traffic.
-7. Before allowing the first start, review root, branch, commands, instance count, plan, and variable names a second time. Start only after owner approval. No deployment is performed by this guide.
+7. Start the new staging service only after owner review and approval. This guide does not create or deploy it.
 8. Verify unauthenticated `GET /healthz` returns healthy. Verify the staging URL prompts for Basic Auth; use username `rakib-staging` and the private staging access password. Run only synthetic tests. Confirm visitor creation, admin login, history/export access, and rate limits while authenticated.
 9. Verify unauthorized requests to `/`, static assets, visitor creation, admin APIs, and exports return 401. Do not put credentials in curl command arguments or shell history. Use a secure HTTP client credential prompt or browser prompt.
 10. Review sanitized logs for startup status and error codes only. Never copy environment output, Authorization headers, IPs, request bodies, or visitor data into evidence.
@@ -73,3 +75,5 @@ Do **not** configure `STORAGE_MOUNT_PATH`, `STORAGE_FILE` (unless it exactly mat
 ## Evidence and shutdown
 
 Record service name, plan, root, branch, Node version, build/start/health result, access-gate cases, and sanitized test statuses. Do not include secrets, visitor IPs, forwarding headers, or data screenshots. A passing Free smoke test is only **temporary runtime validation**; it does not equal paid persistent-disk staging validation and does not change production NO-GO status.
+
+Render references checked 2026-11-19: [Blueprint specification](https://render.com/docs/blueprint-spec) (Free plan, instance count, commands, environment variables, and omitted root directory), [Blueprint setup](https://render.com/docs/infrastructure-as-code) (custom Blueprint Path), and [Free service limitations](https://render.com/docs/free) (ephemeral filesystem, restarts/spin-down, and no persistent disks).
