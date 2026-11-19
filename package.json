@@ -1,10 +1,16 @@
 {
   "name": "rakib-ip-tracker",
-  "version": "2.0.0",
-  "description": "Cyber glass IP intelligence dashboard with MongoDB history",
-  "main": "server.js",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Privacy-conscious IP intelligence dashboard with encrypted JSON storage",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node src/server.js",
+    "backup": "node scripts/storageBackup.js",
+    "test:storage-load": "node scripts/storageLoadTest.js",
+    "test": "node --test test/*.test.js",
+    "check": "node --check src/config.js && node --check src/server.js && node --check src/app.js && node --check src/auth/adminAuth.js && node --check src/db/analyticsSchema.js && node --check src/db/jsonFileRepository.js && node --check src/db/storage.js && node --check src/db/storageBackup.js && node --check src/device/detectDevice.js && node --check src/geolocation/geoService.js && node --check src/geolocation/ipwhoProvider.js && node --check src/lib/ip.js && node --check src/lib/log.js && node --check src/lib/rateLimit.js && node --check src/lib/validateClientSignals.js && node --check src/services/adminAnalytics.js && node --check src/services/visitorService.js && node --check scripts/storageBackup.js && node --check scripts/storageLoadTest.js && node --check public/app.js && node --check public/admin.js",
+    "test:browser": "playwright test"
   },
   "engines": {
     "node": ">=20.18.1"
@@ -12,7 +18,9 @@
   "dependencies": {
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
-    "mongodb": "^6.20.0",
     "ua-parser-js": "^2.0.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1"
   }
 }

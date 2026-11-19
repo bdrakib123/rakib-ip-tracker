@@ -2,8 +2,33 @@ services:
   - type: web
     name: privacy-safe-ip-tracker
     runtime: node
-    buildCommand: npm install
+    buildCommand: npm ci --omit=dev
     startCommand: npm start
+    numInstances: 1
+    healthCheckPath: /healthz
+    disk:
+      name: rakib-ip-data
+      mountPath: /var/data
     envVars:
       - key: NODE_VERSION
-        value: 20
+        value: 20.18.1
+      - key: NODE_ENV
+        value: production
+      - key: STORAGE_BACKEND
+        value: json-file
+      - key: STORAGE_MOUNT_PATH
+        value: /var/data
+      - key: STORAGE_FILE
+        value: /var/data/visitors.json
+      - key: BACKUP_DIR
+        value: /var/data/backups
+      - key: BACKUP_RETENTION_COUNT
+        value: "14"
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: IP_ENCRYPTION_KEY
+        sync: false
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: GEO_PROVIDER
+        value: ipwho.is

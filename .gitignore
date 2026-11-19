@@ -1,4 +1,7 @@
 node_modules/
+data/
+test-results/
+playwright-report/
 .env
 npm-debug.log*
 .DS_Store
@@ -14,3 +17,9 @@ patch_*.py
 
 # Local clear-system backups
 *.clear_backup_*
+.env.*
+!.env.example
+!.env.staging.example
+
+# Preserved local test trace from pre-consolidation V2
+docs/verification/phase-d2-test-results/

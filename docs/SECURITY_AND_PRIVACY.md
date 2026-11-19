@@ -1,0 +1,11 @@
+# Security and Privacy
+
+- Full visitor IPs are encrypted with AES-256-GCM before storage; keyed HMAC hashes support repeat-visitor counting and exact admin search.
+- Public history returns masked IP and only country, country code, region, city, and timezone. ISP, organization, ASN, coordinates, full IP, User-Agent and device details require admin authorization.
+- Admin sessions use random, expiring, in-memory tokens in HTTP-only, SameSite=Strict cookies. Login and destructive writes validate origin; logout invalidates the session. Password verification uses constant-time digest comparison. Login and public route limits run before JSON parsing so malformed bodies consume the applicable rate-limit bucket.
+- Temporary staging adds a global Basic Auth gate, constant-time credential comparison, bounded failure tracking and a distinct secret; only `GET /healthz` bypasses it. Staging storage cannot use production mounts/backups.
+- Express trusts only the configured numeric proxy hop count. Render's current `TRUST_PROXY_HOPS=1` is unverified; do not approve until the real staging ingress behavior is tested.
+- CSV export neutralizes spreadsheet formulas. User-controlled HTML is escaped and inserted via safe text APIs.
+- Storage rejects plaintext IP fields and corrupt/unsupported formats, serializes writes, uses owner-only files, and refuses multiple processes. Backup checksums detect corruption; restore requires interactive confirmation, no active app lock, a validated candidate and a recovery copy.
+- Bounded request, page, session, and coarse security-event analytics are persisted with the versioned JSON store for up to 30 days, with explicit caps. Analytics use a keyed HMAC session identifier; raw cookie tokens, IPs, user agents, referrers, passwords, and credentials are excluded. Suspicious/unmatched paths are redacted. Historical events from the retired MongoDB analytics collections are unavailable and are not recreated. Counts and averages cover only retained capped events. No canvas/WebGL fingerprinting or security-provider classifications are collected.
+- Secrets must not enter source, logs, docs or public API output. Keep the encryption key separate from backups. Same-disk backups are not independent disaster recovery.
