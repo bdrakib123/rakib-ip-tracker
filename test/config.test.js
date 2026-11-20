@@ -120,3 +120,32 @@ test("Vercel production requires Neon storage, DATABASE_URL, and an explicitly r
   assert.throws(() => loadConfig({ ...env, STORAGE_FILE: "/tmp/visitors.json" }), /cannot use file storage/);
   assert.throws(() => loadConfig({ ...env, STAGING_MODE: "true", STAGING_EPHEMERAL_STORAGE: "true" }), /cannot use file storage/);
 });
+
+test("Render production can explicitly use Neon without file storage while JSON production still requires its mount", () => {
+  const env = {
+    ...validEnv(), NODE_ENV: "production", TRUST_PROXY_HOPS: "1",
+    STORAGE_BACKEND: "neon-postgres", DATABASE_URL: "postgresql://synthetic.invalid/render"
+  };
+  delete env.STORAGE_FILE;
+  const config = loadConfig(env);
+  assert.equal(config.vercelMode, false);
+  assert.equal(config.storageBackend, "neon-postgres");
+  assert.equal(config.databaseUrl, env.DATABASE_URL);
+  assert.equal(config.storageMountPath, null);
+  assert.equal(config.storageFile, null);
+
+  const missingUrl = { ...env }; delete missingUrl.DATABASE_URL;
+  assert.throws(() => loadConfig(missingUrl), /DATABASE_URL/);
+  assert.throws(() => loadConfig({ ...env, DATABASE_URL: "not-a-postgres-url" }), /PostgreSQL connection URL/);
+  assert.throws(() => loadConfig({ ...env, STORAGE_MOUNT_PATH: "/var/data" }), /cannot use JSON file/);
+  assert.throws(() => loadConfig({ ...env, BACKUP_DIR: "/var/data/backups" }), /cannot use JSON file/);
+  assert.throws(() => loadConfig({ ...env, STORAGE_FILE: "/var/data/visitors.json" }), /cannot use JSON file/);
+  assert.throws(() => loadConfig({ ...env, STORAGE_BACKEND: "unknown" }), /json-file or neon-postgres/);
+
+  const staging = {
+    ...env, TRUST_PROXY_HOPS: "0", STAGING_MODE: "true", STAGING_EPHEMERAL_STORAGE: "true",
+    STAGING_ACCESS_PASSWORD: "staging-only-password-that-is-long-enough-123",
+    STAGING_STORAGE_DIR: require("node:path").join(require("node:os").tmpdir(), "rakib-ip-config-staging")
+  };
+  assert.throws(() => loadConfig(staging), /requires STORAGE_BACKEND=json-file/);
+});

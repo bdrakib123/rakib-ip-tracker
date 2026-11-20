@@ -73,7 +73,7 @@ async function start({ env = process.env, logger = createLogger(), listenPort, l
 
 if (require.main === module) {
   start().catch(error => {
-    const code = typeof error?.code === "string" && /^STORAGE_[A-Z_]+$/.test(error.code)
+    const code = typeof error?.code === "string" && /^(?:STORAGE|DATABASE)_[A-Z_]+$/.test(error.code)
       ? error.code
       : error && typeof error.message === "string" && error.message.startsWith("Missing required environment variable:")
         ? error.message.slice("Missing required environment variable: ".length)

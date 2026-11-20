@@ -81,14 +81,22 @@ function loadConfig(env = process.env) {
   if (geoProvider !== "ipwho.is") throw new Error(`Unsupported geolocation provider: ${geoProvider}`);
   const storageBackend = vercelMode ? required(env, "STORAGE_BACKEND") : (env.STORAGE_BACKEND || "json-file");
   if (vercelMode && storageBackend !== "neon-postgres") throw new Error("Vercel requires STORAGE_BACKEND=neon-postgres; file storage is not supported.");
-  if (!vercelMode && storageBackend !== "json-file") throw new Error("STORAGE_BACKEND must be json-file outside Vercel.");
-  const databaseUrl = vercelMode ? required(env, "DATABASE_URL") : null;
+  if (!vercelMode && !["json-file", "neon-postgres"].includes(storageBackend)) {
+    throw new Error("STORAGE_BACKEND must be json-file or neon-postgres.");
+  }
+  if (stagingMode && storageBackend !== "json-file") {
+    throw new Error("Temporary staging storage requires STORAGE_BACKEND=json-file.");
+  }
+  const databaseUrl = storageBackend === "neon-postgres" ? required(env, "DATABASE_URL") : null;
   if (databaseUrl && !/^postgres(?:ql)?:\/\//i.test(databaseUrl)) throw new Error("DATABASE_URL must be a PostgreSQL connection URL.");
-  const storageMountPath = vercelMode || stagingMode ? null : env.STORAGE_MOUNT_PATH ? path.resolve(env.STORAGE_MOUNT_PATH) : null;
-  const storageFile = vercelMode ? null : stagingMode
+  if (storageBackend === "neon-postgres" && (env.STORAGE_MOUNT_PATH || env.STORAGE_FILE || env.BACKUP_DIR)) {
+    throw new Error("Neon storage cannot use JSON file, persistent mount, or JSON backup paths.");
+  }
+  const storageMountPath = vercelMode || stagingMode || storageBackend === "neon-postgres" ? null : env.STORAGE_MOUNT_PATH ? path.resolve(env.STORAGE_MOUNT_PATH) : null;
+  const storageFile = vercelMode || storageBackend === "neon-postgres" ? null : stagingMode
     ? path.join(stagingStorageDir, "visitors.json")
     : path.resolve(env.STORAGE_FILE || path.join(process.cwd(), "data", "visitors.json"));
-  if (nodeEnv === "production" && !vercelMode && !stagingMode && !storageMountPath) {
+  if (nodeEnv === "production" && !vercelMode && !stagingMode && storageBackend === "json-file" && !storageMountPath) {
     throw new Error("STORAGE_MOUNT_PATH is required in production; refusing unmounted file storage.");
   }
   if (storageMountPath) {

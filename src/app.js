@@ -15,9 +15,10 @@ function csvCell(value) {
 
 function createApp({ config, repository, visitorService, geoService, analytics, logger = createLogger(), now = Date.now, waitUntil = null }) {
   const app = express();
+  const persistentRepository = config.vercelMode === true || repository.persistent === true;
   const auth = createAdminAuth({ password: config.adminPassword, production: config.secureCookies ?? config.nodeEnv === "production", now,
-    sessionStore: config.vercelMode ? repository : null });
-  const sharedLimit = config.vercelMode ? { store: repository, keySecret: config.encryptionKey } : {};
+    sessionStore: persistentRepository ? repository : null });
+  const sharedLimit = persistentRepository ? { store: repository, keySecret: config.encryptionKey } : {};
   const publicLimiter = createRateLimiter({ windowMs: 60_000, max: config.publicRateLimit, now, bucketName: "public", ...sharedLimit });
   const historyLimiter = createRateLimiter({ windowMs: 60_000, max: config.publicRateLimit * 2, now, bucketName: "history", ...sharedLimit });
   const loginLimiter = createRateLimiter({ windowMs: 15 * 60_000, max: config.loginRateLimit, now, bucketName: "login", ...sharedLimit });
@@ -90,7 +91,7 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
 
   const requireAdmin = auth.requireAdmin;
   const adminWriteOrigin = (req, res, next) => {
-    if (!isSameOrigin(req, { stagingHttps: config.stagingMode === true || config.vercelMode === true })) return res.status(403).json({ success: false, error: { code: "BAD_ORIGIN", message: "Request origin is not allowed." } });
+    if (!isSameOrigin(req, { stagingHttps: config.stagingMode === true || config.vercelMode === true || config.secureCookies === true })) return res.status(403).json({ success: false, error: { code: "BAD_ORIGIN", message: "Request origin is not allowed." } });
     next();
   };
   const aggregateTelemetry = async () => {
@@ -102,8 +103,10 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
   };
 
   app.get("/healthz", async (_req, res) => {
-    if (config.vercelMode) {
-      try { await repository.ping(); } catch { return res.status(503).json({ success: false, status: "unavailable" }); }
+    if (persistentRepository) {
+      try {
+        if (!await repository.ping()) return res.status(503).json({ success: false, status: "unavailable" });
+      } catch { return res.status(503).json({ success: false, status: "unavailable" }); }
     }
     res.json({ success: true, status: "ok" });
   });
@@ -283,7 +286,7 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
       node: process.version,
       telemetry,
       storage,
-      database: config.vercelMode ? storage : "not_configured",
+      database: persistentRepository ? storage : "not_configured",
       observedAt: new Date(now()).toISOString()
     } });
   });
@@ -339,7 +342,10 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
   app.use((req, res) => res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "Endpoint not found." } }));
   app.use((error, req, res, _next) => {
     const status = Number.isInteger(error.status) && error.status >= 400 && error.status < 500 ? error.status : 500;
-    logger.error("request_failed", { code: status === 500 ? "INTERNAL_ERROR" : "BAD_REQUEST", status, route: req.path });
+    const operationalCode = typeof error?.code === "string" && /^(?:DATABASE|STORAGE)_[A-Z_]+$/.test(error.code)
+      ? error.code
+      : status === 500 ? "INTERNAL_ERROR" : "BAD_REQUEST";
+    logger.error("request_failed", { code: operationalCode, status, route: req.path });
     res.status(status).json({ success: false, error: {
       code: status === 500 ? "INTERNAL_ERROR" : "BAD_REQUEST",
       message: status === 500 ? "The request could not be completed." : "The request is invalid."

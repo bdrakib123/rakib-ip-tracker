@@ -30,21 +30,33 @@ async function assertPersistentMountAvailable(mountPath, mountInfoFile = "/proc/
   }
 }
 
-async function createStorageRepository(config) {
-  if (!config || config.storageBackend !== "json-file") {
-    if (config?.vercelMode === true && config.storageBackend === "neon-postgres") {
-      if (typeof config.databaseUrl !== "string" || !config.databaseUrl) {
-        const error = new Error("DATABASE_URL is required for Vercel PostgreSQL storage.");
-        error.code = "DATABASE_URL_REQUIRED";
-        throw error;
-      }
-      const { neon } = require("@neondatabase/serverless");
-      const { createNeonRepository } = require("./neonRepository");
-      const repository = createNeonRepository({ sql: neon(config.databaseUrl) });
-      await repository.assertSchema();
-      await repository.ping();
-      return repository;
+async function createStorageRepository(config, { neonFactory, neonRepositoryFactory } = {}) {
+  if (config?.storageBackend === "neon-postgres") {
+    if (config.stagingMode === true || config.stagingEphemeralStorage === true) {
+      const error = new Error("Temporary staging storage cannot use Neon PostgreSQL mode.");
+      error.code = "STAGING_STORAGE_CONFIG_INVALID";
+      throw error;
     }
+    if (typeof config.databaseUrl !== "string" || !config.databaseUrl) {
+      const error = new Error("DATABASE_URL is required for Neon PostgreSQL storage.");
+      error.code = "DATABASE_URL_REQUIRED";
+      throw error;
+    }
+    const neon = neonFactory || require("@neondatabase/serverless").neon;
+    const createNeonRepository = neonRepositoryFactory || require("./neonRepository").createNeonRepository;
+    const repository = createNeonRepository({ sql: neon(config.databaseUrl) });
+    try {
+      await repository.assertSchema();
+      if (!await repository.ping()) {
+        throw new StorageError("DATABASE_OPERATION_FAILED", "Database readiness check failed.");
+      }
+    } catch (error) {
+      await repository.close?.();
+      throw error;
+    }
+    return repository;
+  }
+  if (!config || config.storageBackend !== "json-file") {
     const error = new Error("Unsupported storage backend.");
     error.code = "STORAGE_BACKEND_UNSUPPORTED";
     throw error;

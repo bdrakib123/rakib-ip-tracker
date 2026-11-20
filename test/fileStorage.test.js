@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const fs = require("node:fs/promises");
 const os = require("node:os");
+const net = require("node:net");
 const path = require("node:path");
 const { JsonFileVisitorRepository, FORMAT_VERSION, MAX_FILE_BYTES } = require("../src/db/jsonFileRepository");
 const { createStorageRepository, mountInfoHasPath } = require("../src/db/storage");
@@ -368,6 +369,29 @@ test("normal server startup succeeds without MongoDB configuration and reopens s
     second.server.closeAllConnections?.();
     await new Promise(resolve => second.server.close(resolve));
     await second.repository.close();
+  }
+});
+
+test("Render-style server startup honors PORT and binds the public listener to 0.0.0.0", async t => {
+  const { directory, file } = await fixture();
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const probe = net.createServer();
+  await new Promise((resolve, reject) => probe.once("error", reject).listen(0, "0.0.0.0", resolve));
+  const port = probe.address().port;
+  await new Promise(resolve => probe.close(resolve));
+  const { start } = require("../src/server");
+  const server = await start({ env: {
+    NODE_ENV: "test", PORT: String(port), STORAGE_BACKEND: "json-file", STORAGE_FILE: file,
+    ADMIN_PASSWORD: "render-port-test-admin-password", IP_ENCRYPTION_KEY: "b".repeat(64)
+  }, logger: { info() {}, warn() {}, error() {} } });
+  try {
+    assert.equal(server.server.address().port, port);
+    assert.equal(server.server.address().address, "0.0.0.0");
+    assert.equal((await fetch(`http://127.0.0.1:${port}/healthz`)).status, 200);
+  } finally {
+    server.server.closeAllConnections?.();
+    await new Promise(resolve => server.server.close(resolve));
+    await server.repository.close();
   }
 });
 

@@ -5,13 +5,13 @@ Version **3.0.0** is the unified, privacy-conscious IP intelligence dashboard. T
 ## Runtime
 
 - Node.js `>=20.18.1`
-- Express 5, UAParser.js, dotenv; optional Vercel target uses Neon Serverless PostgreSQL
-- Versioned JSON storage with validation, exclusive single-process locking, serialized writes, atomic replacement, and a 64 MiB file limit
+- Express 5, UAParser.js, dotenv; Neon Serverless PostgreSQL is supported on Render and Vercel
+- Selectable storage: versioned JSON with validation, exclusive single-process locking, serialized writes, atomic replacement and a 64 MiB file limit, or persistent Neon PostgreSQL
 - AES-256-GCM encrypted stored IP values and keyed IP hashes
 - Public history exposes only masked IP and coarse location; detailed records require server-side admin authentication
 - Production requires a persistent mount. Temporary staging requires both explicit staging flags and a separate Basic Auth password
 
-The Render runtime uses JSON-file storage and does not require MongoDB. Vercel mode is separate: it requires `DATABASE_URL` from Neon and never falls back to local files. Vercel setup and verification requirements are documented below.
+The existing Render persistent-disk blueprint continues to use JSON-file storage. A separate manual Render Free Web Service can use Neon PostgreSQL; it requires `STORAGE_BACKEND=neon-postgres` and `DATABASE_URL` and has no local-file fallback. Vercel also requires Neon and keeps its existing Function entry points and environment validation. Neither target applies schema migrations at startup.
 
 ## Local setup
 
@@ -38,7 +38,7 @@ npm audit --omit=dev
 
 ## Render
 
-The root `render.yaml` is a persistent-disk blueprint, not a Free plan configuration. It uses repository root, `npm ci --omit=dev`, `npm start`, `/healthz`, one instance, and `/var/data`. Actual service provisioning, disk persistence, and proxy topology have not been verified. Review [deployment guide](docs/DEPLOYMENT_GUIDE.md) before owner-side setup. Production remains **NO-GO** until the deployment checklist blockers are verified.
+The root `render.yaml` remains a persistent-disk JSON blueprint, not a Free plan configuration. For a separate manual Free service using Neon, follow the [Render Free + Neon deployment guide](docs/RENDER_FREE_DEPLOYMENT_GUIDE.md). Free services sleep when idle and have ephemeral local filesystems; records must live in the external Neon database. Actual Render/Neon provisioning, schema state, and proxy topology have not been verified. Production remains **NO-GO** until owner-side checks are complete.
 
 ## Vercel + Neon (separate target)
 
@@ -50,6 +50,8 @@ Vercel uses the Express Function exported from `src/index.js`, static assets fro
 - [API contracts](docs/API_DOCUMENTATION.md)
 - [Security and privacy](docs/SECURITY_AND_PRIVACY.md)
 - [Deployment](docs/DEPLOYMENT_GUIDE.md)
+- [Render Free + Neon deployment](docs/RENDER_FREE_DEPLOYMENT_GUIDE.md)
+- [Render Free + Neon migration audit](docs/RENDER_FREE_MIGRATION_AUDIT.md)
 - [Deployment readiness checklist](docs/DEPLOYMENT_READINESS_CHECKLIST.md)
 - [Free temporary staging guide](docs/RENDER_FREE_STAGING_GUIDE.md)
 - [Vercel migration audit](docs/VERCEL_MIGRATION_AUDIT.md)

@@ -17,6 +17,7 @@ function makeRepository() {
   let savedAnalytics = { version: 1, collectedFrom: new Date().toISOString(), requests: [], pages: [], security: [], sessions: [] };
   return {
     records,
+    adminSessions,
     async countByIpHash() { return 0; },
     async insert(document) { const saved = { ...document, _id: `fake-${records.length + 1}` }; records.push(saved); return saved; },
     async history({ page = 1, limit = 50 } = {}) {
@@ -73,8 +74,11 @@ function makeRepository() {
   };
 }
 
-async function withServer(fn, { rateLimit = 30, trustProxyHops = 0, stagingPassword = null, vercelMode = false } = {}) {
+async function withServer(fn, { rateLimit = 30, trustProxyHops = 0, stagingPassword = null, vercelMode = false, persistent = false, pingFails = false, pingUnhealthy = false, secureCookies = false } = {}) {
   const repository = makeRepository();
+  if (persistent) repository.persistent = true;
+  if (pingFails) repository.ping = async () => { throw new Error("synthetic database failure"); };
+  if (pingUnhealthy) repository.ping = async () => false;
   const visitorService = createVisitorService({
     repository,
     geoService: { lookup: async () => { throw new GeoProviderError("network_error", { retryable: true }); } },
@@ -93,6 +97,7 @@ async function withServer(fn, { rateLimit = 30, trustProxyHops = 0, stagingPassw
   const loggedErrors = [];
   const config = { adminPassword: password, nodeEnv: "test", trustProxyHops, publicRateLimit: rateLimit, loginRateLimit: 5,
     ...(vercelMode ? { vercelMode: true } : {}),
+    ...(secureCookies ? { secureCookies: true } : {}),
     ...(stagingPassword ? { stagingMode: true, stagingAccessPassword: stagingPassword, secureCookies: true } : {}) };
   const analytics = createAdminAnalytics({ repository, geoService, encryptionKey: key, flushDelayMs: 60_000 });
   const app = createApp({ config, repository, visitorService, geoService, analytics, logger: { error(...args) { loggedErrors.push(args); } } });
@@ -449,6 +454,53 @@ test("security headers are sent and health endpoint reveals no internal state", 
     assert.match(response.headers.get("content-security-policy"), /default-src 'self'/);
     assert.equal(response.headers.get("x-frame-options"), "DENY");
     assert.equal((await fetch(`${origin}/admin-panel`)).status, 200);
+  });
+});
+
+test("health check reports unavailable when a persistent Neon repository ping fails outside Vercel", async () => {
+  await withServer(async ({ origin }) => {
+    const response = await fetch(`${origin}/healthz`);
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), { success: false, status: "unavailable" });
+  }, { persistent: true, pingFails: true });
+});
+
+test("health check reports unavailable when a persistent repository ping returns false", async () => {
+  await withServer(async ({ origin }) => {
+    const response = await fetch(`${origin}/healthz`);
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), { success: false, status: "unavailable" });
+  }, { persistent: true, pingUnhealthy: true });
+});
+
+test("Render Neon mode uses persistent admin sessions and reports database readiness", async () => {
+  await withServer(async ({ origin, repository }) => {
+    const login = await fetch(`${origin}/api/admin/auth/login`, {
+      method: "POST", headers: { Origin: `https://${new URL(origin).host}`, "X-Forwarded-Proto": "https", "Content-Type": "application/json" },
+      body: JSON.stringify({ password })
+    });
+    assert.equal(login.status, 200);
+    assert.equal(repository.adminSessions.size, 1);
+    const cookie = login.headers.get("set-cookie").split(";")[0];
+    const response = await fetch(`${origin}/api/admin/server/health`, { headers: { Cookie: cookie } });
+    const body = await response.json();
+    assert.equal(body.data.database, "available");
+    assert.equal(body.data.storage, "available");
+  }, { persistent: true, secureCookies: true, trustProxyHops: 1 });
+});
+
+test("database operation errors are logged with a safe code and returned without the underlying message", async () => {
+  await withServer(async ({ origin, repository, loggedErrors }) => {
+    const login = await fetch(`${origin}/api/admin/auth/login`, {
+      method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify({ password })
+    });
+    const cookie = login.headers.get("set-cookie").split(";")[0];
+    repository.history = async () => { throw Object.assign(new Error("synthetic connection details must not leak"), { code: "DATABASE_OPERATION_FAILED" }); };
+    const response = await fetch(`${origin}/api/admin/history`, { headers: { Cookie: cookie } });
+    assert.equal(response.status, 500);
+    assert.deepEqual(await response.json(), { success: false, error: { code: "INTERNAL_ERROR", message: "The request could not be completed." } });
+    assert.equal(JSON.stringify(loggedErrors).includes("DATABASE_OPERATION_FAILED"), true);
+    assert.equal(JSON.stringify(loggedErrors).includes("synthetic connection details"), false);
   });
 });
 

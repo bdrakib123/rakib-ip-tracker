@@ -5,6 +5,8 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { createNeonRepository } = require("../src/db/neonRepository");
+const { createStorageRepository } = require("../src/db/storage");
+const { loadConfig } = require("../src/config");
 const { runMigrations, splitMigrationSql } = require("../scripts/migrateNeon");
 
 function fakeSql() {
@@ -27,6 +29,42 @@ function fakeSql() {
   tag.transaction = async statements => { transactions.push(statements); return statements.map(() => []); };
   return tag;
 }
+
+test("storage factory initializes the existing Neon adapter for a Render production configuration", async () => {
+  const env = {
+    NODE_ENV: "production", STORAGE_BACKEND: "neon-postgres", DATABASE_URL: "postgresql://synthetic.invalid/render",
+    ADMIN_PASSWORD: "synthetic-render-admin-password", IP_ENCRYPTION_KEY: "a".repeat(64), TRUST_PROXY_HOPS: "1"
+  };
+  const config = loadConfig(env);
+  const sql = fakeSql();
+  sql.query = async text => {
+    if (text.startsWith("SELECT version FROM schema_migrations")) return [{ version: 1 }];
+    if (text === "SELECT 1 AS ok") return [{ ok: 1 }];
+    return [];
+  };
+  let receivedUrl;
+  const repository = await createStorageRepository(config, {
+    neonFactory(url) { receivedUrl = url; return sql; }
+  });
+  assert.equal(receivedUrl, env.DATABASE_URL);
+  assert.equal(repository.persistent, true);
+  await repository.close();
+});
+
+test("storage factory rejects a false Neon readiness result and closes the repository", async () => {
+  const config = loadConfig({
+    NODE_ENV: "production", STORAGE_BACKEND: "neon-postgres", DATABASE_URL: "postgresql://synthetic.invalid/render",
+    ADMIN_PASSWORD: "synthetic-render-admin-password", IP_ENCRYPTION_KEY: "a".repeat(64), TRUST_PROXY_HOPS: "1"
+  });
+  let closed = false;
+  await assert.rejects(createStorageRepository(config, {
+    neonFactory() { return fakeSql(); },
+    neonRepositoryFactory() {
+      return { async assertSchema() {}, async ping() { return false; }, async close() { closed = true; } };
+    }
+  }), { code: "DATABASE_OPERATION_FAILED" });
+  assert.equal(closed, true);
+});
 
 function migrationSql({ initiallyApplied = [], delayMs = 0 } = {}) {
   const applied = new Set(initiallyApplied);
