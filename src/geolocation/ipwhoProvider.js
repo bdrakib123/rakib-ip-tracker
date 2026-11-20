@@ -28,7 +28,7 @@ function mapIpWhoPayload(payload) {
     postal: payload.postal || null,
     timezone: payload.timezone?.id || payload.timezone?.utc || null,
     isp: connection.isp || null,
-    organization: connection.org || null,
+    organization: connection.org || connection.isp || null,
     asn: connection.asn ?? null,
     latitude: Number.isFinite(payload.latitude) ? payload.latitude : null,
     longitude: Number.isFinite(payload.longitude) ? payload.longitude : null,
