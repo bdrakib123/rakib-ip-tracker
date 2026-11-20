@@ -25,7 +25,7 @@ function createService(provider, extra = {}) {
 test("provider validates HTTP status, success flag, and maps ipwho fields to canonical fields", async () => {
   const provider = createIpWhoProvider({ fetchImpl: async () => response(ipwhoPayload) });
   const result = await provider.lookup("8.8.8.8");
-  assert.deepEqual(result, { ...canonicalGeo, security: { vpn: false, proxy: false, tor: false, hosting: false } });
+  assert.deepEqual(result, { ...canonicalGeo, security: { vpn: null, proxy: null, tor: null, hosting: null } });
 
   const errorProvider = createIpWhoProvider({ fetchImpl: async () => response({}, 503) });
   await assert.rejects(errorProvider.lookup("8.8.8.8"), error => error.code === "http_503" && error.retryable);
