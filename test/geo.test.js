@@ -33,6 +33,14 @@ test("provider validates HTTP status, success flag, and maps ipwho fields to can
   await assert.rejects(invalidProvider.lookup("8.8.8.8"), error => error.code === "provider_rejected_lookup" && !error.retryable);
 });
 
+test("provider falls back to ISP when ipwho has no organization value", async () => {
+  const payload = { ...ipwhoPayload, connection: { isp: "Fallback ISP", org: null, asn: "64500" } };
+  const provider = createIpWhoProvider({ fetchImpl: async () => response(payload) });
+  const result = await provider.lookup("8.8.8.8");
+  assert.equal(result.isp, "Fallback ISP");
+  assert.equal(result.organization, "Fallback ISP");
+});
+
 test("provider handles malformed JSON and Retry-After classification", async () => {
   const malformed = createIpWhoProvider({ fetchImpl: async () => ({ ok: true, json: async () => { throw new SyntaxError(); } }) });
   await assert.rejects(malformed.lookup("8.8.8.8"), error => error.code === "malformed_json" && error.retryable);

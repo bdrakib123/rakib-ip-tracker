@@ -42,7 +42,7 @@ function geoFromRecord(record) {
     postal: geo.postal ?? geo.postalCode ?? record.postal ?? record.postalCode,
     timezone: geo.timezone ?? geo.time_zone ?? record.timezone ?? record.time_zone,
     isp: geo.isp ?? geo.provider ?? geo.org ?? record.isp ?? record.provider ?? record.org,
-    organization: geo.organization ?? geo.org ?? record.organization ?? record.org,
+    organization: geo.organization ?? geo.org ?? geo.isp ?? record.organization ?? record.org ?? record.isp,
     asn: geo.asn ?? geo.as ?? record.asn ?? record.as,
     latitude: geo.latitude ?? geo.lat ?? record.latitude ?? record.lat,
     longitude: geo.longitude ?? geo.lon ?? record.longitude ?? record.lon

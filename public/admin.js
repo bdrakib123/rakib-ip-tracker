@@ -233,8 +233,59 @@ async function loadHistory() {
 
 function fieldValue(geo, name) { return geo?.fields?.[name]?.value || "Unavailable"; }
 
+
+let visitorMap;
+let visitorMarkers;
+
+function renderVisitorMap(records) {
+  const status = $("visitor-map-state");
+  const node = $("visitor-map");
+  if (!window.L) {
+    status.textContent = "Map library unavailable. Visitor coordinates remain available in Details.";
+    return;
+  }
+  if (!visitorMap) {
+    visitorMap = L.map(node, { scrollWheelZoom: false }).setView([20, 0], 2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(visitorMap);
+    visitorMarkers = L.featureGroup().addTo(visitorMap);
+  }
+  visitorMarkers.clearLayers();
+  const points = [];
+  for (const record of records) {
+    const latitude = record.geo?.fields?.latitude;
+    const longitude = record.geo?.fields?.longitude;
+    if (latitude?.status !== "available" || longitude?.status !== "available" ||
+      latitude.value === null || longitude.value === null || latitude.value === "" || longitude.value === "") continue;
+    const lat = Number(latitude.value);
+    const lon = Number(longitude.value);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) continue;
+    const place = [fieldValue(record.geo, "city"), fieldValue(record.geo, "country")]
+      .filter(value => value !== "Unavailable").join(", ") || "Approximate location";
+    const popup = '<strong>' + escapeHTML(place) + '</strong><br>' +
+      escapeHTML(record.ip || record.maskedIP || "IP unavailable") + '<br>' +
+      '<small>Approximate IP geolocation</small>';
+    L.marker([lat, lon]).bindPopup(popup).addTo(visitorMarkers);
+    points.push([lat, lon]);
+  }
+  if (!points.length) {
+    status.textContent = records.length
+      ? "No valid coordinates on this page. Check visitor Details for lookup status."
+      : "No visitor records to map yet.";
+    visitorMap.setView([20, 0], 2);
+  } else {
+    status.textContent = points.length + " approximate location" + (points.length === 1 ? "" : "s") + " on this page.";
+    if (points.length === 1) visitorMap.setView(points[0], 8);
+    else visitorMap.fitBounds(visitorMarkers.getBounds().pad(0.18), { maxZoom: 8 });
+  }
+  requestAnimationFrame(() => visitorMap.invalidateSize());
+}
+
 function renderHistory(records) {
   const list = $("history-list");
+  renderVisitorMap(records);
   if (!records.length) { list.replaceChildren(); return; }
   list.innerHTML = records.map(record => {
     const place = [fieldValue(record.geo, "city"), fieldValue(record.geo, "country")].filter(value => value !== "Unavailable").join(", ") || "Location unavailable";
