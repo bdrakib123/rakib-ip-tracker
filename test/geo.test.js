@@ -85,7 +85,8 @@ test("geo service opens a global cooldown on 429 and honors Retry-After", async 
   let calls = 0;
   const service = createService(async () => {
     calls += 1;
-    throw new GeoProviderError("fallback_http_429", { retryAfterMs: 5000 });
+    if (calls === 1) throw new GeoProviderError("fallback_http_429", { retryAfterMs: 5000 });
+    return canonicalGeo;
   }, { now: () => timestamp });
   assert.equal((await service.lookup("8.8.4.4")).errorCode, "fallback_http_429");
   assert.equal(calls, 1);
@@ -93,8 +94,8 @@ test("geo service opens a global cooldown on 429 and honors Retry-After", async 
   assert.equal((await service.lookup("9.9.9.9")).errorCode, "fallback_http_429");
   assert.equal(calls, 1, "other IP lookups must not hit a rate-limited provider");
   timestamp += 5001;
-  const recovered = createService(async () => canonicalGeo, { now: () => timestamp });
-  assert.equal((await recovered.lookup("9.9.9.9")).status, "available");
+  assert.equal((await service.lookup("9.9.9.9")).status, "available");
+  assert.equal(calls, 2);
 
   let timeoutCalls = 0;
   const timeoutService = createService((_ip, { signal }) => new Promise((_resolve, reject) => {
