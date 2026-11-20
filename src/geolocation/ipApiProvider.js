@@ -14,8 +14,8 @@ function mapIpApiPayload(payload) {
     city: payload.city || null,
     postal: payload.postal || null,
     timezone: payload.timezone || null,
-    // ipapi.co supplies organization and ASN, but not a distinct ISP field.
-    isp: payload.org || null,
+    // ipapi.co does not provide a distinct ISP field.
+    isp: null,
     organization: payload.org || null,
     asn: payload.asn || null,
     latitude: Number.isFinite(payload.latitude) ? payload.latitude : null,
