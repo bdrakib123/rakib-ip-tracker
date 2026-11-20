@@ -74,7 +74,7 @@ function makeRepository() {
   };
 }
 
-async function withServer(fn, { rateLimit = 30, trustProxyHops = 0, stagingPassword = null, vercelMode = false, persistent = false, pingFails = false, pingUnhealthy = false, secureCookies = false } = {}) {
+async function withServer(fn, { rateLimit = 30, trustProxyHops = 0, stagingPassword = null, persistent = false, pingFails = false, pingUnhealthy = false, secureCookies = false } = {}) {
   const repository = makeRepository();
   if (persistent) repository.persistent = true;
   if (pingFails) repository.ping = async () => { throw new Error("synthetic database failure"); };
@@ -96,7 +96,6 @@ async function withServer(fn, { rateLimit = 30, trustProxyHops = 0, stagingPassw
   const geoService = { health: () => ({ provider: "mock", state: "error", lastCheckedAt: null, lastErrorCode: "network_error" }) };
   const loggedErrors = [];
   const config = { adminPassword: password, nodeEnv: "test", trustProxyHops, publicRateLimit: rateLimit, loginRateLimit: 5,
-    ...(vercelMode ? { vercelMode: true } : {}),
     ...(secureCookies ? { secureCookies: true } : {}),
     ...(stagingPassword ? { stagingMode: true, stagingAccessPassword: stagingPassword, secureCookies: true } : {}) };
   const analytics = createAdminAnalytics({ repository, geoService, encryptionKey: key, flushDelayMs: 60_000 });
@@ -457,7 +456,7 @@ test("security headers are sent and health endpoint reveals no internal state", 
   });
 });
 
-test("health check reports unavailable when a persistent Neon repository ping fails outside Vercel", async () => {
+test("health check reports unavailable when a persistent Neon repository ping fails", async () => {
   await withServer(async ({ origin }) => {
     const response = await fetch(`${origin}/healthz`);
     assert.equal(response.status, 503);
@@ -504,7 +503,7 @@ test("database operation errors are logged with a safe code and returned without
   });
 });
 
-test("admin server health reports the configured Neon repository state", async () => {
+test("admin server health reports the configured persistent repository state", async () => {
   await withServer(async ({ origin }) => {
     const secureOrigin = `https://${new URL(origin).host}`;
     const login = await fetch(`${origin}/api/admin/auth/login`, {
@@ -517,7 +516,7 @@ test("admin server health reports the configured Neon repository state", async (
     assert.equal(response.status, 200);
     assert.equal(body.data.storage, "available");
     assert.equal(body.data.database, "available");
-  }, { vercelMode: true });
+  }, { persistent: true, secureCookies: true });
 });
 
 test("live refresh uses bounded authenticated polling rather than a long-lived SSE connection", async () => {

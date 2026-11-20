@@ -1,36 +1,78 @@
-# Deployment Guide
+# Render Web Service Deployment Guide
 
-## Render blueprint
+This project is deployed only as a Render Web Service created manually in the Render Dashboard. The repository does not provide a Render Blueprint. No service, environment setting, disk, database, or deployment has been verified by this guide.
 
-`render.yaml` is at the repository root and omits `rootDir`, so the source root is used. It declares `npm ci --omit=dev`, `npm start`, Node `20.18.1`, one instance, `/healthz`, and a disk mounted at `/var/data`. Storage is `/var/data/visitors.json`; same-disk backups go to `/var/data/backups`. The blueprint does not specify a compute plan or disk size. Confirm the actual plan, disk size, disk attachment, and capacity in the Render dashboard before use; no service or disk provisioning is verified by this repository configuration.
+## Render Dashboard settings
 
-The server binds to `0.0.0.0` using Render's `PORT`. Do not run multiple instances or processes against the JSON file. Disk access is runtime-only. Render documents attached disks as single-instance and unavailable during builds; disk-backed redeployments can briefly interrupt service.
+Choose **New → Web Service → Connect GitHub Repository**, then review the repository and branch before creating the service.
 
-Official references: [Render Blueprint specification](https://render.com/docs/blueprint-spec), [Persistent disks](https://render.com/docs/disks), [Health checks](https://render.com/docs/health-checks). Checked 2026-11-19.
+| Setting | Value |
+| --- | --- |
+| Repository | `bdrakib123/rakib-ip-tracker` |
+| Branch | `main` (owner must confirm the intended release branch) |
+| Runtime | Node |
+| Root Directory | Blank (repository root) |
+| Build Command | `npm ci --omit=dev` |
+| Start Command | `npm start` |
+| Health Check Path | `/healthz` |
+| Node version | Must satisfy `>=20.18.1`; select and verify the supported version in Render settings/build logs |
+| Instance count | One process for JSON storage; keep one instance for the current deployment unless shared-storage coordination is independently reviewed |
 
-## Production configuration
+The server runs in the foreground and listens on `0.0.0.0` using Render's `PORT`. Do not add a second start command or background process.
+
+## Choose the storage mode deliberately
+
+Do not change an existing service's storage backend until its data has a verified backup and a reviewed migration plan. The old JSON records have not been imported into Neon. No local copy of the Render disk is assumed available.
+
+### Existing JSON-file storage
+
+JSON production storage requires an attached persistent disk. In the Render Dashboard, attach/retain the correct disk and verify its mount path before start. Configure:
 
 - `NODE_ENV=production`
 - `STORAGE_BACKEND=json-file`
-- `STORAGE_MOUNT_PATH=/var/data`
-- `STORAGE_FILE=/var/data/visitors.json`
-- `BACKUP_DIR=/var/data/backups`
-- `BACKUP_RETENTION_COUNT=14` (integer 1–1000)
-- `ADMIN_PASSWORD` (secret; at least 16 characters)
-- `IP_ENCRYPTION_KEY` (secret; exactly 64 hex characters)
-- `TRUST_PROXY_HOPS` (integer 0–10; blueprint uses `1`, pending actual ingress verification)
-- `PORT` is supplied by Render (local default 3000)
-- `GEO_PROVIDER=ipwho.is`; optional `GEO_TIMEOUT_MS`, `GEO_RETRY_COUNT`, `PUBLIC_RATE_LIMIT`, `LOGIN_RATE_LIMIT` have bounded validation in `src/config.js`
+- `STORAGE_MOUNT_PATH` to the actual persistent mount
+- `STORAGE_FILE` strictly inside that mount
+- `BACKUP_DIR` inside the mount, understanding same-disk backups do not protect against disk loss
+- `BACKUP_RETENTION_COUNT` as an integer from 1 through 1000
 
-Set secrets only through the protected dashboard interface. Do not add MongoDB variables: they are unused. Missing production mounts and invalid configuration fail startup; there is no ephemeral fallback.
+The application refuses production JSON startup without a configured mount and verifies that the mount is present. It uses a single-process lock and rejects concurrent processes against the same file. Do not choose a Render plan or filesystem without confirming persistent-disk availability for that service.
 
-## Temporary staging
+### Neon PostgreSQL storage
 
-Free temporary staging is separate from the persistent-disk blueprint. It requires `STAGING_MODE=true`, `STAGING_EPHEMERAL_STORAGE=true`, an absolute `STAGING_STORAGE_DIR` beneath OS temp storage, and a separate `STAGING_ACCESS_PASSWORD` of 32–256 printable ASCII characters. The password must differ from admin password and encryption key. Staging requires proxy trust zero, disallows persistent/backup paths, and places Basic Auth in front of all routes except `GET /healthz`. It is disposable and must not hold real visitor data. See `RENDER_FREE_STAGING_GUIDE.md`.
+Neon mode is available only when explicitly selected. Configure:
 
-## Backup commands
+- `STORAGE_BACKEND=neon-postgres`
+- `DATABASE_URL` as a secret for the intended Neon project, branch, database, and role
+- `NEON_FORCE_IPV4=1` only when required by the verified network environment; TLS certificate validation remains enabled
+- Do not set JSON-only `STORAGE_MOUNT_PATH`, `STORAGE_FILE`, or `BACKUP_DIR`
 
-Run at repository root against the intended mounted storage:
+The application checks the schema and performs a lightweight database ping at startup; it does not run migrations automatically. The manual command is `npm run migrate:neon`, and must be run only against a separately verified target after explicit approval. Do not run it against a production database as part of deployment. The current JSON backup/restore CLI does not back up Neon.
+
+**Data cutover is blocked:** before switching an existing JSON-backed service, obtain a verified export/backup from the actual source disk, build and review an idempotent importer, preserve encryption-key continuity, compare record/event/session counts, and verify Neon recovery. Do not overwrite existing Neon records or assume a branch is empty.
+
+## Environment variables and secrets
+
+Configure values through the Render service's protected Environment page. Never place secret values in Git, commands, screenshots, logs, or support reports.
+
+| Variable | Requirement |
+| --- | --- |
+| `NODE_ENV` | `production` |
+| `PORT` | Supplied by Render; do not hardcode it |
+| `ADMIN_PASSWORD` | Secret; at least 16 characters |
+| `IP_ENCRYPTION_KEY` | Secret; exactly 64 hexadecimal characters. Keep the matching key for existing encrypted data; do not rotate casually. |
+| `TRUST_PROXY_HOPS` | Required in production, integer 0–10. Do not assume `1`; verify the actual Render proxy chain and forged-header resistance before approving a value. |
+| `GEO_PROVIDER` | Optional; defaults to `ipwho.is` |
+| `GEO_TIMEOUT_MS`, `GEO_RETRY_COUNT`, `PUBLIC_RATE_LIMIT`, `LOGIN_RATE_LIMIT` | Optional, bounded by `src/config.js` |
+| `DATABASE_URL` | Secret and required only for `neon-postgres` |
+| `NEON_FORCE_IPV4` | Optional transport setting; does not bypass TLS validation |
+
+Generate secrets privately with an approved password manager/secret generator. Do not use placeholders in production. Never change `IP_ENCRYPTION_KEY` for a database containing encrypted visitor IPs without a reviewed re-encryption plan and verified backup.
+
+## Health, backups, and rollback
+
+Set health check path to `/healthz`. For Neon, the endpoint performs `SELECT 1` through the repository and returns unavailable on failure without disclosing connection details. For JSON, it reports application health; it does not validate recovery copies.
+
+For JSON storage, the local CLI supports:
 
 ```sh
 npm run backup -- create
@@ -39,15 +81,16 @@ npm run backup -- verify BACKUP_ID
 npm run backup -- restore BACKUP_ID
 ```
 
-Restore is an interactive, destructive operation. It requires typing `RESTORE BACKUP_ID`, refuses an active `${STORAGE_FILE}.lock`, verifies checksum/manifest/schema, creates a recovery copy and atomically replaces the file. Do not test it against live storage. Same-disk backups do not protect against loss of the full disk; no off-site destination is configured.
+Restore requires interactive confirmation, refuses an active storage lock, verifies the backup, preserves a recovery copy, and atomically replaces the file. Test restore only in an isolated synthetic directory. Same-disk backups are not independent disaster recovery. For Neon, configure the provider's backup/PITR plan and complete an isolated restore drill; the application CLI does not implement that workflow.
 
-A restore drill must use an isolated temporary directory and synthetic records. Set `STORAGE_FILE` and `BACKUP_DIR` within that test directory, close the repository, and remove only the test-owned temporary directory after verifying isolation.
+For an application rollback, use Render Dashboard's rollback after checking the older code against the current database schema. Do not roll back or re-run schema migrations automatically. Preserve the existing service, disk, database, and secrets while diagnosing.
 
-## Owner checks before traffic
+## Before sending traffic
 
-1. Confirm root directory, commands, health path, disk mount/size and one instance in the Render dashboard.
-2. Confirm secret variable names without recording values.
-3. Test the actual proxy chain and forged forwarding headers in isolated staging before approving the current one-hop value.
-4. Verify restart persistence and perform a synthetic isolated restore drill; arrange independent encrypted backups.
-5. Run browser tests in supported Linux CI and review authentication/privacy behavior.
-6. Resolve every blocker in `DEPLOYMENT_READINESS_CHECKLIST.md`. Production remains NO-GO pending owner verification.
+1. Confirm the service root, branch, Node version, build/start commands, health path, and instance count in the Render Dashboard.
+2. Confirm which storage backend the service currently uses and verify that its target contains the expected data.
+3. Verify secret names and key continuity without recording values.
+4. Verify the proxy chain and spoofed `X-Forwarded-For` behavior with controlled requests before selecting `TRUST_PROXY_HOPS`.
+5. Verify data migration and recovery before any JSON-to-Neon cutover.
+6. Run synthetic smoke tests for login, public privacy, admin authorization, history, analytics, and export.
+7. Review owner-side disk/Neon recovery, capacity, and actual health evidence. Local tests do not establish production readiness; production remains **NO-GO** until these are complete.

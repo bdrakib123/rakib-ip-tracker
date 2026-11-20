@@ -1,9 +1,9 @@
 "use strict";
 
-require("dotenv").config();
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { neon } = require("@neondatabase/serverless");
+const { neon, neonConfig } = require("@neondatabase/serverless");
+const { configureNeonFetch } = require("../src/db/neonTransport");
 
 const MIGRATION_LOCK_ID = 4_927_018_301;
 
@@ -132,6 +132,8 @@ async function runMigrations({ env = process.env, sqlFactory = neon, migrationDi
     error.code = "DATABASE_URL_REQUIRED";
     throw error;
   }
+  configureNeonFetch(neonConfig, String(env.NEON_FORCE_IPV4 || "") === "1");
+
   const sql = sqlFactory(databaseUrl);
   if (typeof sql.transaction !== "function") {
     const error = new Error("The installed database driver does not support atomic HTTP transactions required for migrations.");

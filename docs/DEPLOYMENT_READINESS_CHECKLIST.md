@@ -1,23 +1,21 @@
-# Deployment Readiness Checklist — V3
+# Deployment Readiness Checklist — Render Web Service
 
-Production status: **NO-GO FOR PRODUCTION TRAFFIC** until all owner-side requirements below are verified.
+Production status: **NO-GO FOR PRODUCTION TRAFFIC** until owner-side requirements are independently verified.
 
 | Requirement | Status | Evidence / remaining action |
-|---|---|---|
-| Root startup contract, manifest version 3.0.0 | PASS | `npm start` maps to `node src/server.js`; isolated startup/API tests pass |
-| JSON encryption, public masking, admin authorization | PASS | Root synthetic tests cover serializers, sessions and protected routes |
-| Versioned JSON, atomic writes, process lock, corruption rejection | PASS | Isolated storage suite passes |
-| Backup checksum, retention and restore safeguards | PASS | Synthetic tests pass; no live restore |
-| Render root/build/start/health/disk blueprint | PASS | Code-level YAML matches docs; not proof of actual provisioning |
-| Production install `npm ci --omit=dev` | PASS | Completed at root: 73 packages added, 74 audited, 0 vulnerabilities |
-| Production dependencies and security audit | PASS | Three runtime deps; `npm audit --omit=dev`: 0 vulnerabilities |
-| Synthetic storage workloads through 10,000 base records | PASS | Results in `TEST_REPORT.md`; not an instance/load capacity benchmark |
-| Actual Render service and disk at `/var/data` | BLOCKED | Owner must create/inspect service, disk identity, size, permissions and mount |
-| One live process and persistence across restart | BLOCKED | Verify on the actual isolated staging instance |
-| `TRUST_PROXY_HOPS=1` matches real ingress | BLOCKED | Test actual proxy chain, spoofed/multiple/malformed XFF and rate-limit resistance |
-| Independent encrypted backup destination | BLOCKED | Owner authorizes destination, key management, retention and alerts |
-| Staging restore drill and owner recovery objectives | BLOCKED | Complete synthetic isolated drill and approve RPO/RTO |
-| Real V3 browser suite | BLOCKED | Run Playwright Firefox in supported Linux CI; browser not available here |
-| Production capacity | PENDING | Obtain workload targets and representative hosting load evidence |
+| --- | --- | --- |
+| Root startup contract and version 3.0.0 | PASS | `npm start` runs `node src/server.js`; local startup and route tests use synthetic settings. |
+| Render Dashboard commands and health route | PASS | Manual setup is documented as `npm ci --omit=dev`, `npm start`, and `/healthz`; no service has been provisioned here. |
+| JSON encryption, public masking, admin authorization | PASS | Synthetic tests cover serializers, authentication, and protected routes. |
+| JSON atomic writes, lock, corruption rejection, and backup controls | PASS | Isolated filesystem tests use temporary directories; no live restore was run. |
+| Neon repository and manual schema migration | PASS | Mock-based repository/migration tests and source review only; no database connection or migration was performed in this cleanup. |
+| Legacy JSON-to-Neon data import | BLOCKED | No verified export from the Render disk or idempotent importer/count reconciliation is available. Keep the existing backend and encryption key unchanged. |
+| Current Render service, environment, and storage target | BLOCKED | Owner must verify the dashboard service, selected backend, disk or Neon target, and secret names without sharing values. |
+| Persistent JSON disk and one-process operation | BLOCKED | Verify actual disk attachment/mount and restart persistence if retaining JSON. |
+| Neon schema, database permissions, and readiness | BLOCKED | Verify the intended Neon database and schema through the owner; application startup does not migrate it. |
+| `TRUST_PROXY_HOPS` and forged-header resistance | BLOCKED | Verify Render's actual proxy chain and test forged/multiple/malformed forwarding headers before approving the hop count. |
+| Independent backup and restore | BLOCKED | Verify JSON off-site recovery or Neon backup/PITR and perform an isolated restore drill. The JSON CLI does not back up Neon. |
+| Browser rendering and console checks | BLOCKED | Run the existing Playwright suite in a supported Linux environment with Firefox installed. |
+| Workload capacity | PENDING | Establish traffic/retention targets and measure the selected Render plan and backend under representative synthetic load. |
 
-Unit tests do not establish deployment readiness. Require isolated staging evidence, independent recovery, browser verification, owner review, and explicit deployment approval before reconsidering NO-GO.
+Passing local tests does not establish Render, Neon, proxy, data-import, backup/PITR, or production readiness. No deployment should proceed until every BLOCKED item has owner evidence and the data cutover plan is approved.

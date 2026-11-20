@@ -14,11 +14,6 @@ const { createLogger } = require("./lib/log");
 
 async function start({ env = process.env, logger = createLogger(), listenPort, listenHost = "0.0.0.0" } = {}) {
   const config = loadConfig(env);
-  if (config.vercelMode) {
-    const error = new Error("Vercel requests must use the exported Express application entry point.");
-    error.code = "VERCEL_LISTENER_DISABLED";
-    throw error;
-  }
   const repository = await createStorageRepository(config);
   const provider = createGeoProvider(config.geoProvider);
   const geoService = createGeoService({

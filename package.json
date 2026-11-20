@@ -2,15 +2,15 @@
   "name": "rakib-ip-tracker",
   "version": "3.0.0",
   "private": true,
-  "description": "Privacy-conscious IP intelligence dashboard with encrypted JSON storage",
-  "main": "src/index.js",
+  "description": "Privacy-conscious IP intelligence dashboard with JSON and Neon PostgreSQL storage",
+  "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "migrate:neon": "node scripts/migrateNeon.js",
     "backup": "node scripts/storageBackup.js",
     "test:storage-load": "node scripts/storageLoadTest.js",
     "test": "node --test test/*.test.js",
-    "check": "node --check src/config.js && node --check src/server.js && node --check src/index.js && node --check src/vercelApplication.js && node --check src/app.js && node --check src/auth/adminAuth.js && node --check src/db/analyticsSchema.js && node --check src/db/jsonFileRepository.js && node --check src/db/neonRepository.js && node --check src/db/storage.js && node --check src/db/storageBackup.js && node --check src/device/detectDevice.js && node --check src/geolocation/geoService.js && node --check src/geolocation/ipwhoProvider.js && node --check src/lib/ip.js && node --check src/lib/log.js && node --check src/lib/rateLimit.js && node --check src/lib/validateClientSignals.js && node --check src/services/adminAnalytics.js && node --check src/services/visitorService.js && node --check scripts/migrateNeon.js && node --check scripts/storageBackup.js && node --check scripts/storageLoadTest.js && node --check public/app.js && node --check public/admin.js",
+    "check": "node --check src/config.js && node --check src/server.js && node --check src/app.js && node --check src/auth/adminAuth.js && node --check src/db/analyticsSchema.js && node --check src/db/jsonFileRepository.js && node --check src/db/neonRepository.js && node --check src/db/neonTransport.js && node --check src/db/storage.js && node --check src/db/storageBackup.js && node --check src/device/detectDevice.js && node --check src/geolocation/geoService.js && node --check src/geolocation/ipwhoProvider.js && node --check src/lib/ip.js && node --check src/lib/log.js && node --check src/lib/rateLimit.js && node --check src/lib/validateClientSignals.js && node --check src/services/adminAnalytics.js && node --check src/services/visitorService.js && node --check scripts/migrateNeon.js && node --check scripts/storageBackup.js && node --check scripts/storageLoadTest.js && node --check public/app.js && node --check public/admin.js",
     "test:browser": "playwright test"
   },
   "engines": {
@@ -18,7 +18,6 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.1",
-    "@vercel/functions": "^3.11.3",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
     "ua-parser-js": "^2.0.6"

@@ -7,102 +7,38 @@ const path = require("node:path");
 
 const root = path.join(__dirname, "..");
 
-test("V3 has one root manifest, lockfile, and startup entry with no nested rebuild", () => {
+test("V3 has one root manifest, lockfile, and Render startup entry", () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const lock = JSON.parse(fs.readFileSync(path.join(root, "package-lock.json"), "utf8"));
   assert.equal(manifest.name, "rakib-ip-tracker");
   assert.equal(manifest.version, "3.0.0");
-  assert.equal(manifest.main, "src/index.js");
+  assert.equal(manifest.main, "src/server.js");
   assert.equal(manifest.scripts.start, "node src/server.js");
   assert.equal(lock.name, manifest.name);
   assert.equal(lock.version, manifest.version);
   assert.equal(lock.packages[""].version, manifest.version);
   assert.equal(fs.existsSync(path.join(root, "rebuild")), false);
-  assert.equal(fs.existsSync(path.join(root, "server.js")), false);
+  assert.equal(fs.existsSync(path.join(root, "src", "server.js")), true);
   assert.equal("mongodb" in manifest.dependencies, false);
   assert.equal("mongodb" in (manifest.devDependencies || {}), false);
 });
 
-test("Render blueprint points at the root JSON app with persistent single-instance settings", () => {
-  const blueprint = fs.readFileSync(path.join(root, "render.yaml"), "utf8");
-  assert.match(blueprint, /name: privacy-safe-ip-tracker\n/);
-  assert.doesNotMatch(blueprint, /^\s+plan:/m);
-  assert.doesNotMatch(blueprint, /^\s+sizeGB:/m);
-  assert.doesNotMatch(blueprint, /^\s+rootDir:/m);
-  assert.match(blueprint, /buildCommand: npm ci --omit=dev/);
-  assert.match(blueprint, /startCommand: npm start/);
-  assert.match(blueprint, /numInstances: 1/);
-  assert.match(blueprint, /healthCheckPath: \/healthz/);
-  assert.match(blueprint, /mountPath: \/var\/data/);
-  assert.match(blueprint, /STORAGE_FILE/);
-});
-
-test("separate Free staging blueprint explicitly uses guarded ephemeral storage without changing production blueprint", () => {
-  const productionBlueprint = fs.readFileSync(path.join(root, "render.yaml"), "utf8");
-  const stagingBlueprint = fs.readFileSync(path.join(root, "render-free-staging.yaml"), "utf8");
-
-  assert.match(stagingBlueprint, /name: rakib-ip-tracker-free-staging/);
-  assert.match(stagingBlueprint, /plan: free/);
-  assert.match(stagingBlueprint, /buildCommand: npm ci --omit=dev/);
-  assert.match(stagingBlueprint, /startCommand: npm start/);
-  assert.match(stagingBlueprint, /numInstances: 1/);
-  assert.match(stagingBlueprint, /healthCheckPath: \/healthz/);
-  assert.match(stagingBlueprint, /key: STAGING_MODE\n\s+value: "true"/);
-  assert.match(stagingBlueprint, /key: STAGING_EPHEMERAL_STORAGE\n\s+value: "true"/);
-  assert.match(stagingBlueprint, /key: STAGING_STORAGE_DIR\n\s+value: \/tmp\/rakib-ip-tracker-staging/);
-  assert.match(stagingBlueprint, /key: TRUST_PROXY_HOPS\n\s+value: "0"/);
-  for (const secretName of ["ADMIN_PASSWORD", "IP_ENCRYPTION_KEY", "STAGING_ACCESS_PASSWORD"]) {
-    assert.match(stagingBlueprint, new RegExp(`key: ${secretName}\\n\\s+sync: false`));
-  }
-  assert.doesNotMatch(stagingBlueprint, /STORAGE_MOUNT_PATH|STORAGE_FILE|BACKUP_DIR|MONGODB_URI|disk:/);
-
-  assert.match(productionBlueprint, /mountPath: \/var\/data/);
-  assert.match(productionBlueprint, /STORAGE_MOUNT_PATH/);
-  assert.match(productionBlueprint, /BACKUP_DIR/);
-  assert.doesNotMatch(productionBlueprint, /STAGING_MODE/);
-});
-
-test("Vercel entry exports an Express app without opening a listener and keeps static assets in public", () => {
-  const entry = fs.readFileSync(path.join(root, "src", "index.js"), "utf8");
-  const vercel = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
-  assert.match(entry, /require\("express"\)/);
-  assert.match(entry, /module\.exports = functionApp/);
-  assert.doesNotMatch(entry, /\.listen\s*\(/);
+test("Render dashboard deployment settings remain documented and application assets are present", () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+  const guide = fs.readFileSync(path.join(root, "docs", "DEPLOYMENT_GUIDE.md"), "utf8");
+  assert.equal(manifest.scripts.start, "node src/server.js");
+  assert.match(guide, /npm ci --omit=dev/);
+  assert.match(guide, /npm start/);
+  assert.match(guide, /\/healthz/);
+  assert.match(guide, /Render Dashboard/);
   assert.equal(fs.existsSync(path.join(root, "public", "index.html")), true);
   assert.equal(fs.existsSync(path.join(root, "public", "admin.html")), true);
-  assert.ok(vercel.rewrites.some(rule => rule.source === "/admin" && rule.destination === "/admin.html"));
-  assert.ok(vercel.rewrites.some(rule => rule.source === "/admin-panel" && rule.destination === "/admin.html"));
-  assert.equal(fs.readFileSync(path.join(root, "render.yaml"), "utf8").includes("/var/data"), true);
-  assert.equal(fs.readFileSync(path.join(root, "render-free-staging.yaml"), "utf8").includes("STAGING_EPHEMERAL_STORAGE"), true);
 });
 
-test("Vercel explicitly selects the root Express entrypoint and delegates to the existing handler", () => {
-  const entrySource = fs.readFileSync(path.join(root, "index.js"), "utf8");
-  const entrypoint = require(path.join(root, "index.js"));
-  const existingHandler = require(path.join(root, "src", "index.js"));
-  const vercel = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
-
-  assert.equal(vercel.framework, "express");
-  assert.match(entrySource, /require\("express"\)/);
-  assert.match(entrySource, /require\("\.\/src\/index"\)/);
-  assert.match(entrySource, /module\.exports = functionApp/);
-  assert.doesNotMatch(entrySource, /\.listen\s*\(/);
-  assert.equal(entrypoint, existingHandler);
-  assert.deepEqual(vercel.rewrites.slice(0, 2), [
-    { source: "/admin", destination: "/admin.html" },
-    { source: "/admin-panel", destination: "/admin.html" }
-  ]);
-  assert.ok(vercel.headers.some(item => item.source === "/(.*)"));
-});
-
-test("Express and Vercel CSP policies consistently allow only exact OSM tile host patterns", () => {
+test("Express CSP allows the required exact OpenStreetMap tile hosts", () => {
   const appSource = fs.readFileSync(path.join(root, "src", "app.js"), "utf8");
   const appPolicy = appSource.match(/setHeader\("Content-Security-Policy", "([^"]+)"\)/)?.[1];
-  const vercel = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
-  const vercelPolicy = vercel.headers.find(item => item.source === "/(.*)").headers
-    .find(item => item.key === "Content-Security-Policy").value;
   assert.ok(appPolicy);
-  assert.equal(appPolicy, vercelPolicy);
   assert.match(appPolicy, /img-src 'self' data: https:\/\/tile\.openstreetmap\.org https:\/\/\*\.tile\.openstreetmap\.org/);
   assert.doesNotMatch(appPolicy, /https:\/\/\*\.openstreetmap\.org/);
   assert.match(appPolicy, /script-src 'self' https:\/\/unpkg\.com/);

@@ -13,9 +13,9 @@ function csvCell(value) {
   return `"${clean.replaceAll('"', '""')}"`;
 }
 
-function createApp({ config, repository, visitorService, geoService, analytics, logger = createLogger(), now = Date.now, waitUntil = null }) {
+function createApp({ config, repository, visitorService, geoService, analytics, logger = createLogger(), now = Date.now }) {
   const app = express();
-  const persistentRepository = config.vercelMode === true || repository.persistent === true;
+  const persistentRepository = repository.persistent === true;
   const auth = createAdminAuth({ password: config.adminPassword, production: config.secureCookies ?? config.nodeEnv === "production", now,
     sessionStore: persistentRepository ? repository : null });
   const sharedLimit = persistentRepository ? { store: repository, keySecret: config.encryptionKey } : {};
@@ -62,14 +62,12 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
         const tracked = analytics.record({ type: "request", method: req.method, path: suspiciousPath || res.statusCode === 404 ? "/[redacted]" : routePath,
           status: res.statusCode, duration, createdAt: eventTime, sessionId: trackRequest ? req.analyticsSessionId || null : null, securityType });
         if (tracked && typeof tracked.then === "function") {
-          const task = tracked.catch(error => logger.error?.("analytics_persist_failed", { code: typeof error?.code === "string" ? error.code : "DATABASE_OPERATION_FAILED" }));
-          if (config.vercelMode && typeof waitUntil === "function") waitUntil(task);
+          tracked.catch(error => logger.error?.("analytics_persist_failed", { code: typeof error?.code === "string" ? error.code : "DATABASE_OPERATION_FAILED" }));
         }
         if (req.method === "GET" && req.path === "/") {
           const pageEvent = analytics.record({ type: "page", method: "GET", path: "/", duration: null, createdAt: eventTime, sessionId: req.analyticsSessionId || null });
           if (pageEvent && typeof pageEvent.then === "function") {
-            const task = pageEvent.catch(error => logger.error?.("analytics_persist_failed", { code: typeof error?.code === "string" ? error.code : "DATABASE_OPERATION_FAILED" }));
-            if (config.vercelMode && typeof waitUntil === "function") waitUntil(task);
+            pageEvent.catch(error => logger.error?.("analytics_persist_failed", { code: typeof error?.code === "string" ? error.code : "DATABASE_OPERATION_FAILED" }));
           }
         }
       }
@@ -91,7 +89,7 @@ function createApp({ config, repository, visitorService, geoService, analytics, 
 
   const requireAdmin = auth.requireAdmin;
   const adminWriteOrigin = (req, res, next) => {
-    if (!isSameOrigin(req, { stagingHttps: config.stagingMode === true || config.vercelMode === true || config.secureCookies === true })) return res.status(403).json({ success: false, error: { code: "BAD_ORIGIN", message: "Request origin is not allowed." } });
+    if (!isSameOrigin(req, { stagingHttps: config.stagingMode === true || config.secureCookies === true })) return res.status(403).json({ success: false, error: { code: "BAD_ORIGIN", message: "Request origin is not allowed." } });
     next();
   };
   const aggregateTelemetry = async () => {

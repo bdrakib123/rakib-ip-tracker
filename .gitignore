@@ -6,9 +6,6 @@ playwright-report/
 npm-debug.log*
 .DS_Store
 
-# Local patch scripts
-patch_*.py
-
 # Local patch backups
 *.analytics_backup_*
 *.analytics2_backup_*
@@ -19,7 +16,6 @@ patch_*.py
 *.clear_backup_*
 .env.*
 !.env.example
-!.env.staging.example
 
 # Preserved local test trace from pre-consolidation V2
 docs/verification/phase-d2-test-results/

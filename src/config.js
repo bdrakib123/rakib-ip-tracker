@@ -19,7 +19,6 @@ function loadConfig(env = process.env) {
   }
 
   const nodeEnv = env.NODE_ENV || "development";
-  const vercelMode = env.VERCEL === "1";
   const stagingMode = env.STAGING_MODE === "true";
   const stagingEphemeralStorage = env.STAGING_EPHEMERAL_STORAGE === "true";
   if (env.STAGING_MODE !== undefined && !["true", "false"].includes(env.STAGING_MODE)) {
@@ -27,9 +26,6 @@ function loadConfig(env = process.env) {
   }
   if (env.STAGING_EPHEMERAL_STORAGE !== undefined && !["true", "false"].includes(env.STAGING_EPHEMERAL_STORAGE)) {
     throw new Error("STAGING_EPHEMERAL_STORAGE must be true or false");
-  }
-  if (vercelMode && (stagingMode || stagingEphemeralStorage || env.STORAGE_MOUNT_PATH || env.STORAGE_FILE || env.BACKUP_DIR || env.MONGODB_URI || env.STAGING_MONGODB_URI)) {
-    throw new Error("Vercel mode cannot use file storage, temporary staging storage, or MongoDB configuration.");
   }
   if (stagingMode !== stagingEphemeralStorage) {
     throw new Error("STAGING_MODE and STAGING_EPHEMERAL_STORAGE must both be explicitly enabled for temporary staging storage.");
@@ -71,17 +67,13 @@ function loadConfig(env = process.env) {
   if (!Number.isInteger(trustProxyHops) || trustProxyHops < 0 || trustProxyHops > 10) {
     throw new Error("TRUST_PROXY_HOPS must be an integer from 0 through 10");
   }
-  if (vercelMode && env.TRUST_PROXY_HOPS === undefined) {
-    throw new Error("TRUST_PROXY_HOPS must be explicitly configured for Vercel after verifying the proxy chain.");
-  }
 
   const port = Number(env.PORT || 3000);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("PORT must be an integer from 1 through 65535");
   const geoProvider = env.GEO_PROVIDER || "ipwho.is";
   if (geoProvider !== "ipwho.is") throw new Error(`Unsupported geolocation provider: ${geoProvider}`);
-  const storageBackend = vercelMode ? required(env, "STORAGE_BACKEND") : (env.STORAGE_BACKEND || "json-file");
-  if (vercelMode && storageBackend !== "neon-postgres") throw new Error("Vercel requires STORAGE_BACKEND=neon-postgres; file storage is not supported.");
-  if (!vercelMode && !["json-file", "neon-postgres"].includes(storageBackend)) {
+  const storageBackend = env.STORAGE_BACKEND || "json-file";
+  if (!["json-file", "neon-postgres"].includes(storageBackend)) {
     throw new Error("STORAGE_BACKEND must be json-file or neon-postgres.");
   }
   if (stagingMode && storageBackend !== "json-file") {
@@ -92,11 +84,11 @@ function loadConfig(env = process.env) {
   if (storageBackend === "neon-postgres" && (env.STORAGE_MOUNT_PATH || env.STORAGE_FILE || env.BACKUP_DIR)) {
     throw new Error("Neon storage cannot use JSON file, persistent mount, or JSON backup paths.");
   }
-  const storageMountPath = vercelMode || stagingMode || storageBackend === "neon-postgres" ? null : env.STORAGE_MOUNT_PATH ? path.resolve(env.STORAGE_MOUNT_PATH) : null;
-  const storageFile = vercelMode || storageBackend === "neon-postgres" ? null : stagingMode
+  const storageMountPath = stagingMode || storageBackend === "neon-postgres" ? null : env.STORAGE_MOUNT_PATH ? path.resolve(env.STORAGE_MOUNT_PATH) : null;
+  const storageFile = storageBackend === "neon-postgres" ? null : stagingMode
     ? path.join(stagingStorageDir, "visitors.json")
     : path.resolve(env.STORAGE_FILE || path.join(process.cwd(), "data", "visitors.json"));
-  if (nodeEnv === "production" && !vercelMode && !stagingMode && storageBackend === "json-file" && !storageMountPath) {
+  if (nodeEnv === "production" && !stagingMode && storageBackend === "json-file" && !storageMountPath) {
     throw new Error("STORAGE_MOUNT_PATH is required in production; refusing unmounted file storage.");
   }
   if (storageMountPath) {
@@ -109,7 +101,6 @@ function loadConfig(env = process.env) {
 
   return Object.freeze({
     nodeEnv,
-    vercelMode,
     stagingMode,
     stagingEphemeralStorage,
     stagingStorageDir,

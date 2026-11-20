@@ -1,12 +1,12 @@
 # API Documentation
 
-All API responses use `Cache-Control: no-store`. JSON bodies are limited to 16 KiB. V3 history, analytics, export, and live-refresh endpoints require an authenticated admin session. Temporary Render staging adds Basic Auth to every route except `GET /healthz`.
+All API responses use `Cache-Control: no-store`. JSON bodies are limited to 16 KiB. V3 history, analytics, export, and live-refresh endpoints require an authenticated admin session. The optional local temporary-storage mode adds Basic Auth to every route except `GET /healthz`; it is not a hosted Render service configuration.
 
 ## Public endpoints
 
 | Method/path | Query/body | Success | Errors |
 |---|---|---|---|
-| `GET /healthz` | None | `200 {success:true,status:"ok"}`; liveness only | None from handler |
+| `GET /healthz` | None | `200 {success:true,status:"ok"}` when available | `503 {success:false,status:"unavailable"}` when the persistent repository is unavailable |
 | `POST /api/public/intelligence` | Optional validated `client` signal object | `201 {success:true,data:profile}` | `400` invalid body; `429` limit; `500` generic request error |
 | `GET /api/public/history` | `page`, `limit`, `search`, `country`, `device` | `200 {success:true,data:{page,limit,total,pages,data:[maskedRecord]}}` | `429`, generic `500` |
 | `GET, POST /api/track` | POST accepts the same optional `client` object | Legacy-compatible `200 {success:true,visitor:profile}` | `400`, `429`, generic `500` |
@@ -63,8 +63,4 @@ Admin session cookies are random, HTTP-only, SameSite=Strict, and expire after 3
 | `GET /api/admin/live`, `GET /api/live` | Admin-authenticated bounded polling metadata: `{success:true,data:{mode:"polling",intervalMs:20000,observedAt}}` | `401`, generic `500` if shared session storage is unavailable |
 | `POST /api/admin/clear-data` | `{type:"24h"|"7d"|"history"}`; origin checked | `400` invalid type, `401`, `403` bad origin, generic `500` |
 
-Generic server errors use `{success:false,error:{code,message}}` and do not disclose paths or storage contents. Legacy-compatible analytics intentionally omit legacy IP hashes, user agents, referrers, raw session IDs, security details, and historical data unavailable in V3.
-
-## Vercel-specific behavior
-
-Vercel preserves the route shapes and authorization boundaries above. The live endpoints use the polling contract listed above in all deployment modes, including Render and Vercel; they do not expose SSE. The browser polls while the admin view is visible. `GET /healthz` checks the Neon database in Vercel mode and returns only healthy/unavailable status; Render's health behavior remains unchanged. Public static HTML/CSS/JS are delivered from `public/` by Vercel's CDN.
+Generic server errors use `{success:false,error:{code,message}}` and do not disclose paths or storage contents. Legacy-compatible analytics intentionally omit legacy IP hashes, user agents, referrers, raw session IDs, security details, and historical data unavailable in V3. Live refresh uses bounded authenticated polling on the Render-hosted application; no SSE endpoint is implemented. `/healthz` checks persistent repository readiness (including a database ping in Neon mode) and exposes only healthy/unavailable status.

@@ -30,6 +30,12 @@ function fakeSql() {
   return tag;
 }
 
+test("manual migration runner requires an explicitly injected DATABASE_URL and does not load repository .env", () => {
+  const source = fs.readFileSync(path.join(__dirname, "..", "scripts", "migrateNeon.js"), "utf8");
+  assert.match(source, /env\.DATABASE_URL/);
+  assert.doesNotMatch(source, /dotenv/);
+});
+
 test("storage factory initializes the existing Neon adapter for a Render production configuration", async () => {
   const env = {
     NODE_ENV: "production", STORAGE_BACKEND: "neon-postgres", DATABASE_URL: "postgresql://synthetic.invalid/render",

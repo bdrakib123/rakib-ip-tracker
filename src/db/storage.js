@@ -5,6 +5,7 @@ const { StorageError } = require("./jsonFileRepository");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const os = require("node:os");
+const { configureNeonFetch } = require("./neonTransport");
 
 function decodeMountField(value) {
   return value.replace(/\\([0-7]{3})/g, (_match, octal) => String.fromCharCode(Number.parseInt(octal, 8)));
@@ -42,7 +43,9 @@ async function createStorageRepository(config, { neonFactory, neonRepositoryFact
       error.code = "DATABASE_URL_REQUIRED";
       throw error;
     }
-    const neon = neonFactory || require("@neondatabase/serverless").neon;
+    const neonModule = require("@neondatabase/serverless");
+    if (!neonFactory) configureNeonFetch(neonModule.neonConfig, process.env.NEON_FORCE_IPV4 === "1");
+    const neon = neonFactory || neonModule.neon;
     const createNeonRepository = neonRepositoryFactory || require("./neonRepository").createNeonRepository;
     const repository = createNeonRepository({ sql: neon(config.databaseUrl) });
     try {

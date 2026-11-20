@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="theme-color"
+    content="#070b16"
+  >
+
+  <title>Rakib IP Intelligence</title>
+
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+</head>
+
+<body>
+
+<div class="bg-grid"></div>
+<div class="orb orb-one"></div>
+<div class="orb orb-two"></div>
+
+<header class="topbar">
+
+  <div class="brand">
+    <div class="brand-icon">R</div>
+
+    <div>
+      <div class="brand-name">
+        RAKIB<span>IP</span>
+      </div>
+
+      <div class="brand-sub">
+        INTELLIGENCE SYSTEM
+      </div>
+    </div>
+  </div>
+
+  <div class="status">
+    <span class="status-dot"></span>
+    SYSTEM ONLINE
+  </div>
+
+
+<a href="/admin-panel" class="admin-panel-link" aria-label="Open Admin Panel">
+  🔐 <span>Admin Panel</span>
+</a>
+
+</header>
+
+<main class="container">
+
+  <section class="hero">
+
+    <div class="hero-copy">
+
+      <div class="eyebrow">
+        <span></span>
+        VISITOR INTELLIGENCE
+      </div>
+
+      <h1>
+        Your Digital
+        <strong>Footprint</strong>
+      </h1>
+
+      <p>
+        Real-time IP, location, device and browser intelligence.
+        Your own connection details are shown below.
+      </p>
+
+    </div>
+
+    <div class="hero-chip">
+      <span>LIVE</span>
+      TRACKING
+    </div>
+
+  </section>
+
+  <!-- YOUR DIGITAL PROFILE -->
+
+<section class="user-intelligence" id="userIntelligence">
+
+  <div class="ui-header">
+    <div>
+      <span class="ui-kicker">PERSONAL DEVICE LAB</span>
+      <h2>YOUR DIGITAL PROFILE</h2>
+      <p>Everything this browser publicly reveals to this website</p>
+    </div>
+
+    <div class="ui-live">
+      <span></span>
+      LIVE
+    </div>
+  </div>
+
+  <!-- NETWORK -->
+
+  <div class="ui-section-title">
+    <span>01</span>
+    <div>
+      <b>NETWORK INTELLIGENCE</b>
+      <small>Your public network information</small>
+    </div>
+  </div>
+
+  <div class="ui-grid ui-grid-4">
+
+    <article class="ui-card">
+      <span class="ui-icon">🌐</span>
+      <small>PUBLIC IP</small>
+      <strong id="uiIP">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">📡</span>
+      <small>ISP</small>
+      <strong id="uiISP">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🏢</span>
+      <small>ORGANIZATION</small>
+      <strong id="uiOrganization">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🔢</span>
+      <small>ASN</small>
+      <strong id="uiASN">—</strong>
+    </article>
+
+  </div>
+
+  <!-- LOCATION -->
+
+  <div class="ui-section-title">
+    <span>02</span>
+    <div>
+      <b>APPROXIMATE LOCATION</b>
+      <small>IP-based geographic information</small>
+    </div>
+  </div>
+
+  <div class="ui-location-card">
+
+    <div class="ui-location-main">
+      <span class="ui-big-icon">📍</span>
+
+      <div>
+        <small>YOU ARE APPROXIMATELY IN</small>
+        <strong id="uiLocation">Loading...</strong>
+        <p id="uiRegion">—</p>
+      </div>
+    </div>
+
+    <div class="ui-location-meta">
+
+      <div>
+        <small>COUNTRY</small>
+        <b id="uiCountry">—</b>
+      </div>
+
+      <div>
+        <small>COUNTRY CODE</small>
+        <b id="uiCountryCode">—</b>
+      </div>
+
+      <div>
+        <small>POSTAL</small>
+        <b id="uiPostal">—</b>
+      </div>
+
+      <div>
+        <small>TIMEZONE</small>
+        <b id="uiTimezone">—</b>
+      </div>
+
+      <div>
+        <small>COORDINATES</small>
+        <b id="uiCoordinates">—</b>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- DEVICE -->
+
+  <div class="ui-section-title">
+    <span>03</span>
+    <div>
+      <b>DEVICE INTELLIGENCE</b>
+      <small>Information exposed by your browser</small>
+    </div>
+  </div>
+
+  <div class="ui-grid ui-grid-4">
+
+    <article class="ui-card">
+      <span class="ui-icon">📱</span>
+      <small>DEVICE</small>
+      <strong id="uiDevice">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">⚙️</span>
+      <small>OPERATING SYSTEM</small>
+      <strong id="uiOS">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🖥️</span>
+      <small>SCREEN</small>
+      <strong id="uiScreen">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">📐</span>
+      <small>VIEWPORT</small>
+      <strong id="uiViewport">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🔍</span>
+      <small>PIXEL RATIO</small>
+      <strong id="uiDPR">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🧠</span>
+      <small>CPU CORES</small>
+      <strong id="uiCPU">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">💾</span>
+      <small>DEVICE MEMORY</small>
+      <strong id="uiMemory">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">👆</span>
+      <small>TOUCH</small>
+      <strong id="uiTouch">—</strong>
+    </article>
+
+  </div>
+
+  <!-- BROWSER -->
+
+  <div class="ui-section-title">
+    <span>04</span>
+    <div>
+      <b>BROWSER INTELLIGENCE</b>
+      <small>Browser and client environment</small>
+    </div>
+  </div>
+
+  <div class="ui-grid ui-grid-3">
+
+    <article class="ui-card ui-card-wide">
+      <span class="ui-icon">🌎</span>
+      <small>BROWSER</small>
+      <strong id="uiBrowser">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">⚡</span>
+      <small>ENGINE</small>
+      <strong id="uiEngine">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">💻</span>
+      <small>PLATFORM</small>
+      <strong id="uiPlatform">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🗣️</span>
+      <small>LANGUAGE</small>
+      <strong id="uiLanguage">—</strong>
+    </article>
+
+    <article class="ui-card ui-card-wide">
+      <span class="ui-icon">🗣️</span>
+      <small>PREFERRED LANGUAGES</small>
+      <strong id="uiLanguages">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🍪</span>
+      <small>COOKIES</small>
+      <strong id="uiCookies">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🚫</span>
+      <small>DO NOT TRACK</small>
+      <strong id="uiDNT">—</strong>
+    </article>
+
+    <article class="ui-card">
+      <span class="ui-icon">🟢</span>
+      <small>ONLINE</small>
+      <strong id="uiOnline">—</strong>
+    </article>
+
+  </div>
+
+  <!-- FINGERPRINT -->
+
+  <div class="ui-section-title">
+    <span>05</span>
+    <div>
+      <b>BROWSER LAB</b>
+      <small>Technical browser signals</small>
+    </div>
+  </div>
+
+  <div class="ui-lab">
+
+    <div class="ui-lab-row">
+      <span>Canvas Hash</span>
+      <b id="uiCanvas">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>WebGL Vendor</span>
+      <b id="uiWebGLVendor">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>WebGL Renderer</span>
+      <b id="uiWebGLRenderer">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>WebGL Version</span>
+      <b id="uiWebGLVersion">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>Color Depth</span>
+      <b id="uiColorDepth">—</b>
+    </div>
+
+    <div class="ui-lab-row">
+      <span>Timezone Offset</span>
+      <b id="uiTimezoneOffset">—</b>
+    </div>
+
+  </div>
+
+  <!-- SECURITY -->
+
+  <div class="ui-section-title">
+    <span>06</span>
+    <div>
+      <b>NETWORK SIGNALS</b>
+      <small>Technical signals returned by the IP provider</small>
+    </div>
+  </div>
+
+  <div class="ui-security-grid">
+
+    <div class="ui-security-card">
+      <span>VPN</span>
+      <b id="uiVPN">—</b>
+    </div>
+
+    <div class="ui-security-card">
+      <span>PROXY</span>
+      <b id="uiProxy">—</b>
+    </div>
+
+    <div class="ui-security-card">
+      <span>TOR</span>
+      <b id="uiTor">—</b>
+    </div>
+
+    <div class="ui-security-card">
+      <span>HOSTING</span>
+      <b id="uiHosting">—</b>
+    </div>
+
+  </div>
+
+  <div class="ui-disclaimer">
+    <b>ℹ️ PRIVACY NOTE</b>
+    <span>
+      Location shown here is approximate and based on network information.
+      Browser signals are technical information exposed to this website;
+      they do not by themselves identify a person.
+    </span>
+  </div>
+
+</section>
+
+<!-- CURRENT VISITOR -->
+
+  <section class="section-heading">
+
+    <div>
+      <span class="mini-label">CURRENT SESSION</span>
+
+      <h2>
+        Your Connection
+      </h2>
+    </div>
+
+    <div class="live-pill">
+      <span></span>
+      LIVE
+    </div>
+
+  </section>
+
+  <section class="ip-hero glass">
+
+    <div class="ip-label">
+      YOUR PUBLIC IP ADDRESS
+    </div>
+
+    <div
+      id="currentIP"
+      class="big-ip"
+    >
+      Loading...
+    </div>
+
+    <div class="ip-note">
+      This is the public IP address visible to this website.
+    </div>
+
+  </section>
+
+  <section class="cards">
+
+    <article class="info-card glass">
+
+      <div class="card-icon">🌍</div>
+
+      <div>
+        <div class="card-label">
+          LOCATION
+        </div>
+
+        <div
+          id="location"
+          class="card-value"
+        >
+          Loading...
+        </div>
+
+        <div
+          id="region"
+          class="card-muted"
+        >
+          —
+        </div>
+      </div>
+
+    </article>
+
+    <article class="info-card glass">
+
+      <div class="card-icon">📡</div>
+
+      <div>
+        <div class="card-label">
+          ISP
+        </div>
+
+        <div
+          id="isp"
+          class="card-value"
+        >
+          Loading...
+        </div>
+
+        <div
+          id="asn"
+          class="card-muted"
+        >
+          —
+        </div>
+      </div>
+
+    </article>
+
+    <article class="info-card glass">
+
+      <div class="card-icon">📱</div>
+
+      <div>
+        <div class="card-label">
+          DEVICE
+        </div>
+
+        <div
+          id="device"
+          class="card-value"
+        >
+          Loading...
+        </div>
+
+        <div
+          id="os"
+          class="card-muted"
+        >
+          —
+        </div>
+      </div>
+
+    </article>
+
+    <article class="info-card glass">
+
+      <div class="card-icon">🌐</div>
+
+      <div>
+        <div class="card-label">
+          BROWSER
+        </div>
+
+        <div
+          id="browser"
+          class="card-value"
+        >
+          Loading...
+        </div>
+
+        <div
+          id="engine"
+          class="card-muted"
+        >
+          —
+        </div>
+      </div>
+
+    </article>
+
+  </section>
+
+  <!-- MAP -->
+
+  <section class="map-section glass">
+
+    <div class="section-top">
+
+      <div>
+        <div class="mini-label">
+          GEOLOCATION
+        </div>
+
+        <h2>
+          Approximate Location
+        </h2>
+      </div>
+
+      <div
+        id="coordinates"
+        class="coordinates"
+      >
+        —
+      </div>
+
+    </div>
+
+    <div
+      id="map"
+      class="map"
+    ></div>
+
+  </section>
+
+  <!-- USER AGENT -->
+
+  <section class="details glass">
+
+    <div class="mini-label">
+      CONNECTION DETAILS
+    </div>
+
+    <h2>
+      Browser Signature
+    </h2>
+
+    <div
+      id="userAgent"
+      class="user-agent"
+    >
+      Loading...
+    </div>
+
+    <div class="detail-grid">
+
+      <div>
+        <span>Country</span>
+        <strong id="country">—</strong>
+      </div>
+
+      <div>
+        <span>Country Code</span>
+        <strong id="countryCode">—</strong>
+      </div>
+
+      <div>
+        <span>Postal</span>
+        <strong id="postal">—</strong>
+      </div>
+
+      <div>
+        <span>Timezone</span>
+        <strong id="timezone">—</strong>
+      </div>
+
+      <div>
+        <span>Organization</span>
+        <strong id="organization">—</strong>
+      </div>
+
+      <div>
+        <span>Browser Version</span>
+        <strong id="browserVersion">—</strong>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- NETWORK SECURITY -->
+
+  <section class="security-section glass">
+
+    <div class="mini-label">
+      NETWORK SECURITY
+    </div>
+
+    <h2>
+      VPN / Proxy Intelligence
+    </h2>
+
+    <div class="security-grid">
+
+      <div class="security-card">
+        <span>VPN</span>
+        <strong id="vpnStatus">CHECKING</strong>
+      </div>
+
+      <div class="security-card">
+        <span>PROXY</span>
+        <strong id="proxyStatus">CHECKING</strong>
+      </div>
+
+      <div class="security-card">
+        <span>TOR</span>
+        <strong id="torStatus">CHECKING</strong>
+      </div>
+
+      <div class="security-card">
+        <span>HOSTING</span>
+        <strong id="hostingStatus">CHECKING</strong>
+      </div>
+
+    </div>
+
+    <div class="mini-label signal-label">
+      DEVICE SIGNALS
+    </div>
+
+    <div class="signal-grid">
+
+      <div>
+        <span>Screen</span>
+        <strong id="screenInfo">—</strong>
+      </div>
+
+      <div>
+        <span>Viewport</span>
+        <strong id="viewportInfo">—</strong>
+      </div>
+
+      <div>
+        <span>Pixel Ratio</span>
+        <strong id="pixelInfo">—</strong>
+      </div>
+
+      <div>
+        <span>Touch</span>
+        <strong id="touchInfo">—</strong>
+      </div>
+
+      <div>
+        <span>CPU</span>
+        <strong id="cpuInfo">—</strong>
+      </div>
+
+      <div>
+        <span>Memory</span>
+        <strong id="memoryInfo">—</strong>
+      </div>
+
+      <div>
+        <span>Network</span>
+        <strong id="networkInfo">—</strong>
+      </div>
+
+      <div>
+        <span>WebGL</span>
+        <strong id="webglInfo">—</strong>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- HISTORY -->
+
+  <section class="section-heading history-heading">
+
+    <div>
+      <span class="mini-label">
+        VISITOR DATABASE
+      </span>
+
+      <h2>
+        Visitor History
+      </h2>
+    </div>
+
+  </section>
+
+
+
+  <!-- ADMIN -->
+
+
+
+
+
+    <!-- SMART COMMAND CENTER -->
+
+    <section class="smart-intelligence">
+
+      <div class="smart-header">
+
+        <div>
+          <div class="smart-eyebrow">
+            NEURAL VISITOR INTELLIGENCE
+          </div>
+
+          <h2>Command Center</h2>
+
+          <p>
+            Real-time visitor activity, security signals
+            and network intelligence.
+          </p>
+        </div>
+
+        <div class="smart-actions">
+
+          <button
+            id="smartThemeButton"
+            class="smart-action"
+            type="button"
+          >◐ Theme</button>
+
+          <button
+            id="smartExportCSV"
+            class="smart-action"
+            type="button"
+          >↓ CSV</button>
+
+          <button
+            id="smartExportJSON"
+            class="smart-action"
+            type="button"
+          >↓ JSON</button>
+
+        </div>
+
+      </div>
+
+
+      <div class="smart-kpi-grid">
+
+        <div class="smart-kpi">
+          <div class="smart-kpi-icon">◉</div>
+          <div>
+            <span>LIVE EVENTS</span>
+            <strong id="smartLiveEvents">0</strong>
+            <small>incoming now</small>
+          </div>
+        </div>
+
+        <div class="smart-kpi">
+          <div class="smart-kpi-icon">◎</div>
+          <div>
+            <span>UNIQUE COUNTRIES</span>
+            <strong id="smartCountries">0</strong>
+            <small>detected locations</small>
+          </div>
+        </div>
+
+        <div class="smart-kpi">
+          <div class="smart-kpi-icon">△</div>
+          <div>
+            <span>SECURITY SIGNALS</span>
+            <strong id="smartRiskCount">0</strong>
+            <small>VPN / Proxy / Tor / Hosting</small>
+          </div>
+        </div>
+
+        <div class="smart-kpi">
+          <div class="smart-kpi-icon">⌁</div>
+          <div>
+            <span>ACTIVE DEVICES</span>
+            <strong id="smartDevices">0</strong>
+            <small>device categories</small>
+          </div>
+        </div>
+
+      </div>
+
+
+      <div class="smart-main-grid">
+
+        <div class="smart-feed-card">
+
+          <div class="smart-card-head">
+
+            <div>
+              <span class="smart-label">
+                LIVE ACTIVITY
+              </span>
+
+              <h3>Incoming Visitors</h3>
+            </div>
+
+            <span class="smart-live-badge">
+              <i></i> LIVE
+            </span>
+
+          </div>
+
+          <div
+            id="smartActivityFeed"
+            class="smart-activity-feed"
+          >
+            <div class="smart-empty">
+              Waiting for incoming visitors...
+            </div>
+          </div>
+
+        </div>
+
+
+        <div class="smart-security-card">
+
+          <div class="smart-card-head">
+
+            <div>
+              <span class="smart-label">
+                SECURITY MONITOR
+              </span>
+
+              <h3>Network Signals</h3>
+            </div>
+
+          </div>
+
+          <div class="smart-security-list">
+
+            <div class="smart-security-row">
+              <span>VPN</span>
+              <strong id="smartVPN">0</strong>
+            </div>
+
+            <div class="smart-security-row">
+              <span>Proxy</span>
+              <strong id="smartProxy">0</strong>
+            </div>
+
+            <div class="smart-security-row">
+              <span>Tor</span>
+              <strong id="smartTor">0</strong>
+            </div>
+
+            <div class="smart-security-row">
+              <span>Hosting</span>
+              <strong id="smartHosting">0</strong>
+            </div>
+
+          </div>
+
+          <div
+            id="smartRiskBar"
+            class="smart-risk-bar"
+          >
+            <span></span>
+          </div>
+
+          <div
+            id="smartRiskText"
+            class="smart-risk-text"
+          >
+            No security signals detected.
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="smart-analytics-grid">
+
+        <div class="smart-analytics-card">
+
+          <div class="smart-card-head">
+            <div>
+              <span class="smart-label">GEOGRAPHY</span>
+              <h3>Country Activity</h3>
+            </div>
+          </div>
+
+          <div
+            id="smartCountryRanking"
+            class="smart-ranking"
+          ></div>
+
+        </div>
+
+
+        <div class="smart-analytics-card">
+
+          <div class="smart-card-head">
+            <div>
+              <span class="smart-label">DEVICES</span>
+              <h3>Device Distribution</h3>
+            </div>
+          </div>
+
+          <div
+            id="smartDeviceRanking"
+            class="smart-ranking"
+          ></div>
+
+        </div>
+
+
+        <div class="smart-analytics-card">
+
+          <div class="smart-card-head">
+            <div>
+              <span class="smart-label">BROWSERS</span>
+              <h3>Browser Distribution</h3>
+            </div>
+          </div>
+
+          <div
+            id="smartBrowserRanking"
+            class="smart-ranking"
+          ></div>
+
+        </div>
+
+      </div>
+
+
+      <div class="smart-widget-controls">
+
+        <div>
+          <span class="smart-label">
+            DASHBOARD LAYOUT
+          </span>
+
+          <h3>Widget Visibility</h3>
+        </div>
+
+        <div class="smart-widget-buttons">
+
+          <button
+            type="button"
+            data-smart-toggle="smart-main-grid"
+          >Activity</button>
+
+          <button
+            type="button"
+            data-smart-toggle="smart-analytics-grid"
+          >Analytics</button>
+
+          <button
+            type="button"
+            data-smart-toggle="live-premium-dashboard"
+          >Live Map</button>
+
+          <button
+            type="button"
+            data-smart-toggle="history-tools"
+          >Filters</button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- VISITOR PROFILE -->
+
+    <div
+      id="smartVisitorModal"
+      class="smart-profile-modal"
+    >
+
+      <div
+        class="smart-profile-backdrop"
+        data-smart-close-profile
+      ></div>
+
+      <div class="smart-profile-box">
+
+        <button
+          class="smart-profile-close"
+          type="button"
+          data-smart-close-profile
+        >×</button>
+
+        <div class="smart-profile-head">
+
+          <div class="smart-profile-avatar">
+            ◉
+          </div>
+
+          <div>
+
+            <span class="smart-label">
+              VISITOR INTELLIGENCE
+            </span>
+
+            <h2 id="smartProfileTitle">
+              Visitor
+            </h2>
+
+            <p id="smartProfileSubtitle">
+              Loading...
+            </p>
+
+          </div>
+
+        </div>
+
+        <div
+          id="smartProfileContent"
+          class="smart-profile-content"
+        ></div>
+
+      </div>
+
+    </div>
+
+
+<!-- =======================================================
+     SERVER INTELLIGENCE
+======================================================== -->
+
+<section class="server-intelligence" id="serverIntelligence">
+
+  <div class="server-intelligence-header">
+    <div>
+      <div class="server-kicker">SYSTEM TELEMETRY</div>
+      <h2>Server Intelligence</h2>
+      <p>Runtime, traffic, sessions & security telemetry</p>
+    </div>
+
+    <div class="server-health-state">
+      <span class="server-health-dot" id="serverHealthDot"></span>
+      <span id="serverHealthText">CHECKING</span>
+    </div>
+  </div>
+
+  <div class="server-kpi-grid">
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">UPTIME</span>
+      <strong id="serverUptime">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">RAM</span>
+      <strong id="serverRAM">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">CPU LOAD</span>
+      <strong id="serverCPU">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">REQUESTS</span>
+      <strong id="serverRequests">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">ERROR RATE</span>
+      <strong id="serverErrors">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">ACTIVE SESSIONS</span>
+      <strong id="serverSessions">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">UNIQUE 24H</span>
+      <strong id="serverUnique">—</strong>
+    </div>
+
+    <div class="server-kpi">
+      <span class="server-kpi-label">RETURNING</span>
+      <strong id="serverReturning">—</strong>
+    </div>
+
+  </div>
+
+  <div class="server-analytics-grid">
+
+    <div class="server-panel">
+      <div class="server-panel-title">
+        <span>TOP ENDPOINTS</span>
+        <small>RUNTIME</small>
+      </div>
+
+      <div id="serverEndpoints" class="server-ranking-list">
+        <div class="server-empty">Loading...</div>
+      </div>
+    </div>
+
+    <div class="server-panel">
+      <div class="server-panel-title">
+        <span>HTTP STATUS</span>
+        <small>LIVE</small>
+      </div>
+
+      <div id="serverStatuses" class="server-ranking-list">
+        <div class="server-empty">Loading...</div>
+      </div>
+    </div>
+
+    <div class="server-panel">
+      <div class="server-panel-title">
+        <span>TRAFFIC</span>
+        <small>LAST 24H</small>
+      </div>
+
+      <div class="server-mini-stats">
+        <div>
+          <b id="server24Requests">0</b>
+          <span>Requests</span>
+        </div>
+
+        <div>
+          <b id="server24Pages">0</b>
+          <span>Page Views</span>
+        </div>
+
+        <div>
+          <b id="server24Sessions">0</b>
+          <span>Sessions</span>
+        </div>
+
+        <div>
+          <b id="server24Security">0</b>
+          <span>Security</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="server-footer">
+    <span>Node <b id="serverNode">—</b></span>
+    <span>PID <b id="serverPID">—</b></span>
+    <span>Architecture <b id="serverArch">—</b></span>
+    <span>Last request <b id="serverLastRequest">—</b></span>
+  </div>
+
+</section>
+
+
+
+
+
+<!-- =======================================================
+     PUBLIC USER INTELLIGENCE LAB
+======================================================== -->
+
+
+
+<div class="history-tools">
+
+      <input
+        id="historySearch"
+        type="search"
+        placeholder="Search IP, city, ISP, ASN, device..."
+      >
+
+      <select id="historyCountry">
+        <option value="">All countries</option>
+      </select>
+
+      <select id="historyDevice">
+        <option value="">All devices</option>
+      </select>
+
+      <select id="historyVPN">
+        <option value="">VPN: All</option>
+        <option value="yes">VPN: Detected</option>
+        <option value="no">VPN: Not detected</option>
+      </select>
+
+    </div>
+
+    <div
+      id="adminHistory"
+      class="admin-history"
+    ></div>
+
+  </section>
+
+</main>
+
+
+<footer>
+  <span>RAKIB IP INTELLIGENCE</span>
+  <span>•</span>
+  <span>IP-based approximate geolocation</span>
+</footer>
+
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+></script>
+
+
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+></script>
+<script src="/app.js"></script>
+
+
+<div
+  id="visitorProfileModal"
+  class="visitor-profile-modal"
+>
+
+  <div
+    class="visitor-profile-backdrop"
+    onclick="closeVisitorProfile()"
+  ></div>
+
+  <div class="visitor-profile-dialog">
+
+    <button
+      type="button"
+      class="visitor-profile-close"
+      onclick="closeVisitorProfile()"
+    >
+      ×
+    </button>
+
+    <div
+      id="visitorProfileBody"
+    ></div>
+
+  </div>
+
+</div>
+
+
+<div
+  id="qrShareModal"
+  class="qr-share-modal"
+>
+
+  <div
+    class="qr-share-backdrop"
+    onclick="closeQRShare()"
+  ></div>
+
+  <div class="qr-share-box">
+
+    <button
+      type="button"
+      class="qr-close"
+      onclick="closeQRShare()"
+    >
+      ×
+    </button>
+
+    <div class="eyebrow">
+      LOCATION SHARE
+    </div>
+
+    <h2>
+      📱 Scan to View
+    </h2>
+
+    <div
+      id="qrShareCode"
+      class="qr-share-code"
+    ></div>
+
+    <div
+      id="qrShareUrl"
+      class="qr-share-url"
+    ></div>
+
+    <button
+      type="button"
+      class="qr-copy-button"
+      onclick="copyTextToClipboard(document.getElementById('qrShareUrl').textContent)"
+    >
+      📋 Copy Link
+    </button>
+
+  </div>
+
+</div>
+
+</body>
+</html>
