@@ -255,8 +255,12 @@ function renderVisitorMap(records) {
   visitorMarkers.clearLayers();
   const points = [];
   for (const record of records) {
-    const lat = Number(record.geo?.fields?.latitude?.value);
-    const lon = Number(record.geo?.fields?.longitude?.value);
+    const latitude = record.geo?.fields?.latitude;
+    const longitude = record.geo?.fields?.longitude;
+    if (latitude?.status !== "available" || longitude?.status !== "available" ||
+      latitude.value === null || longitude.value === null || latitude.value === "" || longitude.value === "") continue;
+    const lat = Number(latitude.value);
+    const lon = Number(longitude.value);
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) continue;
     const place = [fieldValue(record.geo, "city"), fieldValue(record.geo, "country")]
       .filter(value => value !== "Unavailable").join(", ") || "Approximate location";
