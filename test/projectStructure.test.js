@@ -76,6 +76,25 @@ test("Vercel entry exports an Express app without opening a listener and keeps s
   assert.equal(fs.readFileSync(path.join(root, "render-free-staging.yaml"), "utf8").includes("STAGING_EPHEMERAL_STORAGE"), true);
 });
 
+test("Vercel explicitly selects the root Express entrypoint and delegates to the existing handler", () => {
+  const entrySource = fs.readFileSync(path.join(root, "index.js"), "utf8");
+  const entrypoint = require(path.join(root, "index.js"));
+  const existingHandler = require(path.join(root, "src", "index.js"));
+  const vercel = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
+
+  assert.equal(vercel.framework, "express");
+  assert.match(entrySource, /require\("express"\)/);
+  assert.match(entrySource, /require\("\.\/src\/index"\)/);
+  assert.match(entrySource, /module\.exports = functionApp/);
+  assert.doesNotMatch(entrySource, /\.listen\s*\(/);
+  assert.equal(entrypoint, existingHandler);
+  assert.deepEqual(vercel.rewrites.slice(0, 2), [
+    { source: "/admin", destination: "/admin.html" },
+    { source: "/admin-panel", destination: "/admin.html" }
+  ]);
+  assert.ok(vercel.headers.some(item => item.source === "/(.*)"));
+});
+
 test("Express and Vercel CSP policies consistently allow only exact OSM tile host patterns", () => {
   const appSource = fs.readFileSync(path.join(root, "src", "app.js"), "utf8");
   const appPolicy = appSource.match(/setHeader\("Content-Security-Policy", "([^"]+)"\)/)?.[1];
