@@ -75,6 +75,11 @@ function maskIP(value) {
 }
 
 function getRequestIP(req) {
+  const cloudflareIP = normalizeIP(req.headers?.["cf-connecting-ip"] || "");
+  const hasCloudflareRay = Boolean(req.headers?.["cf-ray"]);
+  if (hasCloudflareRay && isIP(cloudflareIP) && !isNonPublicIP(cloudflareIP)) {
+    return cloudflareIP;
+  }
   return normalizeIP(req.ip || req.socket?.remoteAddress || "");
 }
 
