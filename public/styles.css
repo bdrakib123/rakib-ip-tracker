@@ -233,3 +233,9 @@ input::placeholder { color: #66748b; }
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Restored administrator visitor map */
+.admin-map-card { margin-top: 18px; padding: 22px; }
+.admin-visitor-map { width: 100%; height: clamp(300px, 42vw, 480px); min-height: 300px; overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: #111827; z-index: 0; }
+.admin-visitor-map .leaflet-popup-content-wrapper, .admin-visitor-map .leaflet-popup-tip { color: #182235; }
+.map-disclaimer { margin: 11px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
