@@ -33,10 +33,10 @@ function mapIpWhoPayload(payload) {
     latitude: Number.isFinite(payload.latitude) ? payload.latitude : null,
     longitude: Number.isFinite(payload.longitude) ? payload.longitude : null,
     security: {
-      vpn: Boolean(payload.security?.vpn),
-      proxy: Boolean(payload.security?.proxy),
-      tor: Boolean(payload.security?.tor),
-      hosting: Boolean(payload.security?.hosting)
+      vpn: typeof payload.security?.vpn === "boolean" ? payload.security.vpn : null,
+      proxy: typeof payload.security?.proxy === "boolean" ? payload.security.proxy : null,
+      tor: typeof payload.security?.tor === "boolean" ? payload.security.tor : null,
+      hosting: typeof payload.security?.hosting === "boolean" ? payload.security.hosting : null
     }
   };
 }
