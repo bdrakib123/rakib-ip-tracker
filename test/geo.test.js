@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { createGeoService } = require("../src/geolocation/geoService");
-const { createIpWhoProvider, GeoProviderError } = require("../src/geolocation/ipwhoProvider");
+const { createIpWhoProvider, createGeoProvider, GeoProviderError } = require("../src/geolocation/ipwhoProvider");
 
 const ipwhoPayload = {
   success: true, country: "Exampleland", country_code: "EX", region: "North", city: "Sample City",
@@ -25,7 +25,7 @@ function createService(provider, extra = {}) {
 test("provider validates HTTP status, success flag, and maps ipwho fields to canonical fields", async () => {
   const provider = createIpWhoProvider({ fetchImpl: async () => response(ipwhoPayload) });
   const result = await provider.lookup("8.8.8.8");
-  assert.deepEqual(result, { ...canonicalGeo, security: { vpn: false, proxy: false, tor: false, hosting: false } });
+  assert.deepEqual(result, { ...canonicalGeo, security: { vpn: null, proxy: null, tor: null, hosting: null } });
 
   const errorProvider = createIpWhoProvider({ fetchImpl: async () => response({}, 503) });
   await assert.rejects(errorProvider.lookup("8.8.8.8"), error => error.code === "http_503" && error.retryable);
@@ -128,4 +128,40 @@ test("geo service cache expires and coalesces concurrent same-IP requests", asyn
   timestamp = 110;
   await service.lookup("8.8.8.8");
   assert.equal(calls, 2);
+});
+
+
+test("geolocation provider falls back to ipapi.co when ipwho.is returns 429", async () => {
+  let calls = 0;
+  const provider = createGeoProvider("ipwho.is", {
+    fetchImpl: async url => {
+      calls += 1;
+      if (calls === 1) return response({}, 429);
+      assert.match(url, /^https:\/\/ipapi\.co\/8\.8\.8\.8\/json\/$/);
+      return response({
+        ip: "8.8.8.8", country_name: "United States", country_code: "US",
+        region: "California", city: "Mountain View", postal: "94035",
+        timezone: "America/Los_Angeles", org: "Google LLC", asn: "AS15169",
+        latitude: 37.386, longitude: -122.0838
+      });
+    }
+  });
+  const result = await provider.lookup("8.8.8.8");
+  assert.equal(calls, 2);
+  assert.equal(result.country, "United States");
+  assert.equal(result.isp, "Google LLC");
+  assert.equal(result.organization, "Google LLC");
+  assert.equal(result.asn, "AS15169");
+  assert.deepEqual(result.security, { vpn: null, proxy: null, tor: null, hosting: null });
+});
+
+test("normalized geolocation retains security signals without inventing unavailable values", async () => {
+  const service = createService(async () => ({
+    ...canonicalGeo, security: { vpn: false, proxy: true, tor: false, hosting: false }
+  }));
+  const result = await service.lookup("8.8.8.8");
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(result.security).map(([key, item]) => [key, item.value])),
+    { vpn: false, proxy: true, tor: false, hosting: false }
+  );
 });

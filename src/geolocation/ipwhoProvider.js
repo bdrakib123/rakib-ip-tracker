@@ -33,10 +33,10 @@ function mapIpWhoPayload(payload) {
     latitude: Number.isFinite(payload.latitude) ? payload.latitude : null,
     longitude: Number.isFinite(payload.longitude) ? payload.longitude : null,
     security: {
-      vpn: Boolean(payload.security?.vpn),
-      proxy: Boolean(payload.security?.proxy),
-      tor: Boolean(payload.security?.tor),
-      hosting: Boolean(payload.security?.hosting)
+      vpn: typeof payload.security?.vpn === "boolean" ? payload.security.vpn : null,
+      proxy: typeof payload.security?.proxy === "boolean" ? payload.security.proxy : null,
+      tor: typeof payload.security?.tor === "boolean" ? payload.security.tor : null,
+      hosting: typeof payload.security?.hosting === "boolean" ? payload.security.hosting : null
     }
   };
 }
@@ -73,8 +73,23 @@ function createIpWhoProvider({ fetchImpl = globalThis.fetch, now = Date.now } = 
 }
 
 function createGeoProvider(name, options) {
-  if (name === "ipwho.is") return createIpWhoProvider(options);
-  throw new Error(`Unsupported geolocation provider: ${name}`);
+  if (name !== "ipwho.is") throw new Error(`Unsupported geolocation provider: ${name}`);
+  const primary = createIpWhoProvider(options);
+  const { createIpApiProvider } = require("./ipApiProvider");
+  const fallback = createIpApiProvider(options);
+  return {
+    name: "ipwho.is (fallback: ipapi.co)",
+    async lookup(ip, context = {}) {
+      try {
+        return await primary.lookup(ip, context);
+      } catch (error) {
+        const shouldFallback = error instanceof GeoProviderError &&
+          (error.code === "http_429" || error.retryable);
+        if (!shouldFallback) throw error;
+        return fallback.lookup(ip, context);
+      }
+    }
+  };
 }
 
 module.exports = { GeoProviderError, createGeoProvider, createIpWhoProvider, mapIpWhoPayload };

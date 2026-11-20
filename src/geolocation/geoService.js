@@ -48,7 +48,11 @@ function normalizeGeo(payload, providerName) {
     precision: "approximate",
     source: providerName,
     errorCode: null,
-    fields
+    fields,
+    security: Object.fromEntries(["vpn", "proxy", "tor", "hosting"].map(name => [
+      name,
+      field(typeof payload.security?.[name] === "boolean" ? payload.security[name] : null)
+    ]))
   };
 }
 

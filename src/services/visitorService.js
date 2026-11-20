@@ -83,6 +83,7 @@ function adminVisitor(record, keyHex) {
     ip: decryptIP(record.ipEncrypted, keyHex) || record.ipMasked || "Unavailable",
     maskedIP: record.ipMasked || "Unavailable",
     geo: geoFromRecord(record),
+    security: record.geoSecurity || geoFromRecord(record).security || null,
     device: deviceFromRecord(record),
     os: record.os || { name: null, version: null, status: "unavailable" },
     browser: record.browser || { name: null, version: null, status: "unavailable" },
@@ -140,6 +141,7 @@ function createVisitorService({ repository, geoService, detectDevice, encryption
       ipMasked: normalizedIP ? maskIP(normalizedIP) : "Unavailable",
       geo: storedGeo(geo),
       geoStatus: { status: geo.status, precision: geo.precision, source: geo.source, errorCode: geo.errorCode },
+      geoSecurity: geo.security || null,
       device: {
         type: deviceData.device.category,
         category: deviceData.device.category,
