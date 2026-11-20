@@ -73,8 +73,23 @@ function createIpWhoProvider({ fetchImpl = globalThis.fetch, now = Date.now } = 
 }
 
 function createGeoProvider(name, options) {
-  if (name === "ipwho.is") return createIpWhoProvider(options);
-  throw new Error(`Unsupported geolocation provider: ${name}`);
+  if (name !== "ipwho.is") throw new Error(`Unsupported geolocation provider: ${name}`);
+  const primary = createIpWhoProvider(options);
+  const { createIpApiProvider } = require("./ipApiProvider");
+  const fallback = createIpApiProvider(options);
+  return {
+    name: "ipwho.is (fallback: ipapi.co)",
+    async lookup(ip, context = {}) {
+      try {
+        return await primary.lookup(ip, context);
+      } catch (error) {
+        const shouldFallback = error instanceof GeoProviderError &&
+          (error.code === "http_429" || error.retryable);
+        if (!shouldFallback) throw error;
+        return fallback.lookup(ip, context);
+      }
+    }
+  };
 }
 
 module.exports = { GeoProviderError, createGeoProvider, createIpWhoProvider, mapIpWhoPayload };
