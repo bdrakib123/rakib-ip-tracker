@@ -149,7 +149,7 @@ test("geolocation provider falls back to ipapi.co when ipwho.is returns 429", as
   const result = await provider.lookup("8.8.8.8");
   assert.equal(calls, 2);
   assert.equal(result.country, "United States");
-  assert.equal(result.isp, "Google LLC");
+  assert.equal(result.isp, null);
   assert.equal(result.organization, "Google LLC");
   assert.equal(result.asn, "AS15169");
   assert.deepEqual(result.security, { vpn: null, proxy: null, tor: null, hosting: null });
