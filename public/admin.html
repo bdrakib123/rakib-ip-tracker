@@ -6,7 +6,9 @@
   <meta name="theme-color" content="#080c16">
   <meta name="robots" content="noindex,nofollow">
   <title>Admin console — RAKIB IP</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="/styles.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
   <script src="/admin.js" defer></script>
 </head>
 <body class="admin-page">
@@ -27,6 +29,11 @@
       <section class="glass-card control-center" aria-labelledby="control-title"><div><p class="section-kicker">DATA CONTROL CENTER</p><h2 id="control-title">Visitor history retention</h2><p class="admin-subtitle">Destructive actions require a typed confirmation and an authenticated admin session.</p></div><div class="control-actions"><button class="button button-danger" type="button" data-clear="24h">Clear last 24 hours</button><button class="button button-danger" type="button" data-clear="7d">Clear last 7 days</button><button class="button button-danger" type="button" data-clear="history">Clear all history</button></div><div id="control-message" class="control-message" role="status" aria-live="polite"></div></section>
 
       <section class="glass-card admin-history-card"><div class="card-heading history-heading"><div><p class="section-kicker">RESTRICTED RECORDS</p><h2>Visitor history</h2></div><div class="history-actions"><button id="export-csv" class="button button-quiet" type="button">Export CSV</button><button id="export-json" class="button button-quiet" type="button">Export JSON</button></div></div><div class="history-filters"><label class="sr-only" for="history-search">Search visitor history</label><input id="history-search" type="search" placeholder="Search IP, location, device…"><label class="sr-only" for="history-country">Filter by country</label><select id="history-country"><option value="">All locations</option></select><label class="sr-only" for="history-device">Filter by device</label><select id="history-device"><option value="">All devices</option></select></div><div id="history-state" class="history-state" role="status">Loading restricted records…</div><div id="history-list" class="history-list"></div><div class="pagination"><button id="history-prev" class="button button-quiet" type="button" disabled>Previous</button><span id="history-page">Page 1</span><button id="history-next" class="button button-quiet" type="button" disabled>Next</button></div></section>
+      <section class="glass-card admin-map-card" aria-labelledby="visitor-map-title">
+        <div class="card-heading"><div><p class="section-kicker">VISITOR GEOGRAPHY</p><h2 id="visitor-map-title">Approximate visitor map</h2><p id="visitor-map-state" class="history-state" role="status">Waiting for visitor coordinates…</p></div></div>
+        <div id="visitor-map" class="admin-visitor-map" role="region" aria-label="Map of approximate visitor locations"></div>
+        <p class="map-disclaimer">Locations are approximate IP-based estimates, not device GPS. Only records on the current history page are plotted.</p>
+      </section>
       <footer class="admin-footer"><span>Session protected with an HTTP-only cookie.</span><button id="refresh-admin" class="text-button" type="button">Refresh data</button></footer>
     </section>
   </main>
