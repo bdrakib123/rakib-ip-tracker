@@ -80,24 +80,21 @@ test("geo service retries retryable failures and classifies exhausted failures",
   assert.equal(result.fields.city.status, "failed");
 });
 
-test("geo service honors provider retry delay and times out via AbortSignal", async () => {
-  const delays = [];
+test("geo service opens a global cooldown on 429 and honors Retry-After", async () => {
+  let timestamp = 1000;
   let calls = 0;
-  const rateService = createService(async () => {
+  const service = createService(async () => {
     calls += 1;
-    if (calls === 1) throw new GeoProviderError("http_429", { retryable: true, retryAfterMs: 350 });
-    return canonicalGeo;
-  }, { sleep: async delay => delays.push(delay) });
-  await rateService.lookup("8.8.4.4");
-  assert.deepEqual(delays, [350]);
-
-  let delayedRetryCalls = 0;
-  const longRetryService = createService(async () => {
-    delayedRetryCalls += 1;
-    throw new GeoProviderError("http_429", { retryable: true, retryAfterMs: 1500 });
-  }, { sleep: async () => assert.fail("must not retry before Retry-After") });
-  assert.equal((await longRetryService.lookup("9.9.9.9")).errorCode, "http_429");
-  assert.equal(delayedRetryCalls, 1);
+    throw new GeoProviderError("fallback_http_429", { retryAfterMs: 5000 });
+  }, { now: () => timestamp });
+  assert.equal((await service.lookup("8.8.4.4")).errorCode, "fallback_http_429");
+  assert.equal(calls, 1);
+  assert.equal(service.health().circuitOpen, true);
+  assert.equal((await service.lookup("9.9.9.9")).errorCode, "fallback_http_429");
+  assert.equal(calls, 1, "other IP lookups must not hit a rate-limited provider");
+  timestamp += 5001;
+  const recovered = createService(async () => canonicalGeo, { now: () => timestamp });
+  assert.equal((await recovered.lookup("9.9.9.9")).status, "available");
 
   let timeoutCalls = 0;
   const timeoutService = createService((_ip, { signal }) => new Promise((_resolve, reject) => {
