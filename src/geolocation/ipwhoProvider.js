@@ -62,26 +62,53 @@ function createGeoProvider(name, options) {
   const primary = createIpWhoProvider(options);
   const { createIpApiProvider } = require("./ipApiProvider");
   const fallback = createIpApiProvider(options);
+  const now = options?.now || Date.now;
+  const primaryCooldownMs = options?.primaryCooldownMs ?? 60 * 1000;
+  const maxRetryAfterMs = options?.maxRetryAfterMs ?? 60 * 60 * 1000;
+  let primaryCooldownUntil = 0;
   const status = {
-    primary: { state: "not_checked", lastErrorCode: null, lastCheckedAt: null, retryAfterMs: 0 },
-    fallback: { state: "not_checked", lastErrorCode: null, lastCheckedAt: null, retryAfterMs: 0 }
+    primary: { state: "not_checked", lastErrorCode: null, lastCheckedAt: null, retryAfterMs: 0, cooldownUntil: null },
+    fallback: { state: "not_checked", lastErrorCode: null, lastCheckedAt: null, retryAfterMs: 0, cooldownUntil: null }
   };
   async function checked(provider, key, ip, context) {
     try {
       const result = await provider.lookup(ip, context);
-      status[key] = { state: "online", lastErrorCode: null, lastCheckedAt: new Date().toISOString(), retryAfterMs: 0 };
+      status[key] = { state: "online", lastErrorCode: null, lastCheckedAt: new Date(now()).toISOString(), retryAfterMs: 0 };
       return result;
     } catch (error) {
-      status[key] = { state: error.code?.includes("429") ? "rate_limited" : "error",
-        lastErrorCode: error.code || "provider_error", lastCheckedAt: new Date().toISOString(),
-        retryAfterMs: Number(error.retryAfterMs) || 0 };
+      const rateLimited = error.code === "http_429" || error.code === "fallback_http_429";
+      const retryAfterMs = Number(error.retryAfterMs) || 0;
+      status[key] = { state: rateLimited ? "rate_limited" : "error",
+        lastErrorCode: error.code || "provider_error", lastCheckedAt: new Date(now()).toISOString(),
+        retryAfterMs, cooldownUntil: null };
+      if (key === "primary" && error.code === "http_429") {
+        const cooldown = Math.min(maxRetryAfterMs, retryAfterMs > 0 ? retryAfterMs : primaryCooldownMs);
+        primaryCooldownUntil = Math.max(primaryCooldownUntil, now() + cooldown);
+        status.primary.state = "cooling_down";
+        status.primary.retryAfterMs = cooldown;
+        status.primary.cooldownUntil = new Date(primaryCooldownUntil).toISOString();
+      }
       throw error;
     }
   }
   return {
     name: "ipwho.is (fallback: ipapi.co)",
-    health: () => ({ primary: { ...status.primary }, fallback: { ...status.fallback } }),
+    health: () => {
+      if (primaryCooldownUntil && primaryCooldownUntil <= now()) {
+        primaryCooldownUntil = 0;
+        status.primary = { state: "not_checked", lastErrorCode: null, lastCheckedAt: status.primary.lastCheckedAt, retryAfterMs: 0, cooldownUntil: null };
+      }
+      return { primary: { ...status.primary }, fallback: { ...status.fallback } };
+    },
     async lookup(ip, context = {}) {
+      if (primaryCooldownUntil > now()) {
+        try { return await checked(fallback, "fallback", ip, context); }
+        catch (error) { throw error; }
+      }
+      if (primaryCooldownUntil && primaryCooldownUntil <= now()) {
+        primaryCooldownUntil = 0;
+        status.primary = { state: "not_checked", lastErrorCode: null, lastCheckedAt: status.primary.lastCheckedAt, retryAfterMs: 0, cooldownUntil: null };
+      }
       try { return await checked(primary, "primary", ip, context); }
       catch (error) {
         if (!(error instanceof GeoProviderError) || !(error.code === "http_429" || error.retryable)) throw error;
