@@ -73,7 +73,7 @@ function createGeoProvider(name, options) {
   async function checked(provider, key, ip, context) {
     try {
       const result = await provider.lookup(ip, context);
-      status[key] = { state: "online", lastErrorCode: null, lastCheckedAt: new Date(now()).toISOString(), retryAfterMs: 0 };
+      status[key] = { state: "online", lastErrorCode: null, lastCheckedAt: new Date(now()).toISOString(), retryAfterMs: 0, cooldownUntil: null };
       return result;
     } catch (error) {
       const rateLimited = error.code === "http_429" || error.code === "fallback_http_429";
@@ -101,10 +101,7 @@ function createGeoProvider(name, options) {
       return { primary: { ...status.primary }, fallback: { ...status.fallback } };
     },
     async lookup(ip, context = {}) {
-      if (primaryCooldownUntil > now()) {
-        try { return await checked(fallback, "fallback", ip, context); }
-        catch (error) { throw error; }
-      }
+      if (primaryCooldownUntil > now()) return checked(fallback, "fallback", ip, context);
       if (primaryCooldownUntil && primaryCooldownUntil <= now()) {
         primaryCooldownUntil = 0;
         status.primary = { state: "not_checked", lastErrorCode: null, lastCheckedAt: status.primary.lastCheckedAt, retryAfterMs: 0, cooldownUntil: null };
@@ -112,8 +109,7 @@ function createGeoProvider(name, options) {
       try { return await checked(primary, "primary", ip, context); }
       catch (error) {
         if (!(error instanceof GeoProviderError) || !(error.code === "http_429" || error.retryable)) throw error;
-        try { return await checked(fallback, "fallback", ip, context); }
-        catch (fallbackError) { throw fallbackError; }
+        return checked(fallback, "fallback", ip, context);
       }
     }
   };
