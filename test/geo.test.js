@@ -80,24 +80,22 @@ test("geo service retries retryable failures and classifies exhausted failures",
   assert.equal(result.fields.city.status, "failed");
 });
 
-test("geo service honors provider retry delay and times out via AbortSignal", async () => {
-  const delays = [];
+test("geo service opens a global cooldown on 429 and honors Retry-After", async () => {
+  let timestamp = 1000;
   let calls = 0;
-  const rateService = createService(async () => {
+  const service = createService(async () => {
     calls += 1;
-    if (calls === 1) throw new GeoProviderError("http_429", { retryable: true, retryAfterMs: 350 });
+    if (calls === 1) throw new GeoProviderError("fallback_http_429", { retryAfterMs: 5000 });
     return canonicalGeo;
-  }, { sleep: async delay => delays.push(delay) });
-  await rateService.lookup("8.8.4.4");
-  assert.deepEqual(delays, [350]);
-
-  let delayedRetryCalls = 0;
-  const longRetryService = createService(async () => {
-    delayedRetryCalls += 1;
-    throw new GeoProviderError("http_429", { retryable: true, retryAfterMs: 1500 });
-  }, { sleep: async () => assert.fail("must not retry before Retry-After") });
-  assert.equal((await longRetryService.lookup("9.9.9.9")).errorCode, "http_429");
-  assert.equal(delayedRetryCalls, 1);
+  }, { now: () => timestamp });
+  assert.equal((await service.lookup("8.8.4.4")).errorCode, "fallback_http_429");
+  assert.equal(calls, 1);
+  assert.equal(service.health().circuitOpen, true);
+  assert.equal((await service.lookup("9.9.9.9")).errorCode, "fallback_http_429");
+  assert.equal(calls, 1, "other IP lookups must not hit a rate-limited provider");
+  timestamp += 5001;
+  assert.equal((await service.lookup("9.9.9.9")).status, "available");
+  assert.equal(calls, 2);
 
   let timeoutCalls = 0;
   const timeoutService = createService((_ip, { signal }) => new Promise((_resolve, reject) => {
@@ -153,6 +151,46 @@ test("geolocation provider falls back to ipapi.co when ipwho.is returns 429", as
   assert.equal(result.organization, "Google LLC");
   assert.equal(result.asn, "AS15169");
   assert.deepEqual(result.security, { vpn: null, proxy: null, tor: null, hosting: null });
+});
+
+test("geolocation provider cools down ipwho.is after 429 while fallback remains available", async () => {
+  let timestamp = 1000;
+  let primaryCalls = 0;
+  let fallbackCalls = 0;
+  const provider = createGeoProvider("ipwho.is", {
+    now: () => timestamp,
+    fetchImpl: async url => {
+      if (url.startsWith("https://ipwho.is/")) {
+        primaryCalls += 1;
+        if (primaryCalls === 1) return response({}, 429, { "retry-after": "5" });
+        return response(ipwhoPayload);
+      }
+      fallbackCalls += 1;
+      return response({
+        country_name: "United States", country_code: "US", region: "California",
+        city: "Mountain View", postal: "94035", timezone: "America/Los_Angeles",
+        org: "Example Org", asn: "AS64500", latitude: 37.386, longitude: -122.0838
+      });
+    }
+  });
+
+  const first = await provider.lookup("8.8.8.8");
+  assert.equal(first.country, "United States");
+  assert.equal(primaryCalls, 1);
+  assert.equal(fallbackCalls, 1);
+  assert.equal(provider.health().primary.state, "cooling_down");
+  assert.equal(provider.health().primary.retryAfterMs, 5000);
+
+  const second = await provider.lookup("1.1.1.1");
+  assert.equal(second.country, "United States");
+  assert.equal(primaryCalls, 1, "primary must be skipped during its Retry-After cooldown");
+  assert.equal(fallbackCalls, 2);
+
+  timestamp += 5001;
+  const third = await provider.lookup("9.9.9.9");
+  assert.equal(third.country, "Exampleland");
+  assert.equal(primaryCalls, 2, "primary should be retried after cooldown expires");
+  assert.equal(provider.health().primary.state, "online");
 });
 
 test("normalized geolocation retains security signals without inventing unavailable values", async () => {
