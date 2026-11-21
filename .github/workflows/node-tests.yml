@@ -1,4 +1,5 @@
 name: Geolocation and project tests
+# Runs the full Node.js suite and syntax checks for pull requests.
 
 on:
   pull_request:
